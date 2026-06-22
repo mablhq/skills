@@ -1,0 +1,30 @@
+name: Validate plugin
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 #v6.0.9
+        with:
+          version: 11
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Validate marketplace manifest
+        run: pnpm dlx @anthropic-ai/claude-code plugin validate --strict .
+      # Not --strict: the validator warns that the root CLAUDE.md is not shipped
+      # as plugin context. That file is contributor docs for this repo, not
+      # plugin content, so the warning is intentional. Errors still fail.
+      - name: Validate plugin manifest
+        run: pnpm dlx @anthropic-ai/claude-code plugin validate .claude-plugin/plugin.json
+      # The Copilot / VS Code plugin manifest (root plugin.json) has no official
+      # CLI validator yet, so check it ourselves: required fields, kebab-case
+      # name, referenced paths exist, and parity with the Claude manifest.
+      - name: Validate Copilot plugin manifest
+        run: node .github/scripts/validate-copilot-manifest.mjs

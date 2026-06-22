@@ -1,0 +1,21 @@
+{
+  "name": "mabl",
+  "description": "Independent verification for agentic development. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
+  "version": "0.1.0",
+  "author": {
+    "name": "mabl",
+    "email": "support@mabl.com",
+    "url": "https://www.mabl.com"
+  },
+  "homepage": "https://www.mabl.com",
+  "repository": "https://github.com/mablhq/skills",
+  "license": "MIT",
+  "keywords": [
+    "testing",
+    "e2e",
+    "quality",
+    "test-automation",
+    "debugging",
+    "mabl"
+  ]
+}

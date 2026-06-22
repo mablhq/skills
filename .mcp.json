@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "chrome-for-mabl": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--browserUrl",
+        "http://127.0.0.1:9222"
+      ]
+    },
+    "mabl": {
+      "type": "http",
+      "url": "https://mcp.mabl.com/mcp"
+    }
+  }
+}
