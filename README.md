@@ -20,6 +20,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | Skill | What it does |
 |-------|--------------|
 | [`mabl-test-authoring`](skills/mabl-test-authoring/SKILL.md) | Create mabl browser and API tests through conversational planning. Describe what to test in plain language, refine the plan with the mabl AI agent, then generate the test in the mabl cloud — no local browser needed. |
+| [`mabl-test-coverage-design`](skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud. |
 | [`mabl-debug`](skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
 
 ### MCP servers
@@ -70,8 +71,9 @@ Both skills and both MCP servers are configured in one step. To roll it out acro
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 
 ```bash
-# install both skills into the current project
+# install the skills into the current project
 gh skill install mablhq/skills mabl-test-authoring
+gh skill install mablhq/skills mabl-test-coverage-design
 gh skill install mablhq/skills mabl-debug
 ```
 

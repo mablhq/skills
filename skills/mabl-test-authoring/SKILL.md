@@ -1,12 +1,15 @@
 ---
 name: mabl-test-authoring
 description: |
-  Create mabl browser and API tests through conversational planning and
-  cloud authoring. Plan a test with an AI agent, refine the plan
+  Create a SINGLE mabl browser and API tests through conversational planning
+  and cloud authoring. Plan one test with an AI agent, refine the plan
   iteratively, then initiate cloud (or local) test generation.
-  Fire when the user wants to create a mabl test, asks to "plan a test",
-  "create a test for", "generate a mabl test", "author a test", or
-  mentions testing a URL / feature / ticket with mabl.
+  Fire when the user wants to create one mabl test, asks to "plan a test",
+  "create a test for <one scenario>", "generate a mabl test", "author a
+  test", or mentions testing a single URL / ticket with mabl.
+  For broad coverage of a whole feature / page / flow with MULTIPLE tests,
+  use mabl-test-coverage-design instead — it explores the feature, designs
+  the suite, and calls THIS skill once per test.
 allowed-tools: Bash
 ---
 
@@ -44,9 +47,9 @@ just track the session IDs.
 
 Once `status` returns `completed` with a `createdTestId`, you can:
 
-- **Run the test in the cloud:** `mabl tests run <createdTestId>`
-- **Run the test locally:** `mabl tests run-local <createdTestId>`
-- **Export to Playwright:** `mabl tests export <createdTestId> --format playwright`
+- **Run the test in the cloud:** `mabl tests run-cloud --id <createdTestId>`
+- **Run the test locally:** `mabl tests run --id <createdTestId>`
+- **Export to Playwright (browser tests only):** `mabl tests export --id <createdTestId> --format playwright`
 
 ---
 
@@ -149,9 +152,9 @@ mabl agent authoring initiate --planning-session-id <id>
 # equivalent to: --mode cloud
 ```
 
-**Local** launches the mabl desktop trainer for recording. Only use
-when testing a locally running app (e.g. localhost) that the cloud
-cannot reach:
+**Local** runs the authoring agent loop in this CLI process, driving a
+browser on your machine (not the desktop trainer). Only use when testing
+a locally running app (e.g. localhost) that the cloud cannot reach:
 
 ```bash
 mabl agent authoring initiate --planning-session-id <id> --mode local
