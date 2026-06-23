@@ -1,7 +1,7 @@
 ---
 name: mabl-test-authoring
 description: |
-  Create a SINGLE mabl browser through conversational planning
+  Create a SINGLE mabl browser and API tests through conversational planning
   and cloud authoring. Plan one test with an AI agent, refine the plan
   iteratively, then initiate cloud (or local) test generation.
   Fire when the user wants to create one mabl test, asks to "plan a test",
