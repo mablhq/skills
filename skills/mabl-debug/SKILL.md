@@ -519,12 +519,6 @@ mabl auth login --auto   # one-time OAuth in browser
 mabl auth info    # check current auth
 ```
 
-**Environment overrides.**
-
-| Var | Effect |
-|---|---|
-| `MABL_API_URL` | Override the API base URL for every CLI call. Default is the production endpoint baked into the build (dev / preview builds default to their own). Set this when reproducing against a non-default backend (e.g. local API server) — only the API host changes, not the test target URL (`--url` covers that). |
-
 Live sessions re-fetch credentials from the API on every `run-step` so
 the in-memory execution context always has fresh values; the resolved
 values also end up in `~/.mabl/debug/<sid>/session.json`'s variable
