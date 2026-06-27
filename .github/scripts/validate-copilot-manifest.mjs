@@ -3,26 +3,14 @@
 // manifest). There is no official Copilot manifest validator yet, so we assert
 // the constraints the docs call out and keep it in parity with the Claude
 // manifest. Exits non-zero with a clear message on any failure.
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createJsonReader, checkManifestParity } from './lib/manifest-parity.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const errors = [];
-
-function readJson(rel) {
-  const path = resolve(repoRoot, rel);
-  if (!existsSync(path)) {
-    errors.push(`${rel} is missing`);
-    return null;
-  }
-  try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch (err) {
-    errors.push(`${rel} is not valid JSON: ${err.message}`);
-    return null;
-  }
-}
+const readJson = createJsonReader(repoRoot, errors);
 
 const copilotManifest = readJson('plugin.json');
 const claudeManifest = readJson('.claude-plugin/plugin.json');
@@ -49,24 +37,9 @@ if (copilotManifest) {
     }
   }
 
-  // Parity with the Claude manifest so the two never drift. These are the
-  // fields CLAUDE.md tells contributors to keep in sync across both manifests.
+  // Parity with the Claude manifest so the two never drift.
   if (claudeManifest) {
-    for (const field of ['name', 'version', 'description']) {
-      if (copilotManifest[field] !== claudeManifest[field]) {
-        errors.push(
-          `plugin.json and .claude-plugin/plugin.json disagree on "${field}": ` +
-            `"${copilotManifest[field]}" vs "${claudeManifest[field]}"`,
-        );
-      }
-    }
-    // author is an object; compare its fields explicitly so a harmless key
-    // reorder doesn't false-positive the way a serialized compare would.
-    for (const authorField of ['name', 'email', 'url']) {
-      if (copilotManifest.author?.[authorField] !== claudeManifest.author?.[authorField]) {
-        errors.push(`plugin.json and .claude-plugin/plugin.json disagree on "author.${authorField}"`);
-      }
-    }
+    checkManifestParity(copilotManifest, claudeManifest, 'plugin.json', errors);
   }
 }
 

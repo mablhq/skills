@@ -1,0 +1,19 @@
+{
+  "name": "mabl",
+  "owner": {
+    "name": "mabl",
+    "email": "support@mabl.com",
+    "url": "https://www.mabl.com"
+  },
+  "metadata": {
+    "description": "Official mabl plugins for AI coding agents",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "mabl",
+      "source": "./",
+      "description": "Independent verification for agentic development. Create, run, and debug mabl end-to-end tests directly from your coding agent."
+    }
+  ]
+}

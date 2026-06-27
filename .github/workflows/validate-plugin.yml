@@ -28,3 +28,14 @@ jobs:
       # name, referenced paths exist, and parity with the Claude manifest.
       - name: Validate Copilot plugin manifest
         run: node .github/scripts/validate-copilot-manifest.mjs
+      # Cursor's own validator from cursor/plugin-template, vendored verbatim at
+      # scripts/validate-template.mjs. It checks the .cursor-plugin manifests,
+      # referenced paths, and skill frontmatter (the "no hooks" line is an
+      # expected warning, not an error).
+      - name: Validate Cursor plugin (official validator)
+        run: node scripts/validate-template.mjs
+      # The official validator can't see the repo's other surfaces, so also check
+      # the cross-surface invariants: mcp.json matches .mcp.json, and the Cursor
+      # manifest stays in parity with the Claude manifest.
+      - name: Validate Cursor cross-surface parity
+        run: node .github/scripts/validate-cursor-parity.mjs
