@@ -13,6 +13,15 @@ The skills (`skills/*/SKILL.md`) are shared by all four. MCP config lives in two
 
 `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, and the root `plugin.json` describe the same plugin. When you bump `version` or change `name`/`description`/`author`, update **all three** (and the `version` in the two `marketplace.json` files, which isn't parity-checked). Likewise, any change to `.mcp.json` must be mirrored into `mcp.json` (they must be byte-equivalent JSON). CI validates the manifests and the two MCP files (`.github/workflows/validate-plugin.yml`).
 
+## Writing PRs
+
+This repo is public — external developers read our PRs. Write them short and human:
+
+- Lead with what changed and why it matters, in plain sentences. The diff shows the rest.
+- A few paragraphs, not a report. Skip the `### Testing` / `### Follow-up` headers and bullet dumps unless the PR is genuinely large.
+- No AI boilerplate: no "This PR introduces...", no generated-by footer, no emoji section markers.
+- Keep the one caveat that actually matters; drop the exhaustive list.
+
 ## Rules for every skill
 
 ### Skills must be self-contained
