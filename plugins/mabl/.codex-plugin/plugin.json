@@ -1,0 +1,40 @@
+{
+  "name": "mabl",
+  "version": "1.0.0",
+  "description": "Independent verification for agentic development. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
+  "author": {
+    "name": "mabl",
+    "email": "support@mabl.com",
+    "url": "https://www.mabl.com"
+  },
+  "homepage": "https://www.mabl.com",
+  "repository": "https://github.com/mablhq/skills",
+  "license": "MIT",
+  "keywords": [
+    "testing",
+    "e2e",
+    "quality",
+    "test-automation",
+    "debugging",
+    "mabl"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "mabl",
+    "shortDescription": "Create, run, and debug mabl end-to-end tests from your coding agent.",
+    "longDescription": "Independent verification for agentic development. Use mabl to author browser and API tests, run them, and debug failures — reproducing a failed run locally and stepping through it in a real browser — without leaving your terminal.",
+    "developerName": "mabl",
+    "category": "Testing",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://www.mabl.com",
+    "logo": "./assets/logo.svg",
+    "defaultPrompt": [
+      "Create a mabl end-to-end test for a flow in my app",
+      "A mabl test run failed — find out why and fix it"
+    ]
+  }
+}

@@ -17,6 +17,6 @@
     "debugging",
     "mabl"
   ],
-  "skills": "skills/",
-  "mcpServers": ".mcp.json"
+  "skills": "plugins/mabl/skills/",
+  "mcpServers": "plugins/mabl/.mcp.json"
 }

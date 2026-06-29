@@ -13,7 +13,7 @@ const errors = [];
 const readJson = createJsonReader(repoRoot, errors);
 
 const copilotManifest = readJson('plugin.json');
-const claudeManifest = readJson('.claude-plugin/plugin.json');
+const claudeManifest = readJson('plugins/mabl/.claude-plugin/plugin.json');
 
 if (copilotManifest) {
   if (!copilotManifest.name) {

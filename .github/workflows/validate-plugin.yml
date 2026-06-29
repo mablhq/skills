@@ -22,7 +22,7 @@ jobs:
       # as plugin context. That file is contributor docs for this repo, not
       # plugin content, so the warning is intentional. Errors still fail.
       - name: Validate plugin manifest
-        run: pnpm dlx @anthropic-ai/claude-code plugin validate .claude-plugin/plugin.json
+        run: pnpm dlx @anthropic-ai/claude-code plugin validate plugins/mabl/.claude-plugin/plugin.json
       # The Copilot / VS Code plugin manifest (root plugin.json) has no official
       # CLI validator yet, so check it ourselves: required fields, kebab-case
       # name, referenced paths exist, and parity with the Claude manifest.
@@ -39,3 +39,8 @@ jobs:
       # manifest stays in parity with the Claude manifest.
       - name: Validate Cursor cross-surface parity
         run: node .github/scripts/validate-cursor-parity.mjs
+      # Codex consumes the plugin from plugins/mabl/ (the single plugin home),
+      # listed by .agents/plugins/marketplace.json. Assert the Codex manifest stays
+      # in parity with the Claude manifest and the marketplace points at it.
+      - name: Validate Codex cross-surface parity
+        run: node .github/scripts/validate-codex-parity.mjs

@@ -12,7 +12,7 @@
   "plugins": [
     {
       "name": "mabl",
-      "source": "./",
+      "source": "./plugins/mabl",
       "description": "Independent verification for agentic development. Create, run, and debug mabl end-to-end tests directly from your coding agent."
     }
   ]
