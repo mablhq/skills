@@ -1,16 +1,26 @@
 # CLAUDE.md
 
-This repo is the public home of mabl's agent skills. One repo, three install surfaces:
+This repo is the public home of mabl's agent skills. One repo, four install surfaces:
 
 - **Claude Code plugin** (`mabl`) — manifest in `.claude-plugin/plugin.json` (+ `marketplace.json`).
-- **GitHub Copilot / VS Code plugin** (`mabl`) — manifest in the root `plugin.json`. VS Code's plugin loader checks for a root `plugin.json` before `.claude-plugin/plugin.json`, so each agent reads its own manifest and the two coexist in one repo.
+- **Cursor plugin** (`mabl`) — manifest in `.cursor-plugin/plugin.json` (+ `marketplace.json`), single plugin at the repo root (`source: "./"`). Cursor discovers skills by convention at `skills/` and reads MCP servers from a root `mcp.json` (note: not `.mcp.json` — Cursor only reads `mcp.json`).
+- **GitHub Copilot / VS Code plugin** (`mabl`) — manifest in the root `plugin.json`. VS Code's plugin loader checks for a root `plugin.json` before `.claude-plugin/plugin.json`, so each agent reads its own manifest and they coexist in one repo.
 - **`gh skill install` source** — skills discovered via `skills/*/SKILL.md`.
 
-The skills (`skills/*/SKILL.md`) and the MCP config (root `.mcp.json`) are shared by all three. Both manifests point at the same `.mcp.json`, so there is one source of truth for MCP servers.
+The skills (`skills/*/SKILL.md`) are shared by all four. MCP config lives in two files that must stay identical: `.mcp.json` (Claude + Copilot) and `mcp.json` (Cursor). Cursor refuses any other filename, so we can't collapse them to one — CI enforces that they match.
 
-### Keep the two manifests in sync
+### Keep the manifests and MCP files in sync
 
-`.claude-plugin/plugin.json` and the root `plugin.json` describe the same plugin. When you bump `version` or change `name`/`description`/`author`, update **both**. CI validates both (`.github/workflows/validate-plugin.yml`).
+`.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, and the root `plugin.json` describe the same plugin. When you bump `version` or change `name`/`description`/`author`, update **all three** (and the `version` in the two `marketplace.json` files, which isn't parity-checked). Likewise, any change to `.mcp.json` must be mirrored into `mcp.json` (they must be byte-equivalent JSON). CI validates the manifests and the two MCP files (`.github/workflows/validate-plugin.yml`).
+
+## Writing PRs
+
+This repo is public — external developers read our PRs. Write them short and human:
+
+- Lead with what changed and why it matters, in plain sentences. The diff shows the rest.
+- A few paragraphs, not a report. Skip the `### Testing` / `### Follow-up` headers and bullet dumps unless the PR is genuinely large.
+- No AI boilerplate: no "This PR introduces...", no generated-by footer, no emoji section markers.
+- Keep the one caveat that actually matters; drop the exhaustive list.
 
 ## Rules for every skill
 
@@ -42,11 +52,17 @@ Run these before pushing (CI runs the same checks on every PR via `.github/workf
 ```bash
 claude plugin validate --strict .                      # marketplace + Claude manifest
 node .github/scripts/validate-copilot-manifest.mjs     # root plugin.json (Copilot) + parity
+node scripts/validate-template.mjs                      # Cursor manifests (official validator)
+node .github/scripts/validate-cursor-parity.mjs        # mcp.json == .mcp.json + Cursor/Claude parity
 ```
+
+`scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (we ship no hooks), not an error.
 
 To test the Claude plugin end to end: `claude --plugin-dir <this repo>` in any project, or `/plugin marketplace add <this repo path>` + `/plugin install mabl@mabl`.
 
 To test the Copilot plugin: in VS Code, run **Chat: Install Plugin From Source** and point it at this repo (a local path or the GitHub URL).
+
+To test the Cursor plugin: import this repo as a team marketplace (Cursor **Dashboard → Settings → Plugins → Add Marketplace → Import from Repo**), then install `mabl` from the **Customize** panel.
 
 ## Syncing with mabl-cli
 

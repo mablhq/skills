@@ -2,7 +2,7 @@
 
 **Independent verification for agentic development.** mabl closes the loop between application change and verified behavior — authoring, orchestrating, executing, and maintaining automated test suites, analyzing failures, and generating reporting, all with the auditable evidence that business-critical applications require.
 
-This repo packages mabl's agent skills as a **Claude Code plugin** and a **GitHub Copilot plugin** (both named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
+This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, and a **GitHub Copilot plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
 
 Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
@@ -57,6 +57,16 @@ The plugin also configures two MCP servers (Claude Code wires these automaticall
 
 That's it — skills and both MCP servers are configured in one step.
 
+### Cursor
+
+The repo is also a Cursor plugin (`.cursor-plugin/`). It installs through a Cursor team marketplace:
+
+1. An admin opens **Dashboard → Settings → Plugins**, and under **Team Marketplaces** clicks **Add Marketplace → Import from Repo**.
+2. Enter the repo URL: `https://github.com/mablhq/skills`
+3. Developers then install `mabl` from the **Customize** panel in the Cursor sidebar.
+
+Skills and both MCP servers are configured in one step. For a quick per-project setup without a marketplace, run `mabl agent install cursor` from the mabl CLI instead.
+
 ### GitHub Copilot in VS Code
 
 The repo is also a native VS Code agent plugin (root `plugin.json`). Install it straight from source:
@@ -66,7 +76,7 @@ The repo is also a native VS Code agent plugin (root `plugin.json`). Install it 
 3. Enter the repo URL: `https://github.com/mablhq/skills`
 4. Trust the plugin when prompted.
 
-Both skills and both MCP servers are configured in one step. To roll it out across a team, add the repo as a marketplace in your `chat.plugins.marketplaces` setting (or a workspace `.github/copilot/settings.json`) and enable `mabl`.
+Skills and both MCP servers are configured in one step. To roll it out across a team, add the repo as a marketplace in your `chat.plugins.marketplaces` setting (or a workspace `.github/copilot/settings.json`) and enable `mabl`.
 
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 

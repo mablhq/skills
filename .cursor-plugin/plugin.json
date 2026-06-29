@@ -1,5 +1,6 @@
 {
   "name": "mabl",
+  "displayName": "mabl",
   "version": "1.0.0",
   "description": "Independent verification for agentic development. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
   "author": {
@@ -7,6 +8,7 @@
     "email": "support@mabl.com",
     "url": "https://www.mabl.com"
   },
+  "homepage": "https://www.mabl.com",
   "repository": "https://github.com/mablhq/skills",
   "license": "MIT",
   "keywords": [
@@ -17,6 +19,5 @@
     "debugging",
     "mabl"
   ],
-  "skills": "skills/",
-  "mcpServers": ".mcp.json"
+  "logo": "assets/logo.svg"
 }
