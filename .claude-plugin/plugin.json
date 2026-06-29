@@ -1,7 +1,7 @@
 {
   "name": "mabl",
   "description": "Independent verification for agentic development. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "author": {
     "name": "mabl",
     "email": "support@mabl.com",
