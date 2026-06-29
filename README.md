@@ -2,7 +2,7 @@
 
 **Independent verification for agentic development.** mabl closes the loop between application change and verified behavior — authoring, orchestrating, executing, and maintaining automated test suites, analyzing failures, and generating reporting, all with the auditable evidence that business-critical applications require.
 
-This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, and a **GitHub Copilot plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
+This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, and an **OpenAI Codex plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
 
 Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
@@ -19,9 +19,9 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
 | Skill | What it does |
 |-------|--------------|
-| [`mabl-test-authoring`](skills/mabl-test-authoring/SKILL.md) | Create mabl browser and API tests through conversational planning. Describe what to test in plain language, refine the plan with the mabl AI agent, then generate the test in the mabl cloud — no local browser needed. |
-| [`mabl-test-coverage-design`](skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud. |
-| [`mabl-debug`](skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
+| [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Create mabl browser and API tests through conversational planning. Describe what to test in plain language, refine the plan with the mabl AI agent, then generate the test in the mabl cloud — no local browser needed. |
+| [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud. |
+| [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
 
 ### MCP servers
 
@@ -77,6 +77,17 @@ The repo is also a native VS Code agent plugin (root `plugin.json`). Install it 
 4. Trust the plugin when prompted.
 
 Skills and both MCP servers are configured in one step. To roll it out across a team, add the repo as a marketplace in your `chat.plugins.marketplaces` setting (or a workspace `.github/copilot/settings.json`) and enable `mabl`.
+
+### OpenAI Codex
+
+The repo is also a Codex plugin. Codex installs plugins from a marketplace, so add this repo as one and install `mabl`:
+
+```bash
+codex plugin marketplace add mablhq/skills
+codex plugin add mabl@mabl
+```
+
+Skills and both MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Codex prompts you to authorize it on first use.
 
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 
