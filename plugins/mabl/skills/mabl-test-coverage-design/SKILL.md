@@ -8,6 +8,7 @@ description: >
   form, flow, or feature broadly, not one specific scenario. This skill explores
   the feature, designs the set of tests, then authors each one in the mabl cloud.
   For a SINGLE test, use mabl-test-authoring directly.
+allowed-tools: Bash, mcp__chrome-devtools__*
 ---
 
 # mabl test coverage design
@@ -29,14 +30,16 @@ command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 mabl auth login --auto   # one-time OAuth in browser — required before any command
 ```
 
-You also need a **browser MCP that drives a real Chrome** (e.g. a Chrome
-DevTools MCP) to explore the app during the design phase.
+You also need the **`chrome-devtools` MCP**, which drives its own real Chrome
+instance, to explore the app during the design phase. Don't use
+`chrome-for-mabl` here — that server is reserved for `mabl-debug`, where it
+attaches to the specific Chrome instance `mabl agent debug session` launches.
 
 ## The two constraints — fix these before anything else
 
 ### 1. Black-box. Discover the feature by USING the app, never by reading source.
 
-Drive the app with a browser MCP (a real Chrome). Everything you choose to test
+Drive the app with the `chrome-devtools` MCP (a real Chrome). Everything you choose to test
 must come from what is visible on screen. **Do not open the app's source code to
 learn how the feature works or to build the test list.**
 
@@ -76,8 +79,8 @@ If a test can't create its own subject, it must not delete anything.
 
 ## The workflow
 
-1. **Navigate to find it.** Drive the app click-by-click with the browser MCP
-   until you reach the target view. Note the path — each intent starts from it.
+1. **Navigate to find it.** Drive the app click-by-click with the `chrome-devtools`
+   MCP until you reach the target view. Note the path — each intent starts from it.
 2. **Read the surface.** Take a snapshot of the interactive elements + a
    screenshot. That list is the spec you design against.
 3. **Overlay a coverage pattern.** Match the surface to a UI pattern below;

@@ -9,6 +9,13 @@
         "http://127.0.0.1:9222"
       ]
     },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
     "mabl": {
       "type": "http",
       "url": "https://mcp.mabl.com/mcp"
