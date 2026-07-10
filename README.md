@@ -25,12 +25,13 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
 ### MCP servers
 
-The plugin also configures two MCP servers (Claude Code wires these automatically):
+The plugin also configures three MCP servers (Claude Code wires these automatically):
 
 | Server | Type | Purpose |
 |--------|------|---------|
 | `mabl` | Hosted (`https://mcp.mabl.com/mcp`) | Structured tools for your workspace: failure analysis with root-cause inference, test details, applications, environments, credentials, and more. |
 | `chrome-for-mabl` | Local (`npx chrome-devtools-mcp`) | Attaches to the Chrome instance that `mabl agent debug session` launches, so the agent can see and drive the live browser while reproducing a failure. |
+| `chrome-devtools` | Local (`npx chrome-devtools-mcp`) | Drives its own real Chrome instance so the agent can explore an app while designing test coverage — not attached to a debug session. |
 
 ## Prerequisites
 
@@ -55,7 +56,7 @@ The plugin also configures two MCP servers (Claude Code wires these automaticall
 /plugin install mabl@mabl
 ```
 
-That's it — skills and both MCP servers are configured in one step.
+That's it — skills and all three MCP servers are configured in one step.
 
 ### Cursor
 
@@ -65,7 +66,7 @@ The repo is also a Cursor plugin (`.cursor-plugin/`). It installs through a Curs
 2. Enter the repo URL: `https://github.com/mablhq/skills`
 3. Developers then install `mabl` from the **Customize** panel in the Cursor sidebar.
 
-Skills and both MCP servers are configured in one step. For a quick per-project setup without a marketplace, run `mabl agent install cursor` from the mabl CLI instead.
+Skills and all three MCP servers are configured in one step. For a quick per-project setup without a marketplace, run `mabl agent install cursor` from the mabl CLI instead — it currently wires up `chrome-for-mabl` and `mabl` only, so add `chrome-devtools` by hand (see the `gh skill install` JSON below) until the CLI installer picks it up too.
 
 ### GitHub Copilot in VS Code
 
@@ -76,7 +77,7 @@ The repo is also a native VS Code agent plugin (root `plugin.json`). Install it 
 3. Enter the repo URL: `https://github.com/mablhq/skills`
 4. Trust the plugin when prompted.
 
-Skills and both MCP servers are configured in one step. To roll it out across a team, add the repo as a marketplace in your `chat.plugins.marketplaces` setting (or a workspace `.github/copilot/settings.json`) and enable `mabl`.
+Skills and all three MCP servers are configured in one step. To roll it out across a team, add the repo as a marketplace in your `chat.plugins.marketplaces` setting (or a workspace `.github/copilot/settings.json`) and enable `mabl`.
 
 ### OpenAI Codex
 
@@ -87,7 +88,7 @@ codex plugin marketplace add mablhq/skills
 codex plugin add mabl@mabl
 ```
 
-Skills and both MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Codex prompts you to authorize it on first use.
+Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Codex prompts you to authorize it on first use.
 
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 
@@ -98,7 +99,7 @@ gh skill install mablhq/skills mabl-test-coverage-design
 gh skill install mablhq/skills mabl-debug
 ```
 
-`gh skill install` installs skills only. To use the debugging skill's full capabilities, also add the two MCP servers to your agent's MCP configuration:
+`gh skill install` installs skills only. To use the debugging and coverage-design skills' full capabilities, also add the MCP servers to your agent's MCP configuration:
 
 ```json
 {
@@ -106,6 +107,10 @@ gh skill install mablhq/skills mabl-debug
     "chrome-for-mabl": {
       "command": "npx",
       "args": ["-y", "chrome-devtools-mcp@latest", "--browserUrl", "http://127.0.0.1:9222"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     },
     "mabl": {
       "type": "http",
@@ -115,7 +120,7 @@ gh skill install mablhq/skills mabl-debug
 }
 ```
 
-Alternatively, `mabl agent install <claude|cursor|vscode|copilot>` from the mabl CLI sets up skills and MCP servers for your agent in one command.
+Alternatively, `mabl agent install <claude|cursor|vscode|copilot>` from the mabl CLI sets up skills and MCP servers for your agent in one command — same `chrome-devtools` caveat as above.
 
 ## Quick tour
 
