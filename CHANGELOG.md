@@ -5,8 +5,6 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [Unreleased]
-
 ## [1.0.1] - 2026-07-10
 ### Added
 - `chrome-devtools` MCP server, so `mabl-test-coverage-design` drives its own

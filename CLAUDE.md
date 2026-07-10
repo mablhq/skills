@@ -20,12 +20,13 @@ CI validates the manifests and the MCP files (`.github/workflows/validate-plugin
 
 ### Changelog
 
-Every PR that changes plugin behavior (skills, MCP servers, install surfaces)
-adds an entry to `CHANGELOG.md` under `## [Unreleased]`. Format follows
+There's no separate release step here — merging to `main` ships the plugin.
+So every PR that bumps `version` (see above) adds its own entry directly to
+the top of `CHANGELOG.md`, no `[Unreleased]` staging section. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
 
 ```markdown
-## [Unreleased]
+## [<version>] - <YYYY-MM-DD>
 ### Added
 - Short, user-facing description of what changed and why it matters.
 ```
@@ -33,12 +34,9 @@ adds an entry to `CHANGELOG.md` under `## [Unreleased]`. Format follows
 Use whichever categories apply — `Added`, `Changed`, `Fixed`, `Removed`,
 `Security` — and only the ones you need.
 
-When you bump `version` in the manifests, rename `[Unreleased]` to
-`[<version>] - <YYYY-MM-DD>` in `CHANGELOG.md` and add a fresh empty
-`[Unreleased]` above it.
-
 Skip the entry only when a change has no effect on what a plugin consumer
-sees (typo fixes in internal comments, CI-only changes, etc).
+sees (typo fixes in internal comments, CI-only changes, etc) — those PRs
+don't bump `version` either.
 
 ## Writing PRs
 
