@@ -18,6 +18,28 @@ The one remaining duplication is MCP config: `plugins/mabl/mcp.json` (Cursor) mu
 
 CI validates the manifests and the MCP files (`.github/workflows/validate-plugin.yml`).
 
+### Changelog
+
+Every PR that changes plugin behavior (skills, MCP servers, install surfaces)
+adds an entry to `CHANGELOG.md` under `## [Unreleased]`. Format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
+
+```markdown
+## [Unreleased]
+### Added
+- Short, user-facing description of what changed and why it matters.
+```
+
+Use whichever categories apply — `Added`, `Changed`, `Fixed`, `Removed`,
+`Security` — and only the ones you need.
+
+When you bump `version` in the manifests, rename `[Unreleased]` to
+`[<version>] - <YYYY-MM-DD>` in `CHANGELOG.md` and add a fresh empty
+`[Unreleased]` above it.
+
+Skip the entry only when a change has no effect on what a plugin consumer
+sees (typo fixes in internal comments, CI-only changes, etc).
+
 ## Writing PRs
 
 This repo is public — external developers read our PRs. Write them short and human:
