@@ -99,7 +99,9 @@ If a test can't create its own subject, it must not delete anything.
    constraints → navigation path → observed surface → pattern overlay → chosen
    tests + what was dropped.
 8. **Fan out.** Author each intent with `mabl agent authoring` (below), using
-   the strategy (default `seed`). Report each `createdTestId` + `viewTestUrl`.
+   the strategy (default `serial`). Order the intents so the central happy-path
+   test is authored first — it seeds every test after it. Report each
+   `createdTestId` + `viewTestUrl`.
 
 ## Authoring each test
 
@@ -119,25 +121,27 @@ The `mabl-test-authoring` skill covers this command in depth (the
 `--test-information` fields, API tests, local mode). Use it for the per-test
 detail; this skill owns deciding *which* tests to author and *in what order*.
 
-## Suite strategy — parallel, seed, or chain
+## Suite strategy — serial or parallel
 
 How the tests get authored relative to each other. Pick a mode; default to
-`seed`. The user may override ("author them in parallel", "chain them").
+`serial`. The user may override ("author them in parallel").
 
 | Mode | Behavior | Wall-clock | Use when |
 |---|---|---|---|
+| `serial` (default) | author sequentially, central happy-path first; each test references **all** prior siblings (plus any existing team tests) | ~N tests | default — the first test seeds the rest and every test after it builds on what already worked |
 | `parallel` | author all intents at once, independently | ~1 test | speed matters; consistency comes from existing team tests (reference those) |
-| `seed` (default) | author the anchor test first (the central happy-path), wait for it, then fan out the rest **concurrently**, each referencing the anchor | ~2 tests | greenfield suite; want a consistency anchor without paying full serialization |
-| `chain` | author sequentially; each test references **all** prior siblings | ~N tests | max consistency, order matters, no existing references to anchor on |
 
-Each cloud authoring run takes 5–20 min, so `chain` of N tests ≈ N× the
-wall-clock of `parallel`. Prefer `seed` unless the user asks otherwise.
+`serial` is the default because it *is* the seed: the central happy-path test
+is authored first, and every test after it references all the siblings already
+created, so the suite converges on one shape. Each cloud authoring run takes
+5–20 min, so `serial` of N tests ≈ N× the wall-clock of `parallel` — switch to
+`parallel` only when speed matters more than consistency and the user says so.
 
 **Degrade gracefully — these runs are slow and can fail or time out.** One
 failed authoring run must not abort the rest: keep going and report which tests
-succeeded (with `createdTestId`) and which failed, so the run is resumable. If
-the `seed` anchor fails, don't block the suite — fall back to `parallel` for the
-remaining tests (they just author without an anchor reference).
+succeeded (with `createdTestId`) and which failed, so the run is resumable. In
+`serial`, if one test fails, don't block the suite — continue to the next test,
+referencing the siblings that did succeed (skip the failed one's ID).
 
 ### How a test references another
 
@@ -150,7 +154,8 @@ verbatim except the IDs:
 ```
 [Reference test context]
 The following tests are related references. Use get_test_definition to study
-them and match their flows, structure, and conventions.
+them and match their flows, structure, and conventions. Trust that structure:
+start from it and change or add only the steps that make THIS test different.
 Reference test IDs: <testId1>, <testId2>
 ```
 
@@ -160,8 +165,9 @@ definition — the same mechanism the mabl web app's "Add reference tests" uses.
 - **Prefer existing team tests as references** whenever the workspace has good
   related ones — they're higher-signal than a freshly-generated sibling. Include
   their IDs in the block in any mode, even `parallel`.
-- In `seed`/`chain`, collect each `createdTestId` as authoring completes and feed
-  it into the reference block of the tests authored after it.
+- In `serial`, collect each `createdTestId` as authoring completes and feed all
+  the prior created IDs into the reference block of the next test, so each test
+  sees every sibling built before it.
 
 ## Coverage patterns (the question sets)
 
