@@ -5,6 +5,16 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.0.2] - 2026-07-15
+### Changed
+- `mabl-test-coverage-design` now defaults to authoring a suite **serially** —
+  the central happy-path test first, then each later test referencing all the
+  siblings before it — so the suite converges on one consistent shape.
+### Removed
+- The `seed` suite-strategy mode. `serial` already is the seed, so the hybrid
+  mode was redundant; `parallel` remains for when speed matters more than
+  consistency.
+
 ## [1.0.1] - 2026-07-10
 ### Added
 - `chrome-devtools` MCP server, so `mabl-test-coverage-design` drives its own
