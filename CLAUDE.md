@@ -10,6 +10,15 @@ Why a subdirectory and not the repo root? **Codex.** Its marketplace requires ea
 - **GitHub Copilot / VS Code plugin** (`mabl`) — manifest is the **root `plugin.json`**, because VS Code's plugin loader checks for a manifest at the repo root. It points into the home: `"skills": "plugins/mabl/skills/"`, `"mcpServers": "plugins/mabl/.mcp.json"`.
 - **`gh skill install` source** — skills discovered via the `skills/*/SKILL.md` convention, which `gh skill` finds even nested under a prefix (`plugins/mabl/skills/...`).
 
+### Changing a skill? Bump the version and update the docs
+
+When you change something a plugin consumer sees — a skill's behavior, a new or
+removed skill, an MCP server — **bump `version`** (all manifests; see "Keep the
+manifests and MCP files in sync" below), add a `CHANGELOG.md` entry (see
+"Changelog" below), and refresh the skill's row in `README.md` if what it does
+changed. Skip all three only for changes no consumer ever sees (internal
+comments, CI-only tweaks).
+
 ### Keep the manifests and MCP files in sync
 
 The four plugin manifests — `plugins/mabl/.claude-plugin/plugin.json`, `plugins/mabl/.cursor-plugin/plugin.json`, `plugins/mabl/.codex-plugin/plugin.json`, and the root `plugin.json` (Copilot) — describe the same plugin. When you bump `version` or change `name`/`description`/`author`, update **all four** (and the `version` in the three `marketplace.json` files, which isn't parity-checked). CI checks this parity.
