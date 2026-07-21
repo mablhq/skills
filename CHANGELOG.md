@@ -5,6 +5,12 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.0.3] - 2026-07-21
+### Added
+- `add-mabl-skill` skill: a structured way to contribute a skill to this repo. It
+  gates a candidate against what's already shipped or in an open PR before adding
+  it, then walks the promotion, version/manifest parity, and validation steps.
+
 ## [1.0.2] - 2026-07-15
 ### Changed
 - `mabl-test-coverage-design` now defaults to authoring a suite **serially** —
