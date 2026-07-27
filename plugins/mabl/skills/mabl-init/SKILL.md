@@ -25,15 +25,8 @@ MCP server, asks you the handful of choices only you can make, and writes a
 ## Prerequisites
 
 This skill uses the hosted **`mabl` MCP server** (bundled with this plugin) —
-not the mabl CLI. Confirm the server is connected before doing anything else:
-
-- Call `get_current_user`.
-  - **Fails / tool unavailable** → the `mabl` MCP server isn't connected.
-    Tell the user to install and authorize it (see the plugin README —
-    `/plugin install mabl@mabl` for Claude Code, or add the
-    `https://mcp.mabl.com/mcp` server for other agents) and **stop**.
-  - **Succeeds** → remember `defaultWorkspaceId` (the fallback workspace when
-    the user doesn't pick one).
+not the mabl CLI. Start by calling `get_current_user` to grab
+`defaultWorkspaceId` (the fallback workspace when the user doesn't pick one).
 
 ## Workflow
 
