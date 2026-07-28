@@ -70,7 +70,10 @@ something.
 If no applications or environments come back, this workspace isn't set up for
 testing yet. Don't write an empty table — tell the user to add an application
 and a deployment in mabl first (or that tests can still target an ad-hoc URL via
-`urlOverride`), and check they picked the workspace they meant in step 1.
+`urlOverride`), and check they picked the workspace they meant in step 1. Same
+if apps and environments exist but none has a deployment `url`: there's no
+deployment for `run_mabl_test_cloud` to resolve, so tell the user to add one, or
+record that runs must pass `urlOverride`.
 
 ### 3. Decide how to choose an application & environment
 
@@ -163,12 +166,13 @@ wrapper differs:
 - **Rule** → a new rule file with the client's rule frontmatter and the template
   as the body (Cursor `.mdc` with `globs`, Copilot `.instructions.md` with
   `applyTo`). For the folder-based strategy, set the globs to the mapped folders.
-- **Skill** → a `SKILL.md` (e.g. `mabl-config`) with the template as the body
-  and a **trigger-first `description`** so it actually loads when needed — it
-  must fire before any mabl work (e.g. "Read before creating or running any mabl
-  test in this project — holds the workspace, applications, and credentials to
-  use"). Without that trigger the IDs won't be in context when tests are later
-  authored, which defeats the point of saving them.
+- **Skill** → a `SKILL.md` (e.g. `mabl-config`) whose YAML frontmatter (the
+  `---` block) has a `name` and a **trigger-first `description`**, with the
+  template as the body. The description must fire before any mabl work (e.g.
+  "Read before creating or running any mabl test in this project — holds the
+  workspace, applications, and credentials to use"). Without frontmatter the
+  skill won't load; without that trigger the IDs won't be in context when tests
+  are later authored — either way it defeats the point of saving them.
 
 ### 7. Confirm and suggest a next step
 
