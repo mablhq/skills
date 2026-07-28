@@ -19,6 +19,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
 | Skill | What it does |
 |-------|--------------|
+| [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | Set up a project once. Discovers your mabl workspace, applications, environments, and credentials, asks how the agent should pick between them, and writes it all into your agent memory file (`CLAUDE.md` / `AGENTS.md` / Copilot instructions) so every later session knows how to create and run your tests. |
 | [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Create mabl browser and API tests through conversational planning. Describe what to test in plain language, refine the plan with the mabl AI agent, then generate the test in the mabl cloud — no local browser needed. |
 | [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud. |
 | [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
@@ -94,12 +95,13 @@ Skills and all three MCP servers are configured in one step. The hosted `mabl` s
 
 ```bash
 # install the skills into the current project
+gh skill install mablhq/skills mabl-init
 gh skill install mablhq/skills mabl-test-authoring
 gh skill install mablhq/skills mabl-test-coverage-design
 gh skill install mablhq/skills mabl-debug
 ```
 
-`gh skill install` installs skills only. To use the debugging and coverage-design skills' full capabilities, also add the MCP servers to your agent's MCP configuration:
+`gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging and coverage-design skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
 
 ```json
 {

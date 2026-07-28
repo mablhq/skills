@@ -5,6 +5,15 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.1.0] - 2026-07-27
+### Added
+- `mabl-init` skill — one-time project setup that discovers your workspace,
+  applications, environments, and credentials over the `mabl` MCP server and
+  writes them (with resolved deployment URLs and worked create/run examples)
+  into your agent memory file, so later sessions can author and run tests
+  without re-explaining the setup. Auto-detects the memory file per client
+  (`CLAUDE.md` / `AGENTS.md` / Copilot instructions) and never stores secrets.
+
 ## [1.0.2] - 2026-07-15
 ### Changed
 - `mabl-test-coverage-design` now defaults to authoring a suite **serially** —
