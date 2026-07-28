@@ -12,7 +12,7 @@ description: |
   Run this once per project, before authoring or running tests. For creating a
   single test use mabl-test-authoring; for a whole suite use
   mabl-test-coverage-design.
-allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials
+allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__mabl__list_mabl_test_run_summaries
 ---
 
 # mabl init
@@ -31,6 +31,13 @@ not the mabl CLI. Start by calling `get_current_user` to grab
 ## Workflow
 
 Do these in order. Steps 1–5 gather; step 6 writes.
+
+**Write only what the user chose.** Everything you discover is shown to help
+them decide — but the memory file records only the workspace, application(s),
+environment(s), and credentials they explicitly selected or confirmed here.
+Don't add the ones they didn't pick, and don't editorialize about them (no
+"these are the other applications" asides). If you're unsure whether something
+belongs, ask — don't pad the file to look complete.
 
 ### 1. Confirm the workspace
 
@@ -77,21 +84,38 @@ and a deployment in mabl first (or that tests can still target an ad-hoc URL via
   - **(c) Ask each time** — no default; the agent asks (or the user names) the
     app/environment for each test.
 
+Whichever they pick, record the specific app + environment combos in play — the
+one default for (a), the mapped pairs for (b), or the set worth considering for
+(c). Steps 4 and 6 use exactly those combos, nothing more.
+
 ### 4. Map credentials
 
-Call `list_mabl_credentials` with the `workspaceId`. You get `id`, `name`,
-`type` (`basic` or `basic_with_totp`), and `cloud_only` — **never secrets**.
+**Don't download and dump the whole credential list.** Lead with the
+credentials actually used for the app + environment the user chose, and suggest
+only those.
 
-Show them and, for each, ask the user for a one-line **"use when…"** note
-(suggest a guess from the name, e.g. "Admin user" → "tests that need admin
-access"; let them accept, edit, or skip). If there are no credentials, note
-that auth-less tests need none.
+1. For each application + environment the user kept in step 3, call
+   `list_mabl_test_run_summaries` with the `workspaceId`, that `applicationId`,
+   and that `environmentId`. Each run row carries the `credentialsId` it really
+   used (absent when the run needed no login). Collect the credential IDs that
+   show up — those are the ones in real use for that combo.
+2. Resolve those IDs to a name and type with `list_mabl_credentials` (same
+   `workspaceId`) — use it only to look up the credentials you found, not as a
+   list to show the user wholesale.
+3. Suggest just those credentials, each with a one-line **"use when…"** note
+   (e.g. "**Standard user** (`BZDY…`) — used by live runs against **Web App /
+   Dev**"). Let the user accept, edit, or skip each, and store only the ones
+   they keep.
 
-The file stores each credential's **name, ID, and type** plus your note —
-never a username or password (the MCP server never returns those). A
-credential's *name* can embed a test-account username, and this memory file is
-meant to be committed and shared with your team — so it's fine for IDs and
-names, but never a place for real secrets.
+If a combo has no runs (or no credential on any run) and the user still wants an
+authenticated test, ask whether they'd like to pick from the workspace's
+credentials — and only then show the `list_mabl_credentials` list. If a test
+needs no login, store no credential for it.
+
+Per stored credential: **name, ID, and type** plus the note — never a username
+or password (the MCP server never returns those). A credential's *name* can
+embed a test-account username, and this file is committed and shared with your
+team, so it's fine for IDs and names but never a place for real secrets.
 
 ### 5. Pick the memory file for this client
 
@@ -116,10 +140,11 @@ Tell the user the resolved path and confirm it before writing.
   touch unrelated content.
 - **File doesn't exist** → create it with the section.
 
-Fill in the template below from what you gathered. For "Choosing an
-application & environment", keep only the one block that matches the strategy
-from step 3 — drop the other two and the `<!-- … -->` picker markers (they are
-guides for you, not content for the file).
+Fill in the template below from what you gathered, honoring the "write only what
+the user chose" rule above — no extra applications, environments, or credentials.
+For "Choosing an application & environment", keep only the one block that matches
+the strategy from step 3, and drop the other two and the `<!-- … -->` picker
+markers (guides for you, not content for the file).
 
 ### 7. Confirm and suggest a next step
 
@@ -152,6 +177,10 @@ Pass `workspaceId: <workspaceId>` on every mabl MCP call. Call
 
 ### Applications & environments
 
+<!-- Only the applications/environments the user chose in step 3 — the default
+one (a), the mapped ones (b), or the set they want considered (c). Not every
+app in the workspace. -->
+
 | Application | Application ID | Environment | Environment ID | URL |
 |-------------|----------------|-------------|----------------|-----|
 | <App name>  | `<app id>`     | <Env name>  | `<env id>`     | <url> |
@@ -160,7 +189,7 @@ Pass `workspaceId: <workspaceId>` on every mabl MCP call. Call
 
 <!-- (a) One default -->
 Default to **<App>** (`<app id>`) on **<Env>** (`<env id>`, <url>) unless I say
-otherwise. The full list is in the table above.
+otherwise.
 
 <!-- (b) Folder-based -->
 Pick the app/environment by the folder the work is in:
@@ -188,9 +217,10 @@ If a test needs no login, omit the credential.
 2. `mabl_authoring_initiate` — generate it in the cloud from that plan.
 3. `mabl_authoring_status` — poll until `completed`; you get the created test id.
 
-Or create directly with `create_mabl_test`, passing `name`, `testType`
-(`browser` or `api`), `applicationId`, `environmentId`, and — only if the test
-logs in — `credentialsId` from above.
+Or, when you already have the steps, create directly with `create_mabl_test`
+(`name`, `testType`, `applicationId`, `environmentId`, plus `credentialsId` for
+authenticated tests) and pass the steps as `initial_flow.steps` — without them
+it creates an empty, non-runnable test envelope.
 
 ### Run a test in the cloud
 - One test: `run_mabl_test_cloud` with `testId`, `environmentId`,
