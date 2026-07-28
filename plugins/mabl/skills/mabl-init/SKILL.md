@@ -3,9 +3,9 @@ name: mabl-init
 description: |
   One-time project setup for mabl. Discover this user's mabl workspace,
   applications, environments, and credentials over the mabl MCP server, then
-  write everything an AI agent needs to create and run mabl cloud tests into
-  the project's agent memory file (CLAUDE.md / AGENTS.md /
-  .github/copilot-instructions.md).
+  save everything an AI agent needs to create and run mabl cloud tests where the
+  user wants it — an agent memory file (CLAUDE.md / AGENTS.md /
+  .github/copilot-instructions.md), a rule, or a skill.
   Fire when the user says "set up mabl", "mabl init", "initialize mabl",
   "configure mabl for this project", "save my mabl workspace / application /
   environment / credentials", "add mabl to my CLAUDE.md", or "/mabl-init".
@@ -19,8 +19,8 @@ allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__mabl__
 
 Prime a project so any future agent session can create and run mabl tests with
 no re-explaining. This skill reads your mabl account through the hosted `mabl`
-MCP server, asks you the handful of choices only you can make, and writes a
-`## mabl testing` section into your project's agent memory file.
+MCP server, asks you the handful of choices only you can make, and saves the
+setup where you want it — an agent memory file, a rule, or a skill.
 
 ## Prerequisites
 
@@ -117,34 +117,58 @@ or password (the MCP server never returns those). A credential's *name* can
 embed a test-account username, and this file is committed and shared with your
 team, so it's fine for IDs and names but never a place for real secrets.
 
-### 5. Pick the memory file for this client
+### 5. Choose how and where to persist the setup
 
-Determine which agent client you are running in (you know your own harness; if
-unsure, check env vars like `CLAUDECODE` or `CURSOR_*`, and look for an existing
-memory file). Map it to the right file at the project root:
+Ask the user how they want it saved — don't assume a file. Offer:
 
-| Client | File |
-|--------|------|
-| Claude Code | `./CLAUDE.md` |
-| Cursor | `./AGENTS.md` |
-| GitHub Copilot (VS Code) | `./.github/copilot-instructions.md` |
-| OpenAI Codex | `./AGENTS.md` |
-| Anything else | `./AGENTS.md` (the cross-agent default) |
+- **(a) Agent memory file** (recommended — always loaded, nothing to invoke
+  later). Then ask *where*, the way `#memory` does:
+  - **project root** — committed and shared with the team (the usual choice);
+  - **user-level** (`~/.claude/CLAUDE.md` and equivalents) — personal; applies
+    to every project you open, so only pick it if you use the same workspace
+    everywhere (the IDs are workspace-specific);
+  - **a specific path** they name (e.g. a subdirectory's memory file).
 
-Tell the user the resolved path and confirm it before writing.
+  The filename follows the client (you know your own harness; if unsure, check
+  env vars like `CLAUDECODE` / `CURSOR_*` or an existing file): Claude Code →
+  `CLAUDE.md`, Cursor / Codex → `AGENTS.md`, GitHub Copilot →
+  `.github/copilot-instructions.md`.
+- **(b) A rule** — for clients with path-scoped rules (e.g. Cursor
+  `.cursor/rules/mabl.mdc` with `globs`, GitHub Copilot
+  `.github/instructions/mabl.instructions.md` with `applyTo`). Pairs naturally
+  with the folder-based strategy from step 3 — scope the rule's globs to the
+  mapped folders so the right app/environment loads per path.
+- **(c) A skill** — a small `mabl-config` skill (a `SKILL.md` in the client's
+  skills directory, e.g. `.claude/skills/mabl-config/SKILL.md`) the agent
+  invokes on demand. Only pick this if you'd rather it not always be in context
+  — the IDs won't be loaded unless the skill is triggered.
 
-### 6. Write (or merge) the memory section
+Default to (a) at the project root. Confirm the format and the resolved path
+with the user before writing.
 
-- **File exists** → `Read` it first. If it already has a `## mabl testing`
-  section, replace just that section. Otherwise append the section. **Never**
-  touch unrelated content.
-- **File doesn't exist** → create it with the section.
+### 6. Write (or merge) the setup
 
 Fill in the template below from what you gathered, honoring the "write only what
 the user chose" rule above — no extra applications, environments, or credentials.
-For "Choosing an application & environment", keep only the one block that matches
-the strategy from step 3, and drop the other two and the `<!-- … -->` picker
-markers (guides for you, not content for the file).
+For "Choosing an application & environment", keep only the block that matches the
+strategy from step 3, and drop the other two and the `<!-- … -->` picker markers
+(guides for you, not content for the file).
+
+Then save it in the format chosen in step 5. The content is identical; only the
+wrapper differs:
+
+- **Memory file** → the template as a `## mabl testing` section. If the file
+  exists, `Read` it and replace an existing `## mabl testing` section (else
+  append) — **never** touch unrelated content. Create the file if it's missing.
+- **Rule** → a new rule file with the client's rule frontmatter and the template
+  as the body (Cursor `.mdc` with `globs`, Copilot `.instructions.md` with
+  `applyTo`). For the folder-based strategy, set the globs to the mapped folders.
+- **Skill** → a `SKILL.md` (e.g. `mabl-config`) with the template as the body
+  and a **trigger-first `description`** so it actually loads when needed — it
+  must fire before any mabl work (e.g. "Read before creating or running any mabl
+  test in this project — holds the workspace, applications, and credentials to
+  use"). Without that trigger the IDs won't be in context when tests are later
+  authored, which defeats the point of saving them.
 
 ### 7. Confirm and suggest a next step
 
@@ -156,9 +180,10 @@ and suggest a smoke check, e.g.:
 
 ---
 
-## Memory section template
+## Setup content template
 
-Write this as a `## mabl testing` section. Replace every `<…>` and drop rows /
+This is the content to save — as a `## mabl testing` section (memory file), or
+as the body of a rule or skill (see step 6). Replace every `<…>` and drop rows /
 blocks that don't apply. Reference mabl tools by their plain names (the agent
 maps them to its own MCP tool names).
 
