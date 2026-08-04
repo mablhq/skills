@@ -5,6 +5,32 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.7.0] - 2026-08-27
+### Added
+- `mabl-onboarding` skill — onboarding for a brand-new or empty workspace, the
+  step before `mabl-init` has anything to record. Interviews you about what you
+  ship and what needs verifying, discovers your repo — including related repos
+  elsewhere on the machine, which is where the full list of environments usually
+  lives — then builds out the parts of the workspace a command can build:
+  environments, deployment URL rows, in-product agent instructions, mabl
+  branches, a CI deployment trigger. Every write is drafted and applied only on
+  an explicit yes, and everything with no product surface is recorded as durable
+  team policy instead.
+  Tests, DataTables and plans are deliberately *not* built here — each is a
+  decision with an owner, so each gets a question instead: what is worth testing
+  before anything is authored, and how tests should be grouped before any plan
+  exists. Plans group by product module rather than test tier, adopt an existing
+  taxonomy (tracker components, an existing test-case folder layout) when the
+  team has one, and are never scheduled. Another workspace is never read without
+  asking.
+  States plainly what no agent can create (a workspace, a Link agent) and what
+  the CLI cannot create but the `mabl` MCP server can (applications,
+  credentials, plans), so a tooling gap is never reported as an impossibility.
+  Hands project-local persistence to `mabl-init` rather than writing memory
+  files itself, and can also be entered mid-workflow by another skill that finds
+  the workspace missing an application, environment or credential — it fills
+  only the gap and hands the ids back.
+
 ## [1.6.1] - 2026-08-25
 ### Changed
 - `mabl-test-edit`'s description now fits the 1024-character budget every skill

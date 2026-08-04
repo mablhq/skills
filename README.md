@@ -19,6 +19,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
 | Skill | What it does |
 |-------|--------------|
+| [`mabl-onboarding`](plugins/mabl/skills/mabl-onboarding/SKILL.md) | Onboard a brand-new or empty workspace — the step before there is anything for `mabl-init` to record. Interviews you about what you ship and what needs verifying, discovers your repo, then builds out what a command can build (environments, deployment URLs, DataTables, in-product agent instructions, branches, a CI trigger), drafting every write and applying it only on your yes. Records the rest as team policy, and is explicit about what only a human can do in the mabl app. |
 | [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | Set up a project once. Discovers your mabl workspace, applications, environments, and credentials, asks how the agent should pick between them, and writes it all into your agent memory file (`CLAUDE.md` / `AGENTS.md` / Copilot instructions) so every later session knows how to create and run your tests. |
 | [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Create mabl browser and API tests through conversational planning. Describe what to test in plain language, refine the plan with the mabl AI agent, then generate the test in the mabl cloud — no local browser needed. Checks the built test against what you asked for and offers to fix it if it falls short. |
 | [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud — and checks each one against what you asked for, so you get told which tests are verified and which only look finished. |
@@ -96,6 +97,7 @@ Skills and all three MCP servers are configured in one step. The hosted `mabl` s
 
 ```bash
 # install the skills into the current project
+gh skill install mablhq/skills mabl-onboarding
 gh skill install mablhq/skills mabl-init
 gh skill install mablhq/skills mabl-test-authoring
 gh skill install mablhq/skills mabl-test-coverage-design
