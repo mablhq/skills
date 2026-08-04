@@ -5,6 +5,17 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.2.0] - 2026-08-04
+### Added
+- `mabl-test-edit` skill — change a test that already exists. It routes each
+  edit to the cheapest lane that can make it deterministically: metadata
+  (rename, labels, enable/disable), structured step edits
+  (replace / insert / delete / move, no browser), or a live cloud authoring
+  agent when the change needs to look at the running app. Handles shared
+  reusable flows (blast-radius review before you commit), branch-aware writes
+  with a confirmation before touching the default branch, and honest
+  degradation when the authoring preview isn't enabled for the workspace.
+
 ## [1.1.0] - 2026-07-27
 ### Added
 - `mabl-init` skill — one-time project setup that discovers your workspace,
