@@ -3,7 +3,8 @@ name: mabl-test-authoring
 description: |
   Create a SINGLE mabl browser and API tests through conversational planning
   and cloud authoring. Plan one test with an AI agent, refine the plan
-  iteratively, then initiate cloud (or local) test generation.
+  iteratively, initiate cloud (or local) test generation, then validate that
+  the test it built actually matches what you asked for and fix it if not.
   Fire when the user wants to create one mabl test, asks to "plan a test",
   "create a test for <one scenario>", "generate a mabl test", "author a
   test", or mentions testing a single URL / ticket with mabl.
@@ -21,7 +22,7 @@ Create mabl browser or API tests through a plan-then-generate workflow.
 
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
-MIN_MABL_CLI_VERSION=2.111.0
+MIN_MABL_CLI_VERSION=2.124.30
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 
@@ -37,7 +38,9 @@ mabl auth info    # verify you're logged in and the token hasn't expired
 2. Generate → mabl agent authoring initiate --planning-session-id <id>
               (kicks off cloud test authoring)
 3. Poll     → mabl agent authoring status --session-id <id>
-              (check until completed, then the test is ready)
+              (check until sessionStatus is terminal)
+4. Validate → check the built test against the intent you asked for
+              (see step 4 — a completed session is not proof)
 ```
 
 You can run multiple planning and authoring sessions concurrently —
@@ -45,11 +48,29 @@ just track the session IDs.
 
 ### After authoring completes
 
-Once `status` returns `completed` with a `createdTestId`, you can:
+Read the terminal output carefully — two fields are easy to misread:
+
+- **`sessionStatus`** is the status field (not `status`). Terminal values are
+  `completed`, `failed`, and `terminated`.
+- **`createdTestId` is NOT a success signal.** It is populated on `failed`
+  sessions too, because a test can be saved by a session that then failed.
+  Check `sessionStatus` for success, never the presence of a test id.
+
+`reportedTestRunId` is the useful signal. When the agent's final validation
+replay passes, it reports that replay to the cloud as a test run and links it
+to the session; `status` surfaces its id plus a `viewTestRunUrl`. So:
+
+- **`reportedTestRunId` present** → the agent ran the test end to end and it
+  passed. You get a real step trace and a screenshot per step, for free — no
+  need to re-run anything.
+- **absent** → nothing proved the test works. Either the validation didn't
+  pass, or the workspace can't report agent runs. Treat the test as unverified.
+
+Other things you can do with the test:
 
 - **Run the test in the cloud:** `mabl tests run-cloud --id <createdTestId>`
 - **Run the test locally:** `mabl tests run --id <createdTestId>`
-- **Export to Playwright (browser tests only):** `mabl tests export --id <createdTestId> --format playwright`
+- **Export to Playwright (browser tests only):** `mabl tests export <createdTestId> --format playwright --file out.spec.ts`
 
 ---
 
@@ -178,8 +199,178 @@ mabl agent authoring status --session-id <sessionId> --verbose
 
 When the session reaches a terminal state (`completed`, `failed`, or
 `terminated`), both verbose and non-verbose output include
-`createdTestId` and `viewTestUrl` so you can immediately run or
-inspect the test.
+`createdTestId` and `viewTestUrl`, plus `reportedTestRunId` and
+`viewTestRunUrl` when the agent's validation replay passed.
+
+---
+
+## 4. Validate — check what was actually built
+
+**A completed session does not mean you got the test you asked for.** The
+agent can build a test that misses an assertion the intent asked for, verifies
+something adjacent to what you wanted, or passes because it never checked the
+thing that matters. So read the test back and compare it to the intent you
+launched with. You already have that intent — no need to write it down
+anywhere.
+
+Always validate. Then **ask before healing**: each fix attempt is another
+5–20 minute cloud session, so report what doesn't match and let the user
+decide whether to spend that.
+
+First confirm this CLI can do it. Probe for the flag rather than trusting a
+version number — the commands this step needs all shipped together, and a
+version check can pass on a build that predates them:
+
+```bash
+# Match --step as a whole word: a plain substring search also matches the
+# older --step-run-id flag, so it would pass on a CLI that can't do this.
+mabl agent debug artifact --help 2>&1 | grep -qE '(^|[[:space:]])--step([[:space:]]|$)' \
+  || echo "This mabl CLI cannot validate an authored test — 'mabl agent debug artifact --step' is missing. Upgrade: npm install -g @mablhq/mabl-cli@latest"
+```
+
+If that prints the warning, stop here and report the test **unverified**, naming
+the missing capability. Don't fall back to re-running the test — that answers a
+different question.
+
+### 4.1 Does the test contain what you asked for?
+
+Export the built test and read its steps. Each step is a single-key object
+keyed by its step type, so assertions are the keys beginning with `Assert`:
+
+```bash
+mabl tests export <createdTestId> --format json --file /tmp/built-test.json
+```
+
+Then check, against your own intent:
+
+- Every "verify / check / assert that ..." in the intent has a matching
+  `Assert*` step. A test that only navigates and clicks proves nothing.
+- **Zero assertion steps is always a failure**, whatever the run said.
+- The actions the intent asked for are present.
+
+`mabl tests export` writes a **file** — it prints nothing to stdout. It also
+refuses some tests ("Default mabl tests can not be exported") and performance
+tests; if it refuses, say so and validate behavior only.
+
+### 4.2 Did it actually run, and pass for the right reason?
+
+Use the run the agent already reported — do not fire a new one:
+
+```bash
+mabl agent debug steps <reportedTestRunId> --all --output json
+```
+
+You get one entry per step with `status` (`passed` / `failed` / `skipped`),
+`duration_ms`, any `error`, and the artifacts it captured.
+
+**Match steps by their `description`, never by position.** The trace lists only
+leaf steps, while the export is a tree — so the third assertion in the export is
+*not* `index: 3` in the trace for any test with a flow or step group. Match the
+trace's `description` against the exported step's description text.
+
+Newer runs prefix each `description` with the step's outline number
+(`"3.1. Click Sign in"`), which makes the match unambiguous — use it when it's
+there. **Don't require it:** runs authored by an older CLI have plain
+descriptions with no number, so a rule that depends on the prefix will fail on
+them.
+
+Then check that:
+
+- every step carrying an assertion is `passed`, **not `skipped`** — a skipped
+  assertion is a test that proved nothing while looking green;
+- every assertion you found in 4.1 appears in the trace.
+
+**If you cannot line the two up, the test is unverified — say so.** Do not fall
+back to position and do not guess: a wrong match makes you report "the assertion
+passed" about a different step, which is the exact failure this step exists to
+catch.
+
+These runs have no step-run ids, so artifacts are addressed by position — and
+`--step` takes the trace's `index` field, *not* the outline number in
+`description`. The two diverge as soon as a flow is involved.
+To look at what the browser actually showed on any step:
+
+```bash
+mabl agent debug artifact screenshot <reportedTestRunId> --step <index>
+```
+
+That writes a PNG and prints its path. Read the image for the steps you
+doubt — it is the cheapest way to catch a test that passed against the wrong
+screen.
+
+### 4.3 Fixing a mismatch — ask first, and never weaken the test
+
+Report the mismatch and ask before spending a heal attempt. On a yes, **pick the
+cheapest way to make the fix** — that decision matters more than it looks:
+
+**Can you name the exact edit?** Then don't open a browser. Hand the change to
+the `mabl-test-edit` skill's structured-step lane, which applies a named
+`insert_after` / `replace` / `move` in seconds. You can name it when:
+
+- the intent asked to verify a variable, the URL, or the viewport — no element
+  lookup needed;
+- the element is one the test already interacts with, so the find descriptor is
+  already sitting on that step in the export you read in 4.1 — copy it into the
+  assertion;
+- an assertion exists but ran in the wrong place, and the fix is to move it.
+
+That lane is not just faster. **A structured insert cannot delete anything**, so
+it removes the whole risk this section is guarding against.
+
+**Otherwise** — the fix needs the live app, e.g. "verify the toast appears" for
+an element nothing in the test has ever touched — edit through the authoring
+agent by passing `test_id` (this edits rather than creates; `name` and URL are
+not needed):
+
+```bash
+mabl agent authoring initiate --test-information '{
+  "test_id": "<createdTestId>",
+  "test_case": "Add an assertion that the cart badge shows 2 after adding an item. Edit in place; do not remove existing steps."
+}'
+```
+
+Poll it like any other session, then re-validate from 4.1. **Bound the agent
+lane at 3 attempts**, then stop and report.
+
+Keep the decision here, in this loop: it holds the authoring intent and the
+obligation not to converge by deleting coverage, which a general-purpose editor
+has no way to know. Delegate only the mechanism. And for any change that isn't a
+validation fix at all — a rename, a label, a deliberate step edit — the user
+should be pointed at `mabl-test-edit` directly.
+
+Before accepting any attempt, prove the fix didn't just delete the problem:
+
+```bash
+mabl tests versions <createdTestId>
+mabl tests compare <createdTestId>:<previousVersion> <createdTestId>:<newVersion> --output json
+```
+
+The diff summarizes `added` / `removed` / `changed` steps. **Any `Assert*`
+step in `removed` that you did not explicitly ask to remove is a failure, not
+a fix** — an edit that turns a run green by dropping coverage is worse than the
+mismatch you started with. Re-prompt with "add the assertion; do not remove
+steps", and count it as one of the three attempts. Run this after a structured
+edit too: it should show a clean single insert, and if it doesn't, something
+other than your edit changed the test.
+
+If neither lane is open — the workspace has neither the structured edit tools nor
+agentic test editing — stop looping and report the mismatch unverified. Don't
+re-run the test hoping for a different answer.
+
+### 4.4 Report
+
+Whether you succeeded or gave up, end with:
+
+- what you checked, and what did or didn't match the intent;
+- how many heal attempts you used;
+- every id: planning session, each authoring session, `createdTestId`,
+  each `reportedTestRunId`, and the versions you compared.
+
+Never report a test as verified when `reportedTestRunId` was absent or an
+assertion was skipped. Say it is unverified and why.
+
+`references/validate-and-heal.md` has the detail: how to read the export,
+what the trace looks like, and the failure modes worth knowing.
 
 ---
 

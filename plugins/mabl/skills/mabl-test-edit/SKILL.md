@@ -12,6 +12,12 @@ description: |
   click before the assertion", "change the URL that step 2 opens".
   For CREATING a new test use mabl-test-authoring; for debugging a FAILING
   test use mabl-debug. This skill edits a test that already exists.
+  One boundary: if the test was just authored in this session and its own
+  validation found a gap, mabl-test-authoring's validate-and-fix step owns that
+  decision — it holds the authoring intent and the rule against converging by
+  deleting coverage. Don't take the decision over. Do accept the work: that step
+  routes its specifiable fixes here on purpose, because a structured step edit
+  is instant and cannot delete anything.
 allowed-tools: Bash, mcp__mabl__*
 ---
 
