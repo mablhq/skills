@@ -5,6 +5,30 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.2.0] - 2026-08-04
+### Added
+- `mabl-test-edit` skill — change a test that already exists. It routes each
+  edit to the cheapest lane that can make it deterministically: metadata
+  (rename, labels, enable/disable), structured step edits
+  (replace / insert / delete / move, no browser), or a live cloud authoring
+  agent when the change needs to look at the running app. Handles shared
+  reusable flows (blast-radius review before you commit), branch-aware writes
+  with a confirmation before touching the default branch, and honest
+  degradation when the authoring preview isn't enabled for the workspace.
+- `mabl-test-authoring` now checks the test it built. After a session
+  completes it reads the test's steps back and compares them to the intent it
+  was given, and reads per-step pass/fail from the validation run the agent
+  already reported — so nothing has to be re-run. On a mismatch it offers to fix
+  the test, routing to `mabl-test-edit`'s structured-step lane when the edit can
+  be named exactly (instant, and it can't delete a step) and only opening a cloud
+  session when the fix needs the running app. Either way it diffs the versions
+  afterwards, so a fix can't go green by dropping an assertion.
+
+### Fixed
+- `mabl-test-authoring` documented the authoring session's status field as
+  `status` (it is `sessionStatus`) and implied `createdTestId` meant success.
+  A test id is set on failed sessions too, so it never proved anything.
+
 ## [1.1.0] - 2026-07-27
 ### Added
 - `mabl-init` skill — one-time project setup that discovers your workspace,
