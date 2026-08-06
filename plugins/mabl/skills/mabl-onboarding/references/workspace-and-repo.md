@@ -275,3 +275,37 @@ Counted zeros appear **as rows**, phrased as questions. The four-way affordance 
 explicit — "Does that look right?" is not an affordance. Log every correction to
 the ledger, with its downstream effect, the moment they say it.
 
+
+---
+
+## Related repos elsewhere on the machine (§2)
+
+The C2 floor scans the current repo. That is often the wrong repo, or only one of
+several: the repository defining the application under test is frequently a
+sibling checkout, a directory one level up, or another clone in a multi-repo
+workspace. Search for it by product name and by the app's hostname stem:
+
+```bash
+# PROBE. Read-only. Sibling and parent checkouts whose path or remote matches.
+NEEDLE='<product-or-host-stem>'      # e.g. the stem of shopbricks.example.com
+for d in . .. ../..; do
+  find "$d" -maxdepth 3 -name .git -type d 2>/dev/null | while read -r g; do
+    r=$(git -C "${g%/.git}" remote get-url origin 2>/dev/null)
+    case "${g}${r}" in *"$NEEDLE"*) printf '%s\t%s\n' "${g%/.git}" "${r:-no-remote}";; esac
+  done
+done
+```
+
+**Why this matters more than the extra file coverage: a related repo lists the
+environments.** Read its CI configuration, compose files and `.env*` filenames for
+the deployment targets the team actually has — dev, staging, preview, production —
+and carry **all** of them into gate C3, rather than the single public URL the
+operator happened to mention in conversation. A run that creates one production
+environment when the repo describes four has under-built the workspace, and the
+gap is invisible in the closing report unless this step ran.
+
+Finding nothing is a normal outcome and not a failure. Say the repo was not
+present locally, say what was searched, and continue with what the operator told
+you. Do **not** substitute another mabl workspace for the missing repo — that
+needs an explicit ask (standing rule, `SKILL.md`), and it imports conventions
+nobody in this run chose.

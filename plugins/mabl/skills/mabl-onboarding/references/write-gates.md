@@ -420,3 +420,93 @@ address from `mabl users list`. Credentials by name only. The operator's own
 identity is a separate question and is governed by §1's scoped rule — it belongs in
 the report header, and there is no reason to put it in this file at all.
 
+
+---
+
+## Irreversibility preflight (§0)
+
+`mabl tests` and `mabl datatables` have **no delete subcommand** — anything created
+is permanent from the CLI. `applications`, `environments`, `branches` and
+`agent-instructions` delete cleanly. Do not carry that table from memory; the
+surface moves between versions. Probe it in step 0 and record the result in the
+write log, so every later gate can state the true irreversibility:
+
+```bash
+# PROBE. Read-only. Which entities can be undone if this run gets one wrong?
+for n in applications environments tests datatables branches agent-instructions; do
+  printf '%-20s ' "$n"
+  mabl "$n" --help 2>&1 | grep -qE '^[[:space:]]+mabl '"$n"' delete' \
+    && echo 'delete: YES' || echo 'delete: NO — creation is PERMANENT'
+done
+```
+
+**Never create anything as a probe in a no-delete family.** If a capability
+question can only be answered by creating something permanent, ask the operator
+instead of answering it yourself. This rule was written after a capability probe
+left an undeletable scratch test in a customer-shaped workspace.
+
+**Never re-issue a create on a status that is not proven terminal.**
+`RATE_LIMITED` from cloud authoring is the case that matters: it means the
+concurrency quota rejected *this attempt*, not that the session failed. It usually
+completes on its own. Wait and re-poll. Re-firing it produced four undeletable
+duplicate tests in a real run. Keep concurrent cloud-authoring sessions to about
+two or three — concurrency is a performance choice for reads and a **risk** choice
+for irreversible writes.
+
+### Recovering a duplicate you cannot delete
+
+The CLI cannot rename a test (`tests edit-metadata` handles labels only). The MCP
+tool can: `edit_mabl_test_metadata` supports `set_name`, `set_description` and
+`set_enabled`. Recover in one call, then **report it**:
+
+1. rename to `zz-duplicate - <original name>`
+2. `set_enabled: false`
+3. add the label **`to-delete`**
+4. set the description to name the canonical entity's id and why the duplicate exists
+5. list every `to-delete` entity in the closing report, under a heading that says
+   plainly that **only a human can remove them, in the web app**
+
+Never leave this implicit. A disabled duplicate with no label and no report line is
+invisible within weeks, and the next dedupe pass will read it as real coverage.
+
+---
+
+## Verify from a different source than the one that wrote (§6)
+
+Every failure mode this skill has hit in the field **reported success**: `exit 0`,
+`OK`, a poll status of `ALL TERMINAL` mid-run, labels "applied" that selected
+nothing. None surfaced as an error, and each produced a workspace that *looked*
+finished.
+
+**A write's own return value is not evidence the write is correct.** Read it back
+through a different surface than the one that made the claim:
+
+| Wrote | Verify with | The failure it catches |
+|---|---|---|
+| a label | a **filter query** for that label | a suite that selects zero tests |
+| a test | an actual run | a test bound to a URL variable that does not resolve |
+| a plan | its returned `execution_stages` | ids silently dropped by the API |
+| an environment | `describe` | variables or URL rows that never landed |
+| a bulk status | per-item re-query | a poll that reports finished while work runs |
+
+### Two traps behind this
+
+**A silent list cap makes "absent" and "truncated" indistinguishable.**
+`mabl workspaces list` returns 10 rows with no "showing 10 of N". Every inventory,
+dedupe and does-this-already-exist check rests on lists being complete, so pass an
+explicit high `--limit` and reconcile the count. Treating "not in the list" as
+"does not exist" is how a run creates a duplicate of something it already had.
+
+**Multi-value flags through an unquoted shell variable are unsafe.** zsh does not
+word-split unquoted parameter expansions; bash does. So this silently creates ONE
+label containing a space:
+
+```sh
+L="smoke search"
+mabl tests edit-metadata "$ID" --add-labels $L     # -> label literally "smoke search"
+```
+
+The tell is that literal words on the command line (`--add-labels smoke search`)
+split correctly, so plan labels can be right in the same run that test labels are
+wrong. Pass literals, build a real array, or use the MCP tool — never an unquoted
+variable. Verify with a filter query, per the table above.

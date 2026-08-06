@@ -3,10 +3,11 @@ name: mabl-onboarding
 description: |
   Onboard a NEW or EMPTY mabl workspace. Interview the human about what they
   ship and what they need verified, then build out the parts of that workspace
-  an agent can actually build — environments, deployment URL rows, DataTables,
-  in-product agent instructions, mabl branches, CI deployment triggers — and
-  record everything else as team policy, drafting every write and applying it
-  only on an explicit yes.
+  an agent can actually build — environments, deployment URL rows, in-product
+  agent instructions, mabl branches, CI deployment triggers — and record
+  everything else as team policy, drafting every write and applying it only on
+  an explicit yes. Test data, tests and plans are NOT built here: they are
+  decisions this skill hands off, each behind its own question.
   Fire when the mabl side doesn't exist yet, for example "onboard my mabl
   workspace", "I just signed up for mabl", "my mabl workspace is empty",
   "we're new to mabl", "roll mabl out to my team", or "/mabl-onboarding".
@@ -102,6 +103,32 @@ never overstate one.
   step 8, branch D.
 - **Attribution travels with every entity.** One a human made is "you created
   this, not me"; one created over the MCP server names the tool.
+- **Never read another workspace without asking.** Another workspace may look
+  like free evidence — an existing app under test, a naming convention already in
+  use. It is still not this run's to open. Ask first, naming the workspace and what
+  reading it would be for, and treat a no as final. This is not only privacy: a convention
+  copied from elsewhere silently becomes this team's convention without anyone
+  deciding it, and during any evaluation of this skill it contaminates the run.
+- **This skill creates no test, no DataTable and no plan.** Each is a decision
+  with an owner, and each has its own question in step 9. Building them here is
+  how an onboarding run quietly becomes someone else's test strategy.
+
+## Two rules that outrank convenience
+
+**Irreversibility.** `mabl tests` and `mabl datatables` have **no delete
+subcommand**; creation there is permanent. Probe the real surface in step 0 rather
+than trusting that sentence, never create anything as a probe in a no-delete
+family, and never re-issue a create on a status that is not proven terminal —
+`RATE_LIMITED` means *wait and re-poll*, not *failed*. Recovering a duplicate
+(rename, disable, label `to-delete`, report it as human-only cleanup) and the
+probe itself: `references/write-gates.md`.
+
+**Verification.** Every failure this skill has hit in the field reported success —
+`exit 0`, `OK`, labels "applied" that selected nothing. **A write's own return
+value is not evidence the write is correct**: read it back through a *different*
+surface than the one that wrote it. The per-entity table, the silent list cap that
+makes "absent" and "truncated" indistinguishable, and the unquoted-variable
+splitting hazard: `references/write-gates.md`.
 
 Which command can create what, with exact flags and types:
 `references/cli-surface.md`.
@@ -137,6 +164,13 @@ commented-out code as a finding, or hand back raw enumerator output — the gate
 closes with a filled-in draft in which every row carries its source and a marker.
 → `references/workspace-and-repo.md`.
 
+**Do not scan only the current directory.** The repo defining the app under test is
+often a sibling checkout or one level up. Search the machine for related repos by
+product name and host stem — and find them mainly because **a related repo lists
+the environments**, so gate C3 gets all four deployment targets instead of the one
+public URL the operator mentioned. Finding nothing is a normal outcome, not a
+failure. → `references/workspace-and-repo.md`.
+
 **3. Gate C3 — application, environments, URLs, network reach.** Settle the
 **application first**, on the route the step-0 state selects: reachable → offer
 the write; configured-but-unauthenticated → offer the **sign-in** first, and only
@@ -149,9 +183,11 @@ drafting in `references/interview.md`.
 
 **4. Gate C4 — authentication and personas.** Decides the sign-in mechanism,
 whether credentials are per-environment or shared, how many roles, whether a
-temporary inbox is needed, and which personas are DataTable rows rather than mabl
-credentials. Must not: offer to create a credential over the MCP server — that
-puts a live password in this transcript — or record anything but names. →
+temporary inbox is needed, and which personas are test **data** rather than mabl
+credentials. Record those personas as policy for the authoring hand-off; do not
+build a DataTable for them here. Must not: offer to create a credential over the
+MCP server — that puts a live password in this transcript — or record anything but
+names. →
 `references/interview.md`.
 
 **5. The depth sheet.** Decides the fifteen policy rows, presented **pre-filled
@@ -162,7 +198,11 @@ dropped. This step also classifies which rows have a product surface; steps 7 an
 10 must agree with that classification. → `references/interview.md`.
 
 **6. Write gates.** Decides what actually gets built — environments, URL rows,
-DataTables, agent instructions, mabl branches, the CI deployment-event patch.
+agent instructions, mabl branches, the CI deployment-event patch. **DataTables are
+not on this list.** Test data is a test-authoring decision: the question is not
+"does a DataTable exist" but "does this test need one, and does an existing one
+already cover it" — which cannot be answered before any test exists. Carry it to
+step 9 and to the authoring hand-off, and record D7 as policy here.
 One write, one gate, one approval; never batched. Show the exact command, put
 each irreversibility disclosure in the gate where the yes happens, emit the write
 log line the moment the command returns, and verify with a read-back because exit
@@ -188,20 +228,43 @@ why a path breaks where a name doesn't, the preconditions, the handoff block, th
 four branches, and the fallback section with the marker comment that lets a later
 `mabl-init` replace rather than append.
 
-**9. Optional hand-offs, named not invented.**
+**9. Optional hand-offs — each one a question first, named not invented.**
 
 - **App exploration.** If the human wants coverage designed from the real app
   rather than from the repo, hand off to **`mabl-test-coverage-design`**, which
   explores a feature black-box in a real browser. **Do not build a crawler.**
   Say plainly that this run read the repo and asked questions, and did not crawl
   their app.
-- **Authoring.** A first test is **`mabl-test-authoring`** (one test) or
-  `mabl-test-coverage-design` (a suite). Name the hand-off; don't author
-  silently.
+
+- **Authoring — ask what to test before proposing anything.** Discovery can tell
+  you what an app *has*: routes, categories, a cart, a locale path. It cannot tell
+  you what is **worth verifying**, which is a judgment with an owner. Reading the
+  nav and inventing a suite from it produces tests that look reasonable and were
+  never sanctioned.
+
+  So: put the candidates forward **as a proposal**, shortest list that covers the
+  critical journeys, each with the one sentence of why. Then wait. Only after the
+  operator has picked, cut or replaced does anything reach
+  **`mabl-test-authoring`** (one test) or `mabl-test-coverage-design` (a suite).
+  This is stricter than a per-batch kickoff confirmation: that one gates *when* an
+  approved test is built, this one gates *what the tests are at all*.
+
+- **Plans — only after tests exist, and only after asking how to group.** Two hard
+  preconditions: a plan needs at least one test id, so a day-one workspace cannot
+  have one; and the grouping is the operator's call, never inferred. **Group by
+  product module, not by test tier** — smoke/regression/nightly says *when* a test
+  runs, not *what it covers*. Look for a grouping that already exists (their Jira
+  components and process docs first, an existing test-case folder layout second —
+  those folders **are** the plans) before proposing your own. Plan labels carry the
+  suite and module; test labels carry the features that test covers; a test belongs
+  to **one** plan per suite, the closest to what it validates. **Never schedule a
+  plan or attach a trigger.** → `references/interview.md`.
+
 - **Migration (D1).** If existing suites were **confirmed** by a config file,
   offer to mirror those specs. Never offer to migrate a dependency-only hit. →
   `references/workspace-and-repo.md` for the two-tier CONFIRMED / WEAK / nothing
-  rule that decides which of those a hit is.
+  rule that decides which of those a hit is. A confirmed suite's **folder layout
+  is also the plan grouping** above — read it before proposing one.
 
 **10. The closing report.** The last step of the run, and the only report it
 emits. Must not: run before `mabl-init` has returned, cut anything, or take a
@@ -216,11 +279,11 @@ the `§` numbers inside these files refer to the numbered steps above.
 | File | What it holds | Steps |
 |---|---|---|
 | `references/cli-surface.md` | the verified CLI surface: which commands create and which only read, exact flag names and types, the version floor and its evidence, every footgun with its consequence, the stdout-pollution hazards and their required `sed`, the commands that reject `--output`, the silent 10-result list cap, and which footguns cannot be observed on a day-one workspace | 0, 6 |
-| `references/write-gates.md` | the write-gate discipline: the gate template, the write log, per-entity gates and caveats, read-back verification, the irreversibility disclosures and where each must appear, the machine-install gate, and the committed-file gate with its three modes | 0, 6, 7 |
-| `references/interview.md` | gather-then-confirm mechanics, the correction ledger and its honest-zero renderings, gates C3/C4 drafting content, and the fifteen-row depth sheet with its markers, cap and full priority order | 3, 4, 5 |
+| `references/write-gates.md` | the write-gate discipline: the gate template, the write log, per-entity gates and caveats, read-back verification, the irreversibility disclosures and where each must appear, the machine-install gate, the committed-file gate with its three modes, the **irreversibility preflight probe**, **duplicate recovery and its `to-delete` reporting**, and the **verify-from-a-different-source** table with the list-cap and shell-splitting traps | 0, 6, 7, 9 |
+| `references/interview.md` | gather-then-confirm mechanics, the correction ledger and its honest-zero renderings, gates C3/C4 drafting content, the fifteen-row depth sheet with its markers, cap and full priority order, and the **plan-grouping doctrine** (module not tier, the existing-taxonomy search order, the plan/test label split, never schedule) | 3, 4, 5, 9 |
 | `references/mcp-and-handoff.md` | the three MCP states and each one's remedy, the probe and multi-server ruling-out, the application routes, and gate C5: preconditions, handoff block, four branches, and the fallback `## mabl testing` section with its marker comment | 0, 1, 3, 8 |
 | `references/closing-report.md` | the two-tier report spec: the tier-1 closed list with its binding budgets and eviction order, tier-2 sections A–G, the write-log-derived counts, and the full must-hold ledger | 10 |
-| `references/workspace-and-repo.md` | gate C1 (role resolution, counted emptiness, the seeded demo files, the three-way new-workspace route with its hedges and the account-admin/company-owner distinction) and gate C2 (the enumerating floor, the reading done directly, the closing draft) | 1, 2 |
+| `references/workspace-and-repo.md` | gate C1 (role resolution, counted emptiness, the seeded demo files, the three-way new-workspace route with its hedges and the account-admin/company-owner distinction) and gate C2 (the enumerating floor, the reading done directly, the closing draft, and the **related-repo search** that supplies the full environment list) | 1, 2 |
 
 Finding things inside the four long files:
 
@@ -229,6 +292,12 @@ grep -n 'reject `--output`' references/cli-surface.md   # the four that hard-fai
 grep -n 'unobservable'      references/cli-surface.md   # the day-one-invisible footguns
 grep -n 'WRITE LOG'         references/write-gates.md   # the log's rules
 grep -n 'THREE modes'       references/write-gates.md   # CREATE / APPEND / REPLACE
+grep -n 'delete: NO'        references/write-gates.md   # the irreversibility probe
+grep -n 'to-delete'         references/write-gates.md   # duplicate recovery + reporting
+grep -n 'different source'  references/write-gates.md   # the read-back table
+grep -n 'already exists, in this order' references/interview.md   # plan grouping search
+grep -n 'Never schedule'    references/interview.md     # the no-trigger rule
+grep -n 'Related repos'     references/workspace-and-repo.md      # sibling-checkout search
 grep -n 'Needs authentication' references/mcp-and-handoff.md   # state 2
 grep -n '^\*\*[A-D]\.'      references/mcp-and-handoff.md      # the four branches
 grep -n 'Must-hold'         references/closing-report.md       # the ledger

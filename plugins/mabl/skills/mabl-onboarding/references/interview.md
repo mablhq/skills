@@ -175,7 +175,7 @@ here, mechanically:
    | 1 | **D12** Agent Instructions | it *is* a write — the flagship entity of the empty-workspace case |
    | 2 | **D14** Autonomous guardrails | gates everything you do next; a wrong answer invalidates later writes |
    | 3 | **D5** CI/CD triggers | product surface: `deployments create` |
-   | 4 | **D7** Test data | product surface: `datatables create`, `--variables` |
+   | 4 | **D7** Test data | product surface: `--variables` (DataTables deferred to authoring) |
    | 5 | **D1** Migration | decides whether authoring seeds from existing specs — reshapes the whole plan, and §9's hand-off |
    | 6 | **D9** Parallelism and flakiness | data isolation constrains D7's answer, so it is worth having early |
    | 7 | **D13** Failure triage | the first thing that happens after the first run; feeds D12's instruction text |
@@ -238,7 +238,7 @@ nothing" about a DataTable it also lists as built.
 | Row | Product surface | What §6 actually writes | §7 marker |
 |-----|-----------------|--------------------------|-----------|
 | **D12** In-product Agent Instructions | **fully** | `mabl agent-instructions create` — the row *is* the entity | `the Agent Instruction itself` |
-| **D7** Test data | **partly** | `mabl datatables create` for static persona/data rows; `mabl environments create --variables` for per-environment values. Setup/teardown of data *state* has no surface. | `partly — DataTable <name>/<id>, env variables on <env>` |
+| **D7** Test data | **partly** | `mabl environments create --variables` only, for per-environment values. **DataTables are deliberately NOT built on this run** — whether a test needs one, and whether an existing DataTable already covers it, is a test-authoring decision and there are no tests yet. Setup/teardown of data *state* has no surface at all. | `partly — env variables on <env>; DataTables deferred to authoring` |
 | **D5** CI/CD triggers | **partly** | `mabl deployments create` — drafted in §6 as a CI patch. Rerun policy, warmup and scheduling live in **plans**, and a plan needs at least one test, so a day-one workspace has none to configure. | `partly — the deployment-event command in <workflow>` |
 | D1–D4, D6, D8–D11, D13–D15 | **none** | nothing | `nothing — text only` |
 
@@ -253,3 +253,55 @@ Record which rows the operator left blank, plus every `[?] deferred` row, as
 **open questions**. Do not fill them with plausible answers, and name them in the
 report as declined-to-fill or deferred, distinguishing the two.
 
+
+---
+
+## Plan grouping — the questions to ask before any plan exists (§9)
+
+Plans are out of reach on a day-one workspace: `create_mabl_plan` requires at least
+one test id. When a later run does have tests, or the operator asks for plans
+directly, the grouping is **their** call. Ask before proposing.
+
+### Group by product module, not by test tier
+
+Smoke / regression / nightly is the tempting axis and the wrong one. It describes
+*when* a test runs, not *what it covers*, so it tells a reader nothing about which
+part of the product is verified, and it collapses as soon as the suite grows past
+a handful of tests. Group by the modules of the product.
+
+### Look for a grouping that already exists, in this order
+
+1. **The team's tracker and process docs.** Jira components, epics or labels; the
+   ticketing system's module or product-area field; internal engineering and
+   quality process documents. If a functional-area taxonomy already exists, **that
+   is the grouping** — adopt it. Inventing a parallel one guarantees two
+   vocabularies for the same product and no one using either consistently.
+2. **An existing test-case folder structure.** If their current test cases live in
+   folders, **the folders are the plans**, and each folder's tests go into its
+   plan. Do not re-derive a structure the team already maintains.
+3. **Only if neither exists**, propose modules from the app's own structure — and
+   mark it explicitly as a proposal for them to correct, not a decision.
+
+Do **not** substitute another mabl workspace as the source of a grouping. Reading
+another workspace requires asking first (see the standing rule in `SKILL.md`), and
+a convention lifted from elsewhere becomes this team's convention without anyone
+choosing it.
+
+### The label split
+
+| Level | Carries |
+|---|---|
+| **Plan labels** | the **test suite**, plus the **module / feature** that plan covers |
+| **Test labels** | the **modules / features that test actually covers** — often several |
+
+A test may cover several features and still belongs in **one** plan per suite: the
+plan closest to what it validates. Do not fan a test across plans to mirror its
+labels — the labels already record the coverage, and duplicated membership makes
+every run count that test more than once.
+
+### Never schedule
+
+Creating a plan on request is fine. Deciding **when it runs** is not this skill's
+call: a schedule or deployment trigger changes what happens in someone's CI
+without them choosing it. Create plans unscheduled, say so, and name the command
+or UI path the operator would use to schedule it themselves.
