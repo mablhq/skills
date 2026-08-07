@@ -23,7 +23,7 @@ fan-out; it authors each test with `mabl agent authoring` (the companion
 
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
-MIN_MABL_CLI_VERSION=2.111.0
+MIN_MABL_CLI_VERSION=2.124.30
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 
@@ -102,6 +102,10 @@ If a test can't create its own subject, it must not delete anything.
    the strategy (default `serial`). Order the intents so the central happy-path
    test is authored first — it seeds every test after it. Report each
    `createdTestId` + `viewTestUrl`.
+9. **Validate what got built.** A finished authoring run is not proof the test
+   is right. Check each authored test against the intent it came from, then
+   report the suite in the three states below. A suite of links to tests that
+   do the wrong thing is worse than a smaller suite you actually verified.
 
 ## Authoring each test
 
@@ -143,6 +147,100 @@ succeeded (with `createdTestId`) and which failed, so the run is resumable. In
 `serial`, if one test fails, don't block the suite — continue to the next test,
 referencing the siblings that did succeed (skip the failed one's ID).
 
+## Validating each authored test
+
+`sessionStatus: completed` means the agent finished, not that it built the test
+you asked for. It can miss an assertion the intent called for, assert on
+something adjacent, or go green because it never checked the thing that
+mattered. Across a fan-out this compounds: five confident links, and nobody has
+looked at any of them. So validate each test against **the intent you authored
+it from** — you already have that text, no need to write it down anywhere.
+
+Validate every test. Then **ask before healing**: each fix is another 5–20
+minute cloud run, so report the mismatches and let the user decide whether to
+spend that. Never heal automatically across a whole suite.
+
+First confirm once, before the loop, that this CLI can validate at all. Probe
+for the flag rather than trusting the version — these commands shipped
+together, so a version check can pass on a build that predates them, and you'd
+rather learn that once than N times:
+
+```bash
+# Match --step as a whole word: a plain substring search also matches the
+# older --step-run-id flag, so it would pass on a CLI that can't do this.
+mabl agent debug artifact --help 2>&1 | grep -qE '(^|[[:space:]])--step([[:space:]]|$)' \
+  || echo "This mabl CLI cannot validate authored tests — 'mabl agent debug artifact --step' is missing. Upgrade: npm install -g @mablhq/mabl-cli@latest"
+```
+
+If that prints the warning, stop validating and report every authored test as
+**unverified**, naming the missing capability once for the whole suite. Don't
+re-run the tests instead — that answers a different question.
+
+Per test, two checks:
+
+**Does it contain what you asked for?** Export it and read the steps back.
+Each step is a single-key object keyed by its step type, so assertions are the
+keys starting with `Assert`:
+
+```bash
+mabl tests export <createdTestId> --format json --file /tmp/built-<createdTestId>.json
+jq '[.. | objects | keys[] | select(startswith("Assert"))] | length' /tmp/built-<createdTestId>.json
+```
+
+Every "verify / check / assert that ..." in the intent needs a matching
+`Assert*` step, and the actions the intent asked for must be present. **Zero
+assertions is always a failure**, whatever the run reported. (`mabl tests
+export` writes a file and prints nothing; it refuses default and performance
+tests — if it refuses, say so and validate behavior only.)
+
+**Did it run, and pass for the right reason?** Use the run the agent already
+reported — don't fire a new one:
+
+```bash
+mabl agent debug steps <reportedTestRunId> --all --output json
+```
+
+Match steps by their `description`, never by position — the trace lists only
+leaf steps while the export is a tree, so the third assertion in the export is
+not `index: 3` in the trace for any test with a flow or step group. Then check
+every assertion step is `passed` and **not `skipped`** (a skipped assertion is
+a test that proved nothing while looking green), and that every assertion you
+found in the export shows up in the trace. If you can't line the two up, the
+test is **unverified** — say so rather than guessing.
+
+To see what the browser actually showed on a step you doubt:
+
+```bash
+mabl agent debug artifact screenshot <reportedTestRunId> --step <index>
+```
+
+`--step` takes the trace's `index`, not the outline number in `description`.
+
+**`reportedTestRunId` absent means unverified**, full stop — nothing proved the
+test works. Don't fall back to `mabl tests run-cloud`; a fresh run answers a
+different question than the validation the agent performed.
+
+The `mabl-test-authoring` skill owns this lane in depth (the heal routing, the
+no-weakening version diff, the full failure-mode table). Use it when a single
+test needs fixing; this skill owns validating the suite and reporting it.
+
+### Report the suite in three states
+
+One test's validation failing must not abort the others — same degrade-gracefully
+stance as authoring. Validate them all, then report every test in exactly one
+state:
+
+| State | Means | Report |
+|---|---|---|
+| **Authored + validated** | assertions present, ran, passed for the right reason | `createdTestId` + `viewTestUrl` |
+| **Authored, not validated** | test exists but the check failed or couldn't run — missing assertion, skipped assertion, no `reportedTestRunId`, steps that wouldn't line up | id + url + **what specifically didn't match** |
+| **Authoring failed** | no usable test — `sessionStatus` `failed`/`terminated`, or timed out | what failed, so the run is resumable |
+
+That three-state report is the deliverable. Never collapse the middle state
+into the first: "authored" and "verified" are different claims, and a suite
+that quietly reports unverified tests as done is the exact failure this step
+exists to prevent.
+
 ### How a test references another
 
 The planning agent has no structured "reference test" parameter — it reads
@@ -168,6 +266,48 @@ definition — the same mechanism the mabl web app's "Add reference tests" uses.
 - In `serial`, collect each `createdTestId` as authoring completes and feed all
   the prior created IDs into the reference block of the next test, so each test
   sees every sibling built before it.
+
+### Referencing vs copying — two different asks
+
+A reference says *"match this test's conventions."* A copy says *"start from
+this test's actual steps."* They solve different problems and you can use both
+at once:
+
+| | Reference block | Copy |
+|---|---|---|
+| What the planner does | studies N tests, plans fresh steps | plans a **diff** against one test's real steps |
+| Good for | consistency across a suite | a new test that is 90% an existing one |
+| How many | several | exactly one source |
+
+Reach for a copy when the workspace already has a test that is nearly the one
+you're about to author — a variant differing by one input, one payment method,
+one role. Say it plainly in the `--intent`, naming the test and its id:
+
+```
+Start from an exact copy of the "Guest Checkout" test (<testId>), then change
+only the payment step to use PayPal. Keep every other step and assertion as-is.
+```
+
+The planner resolves that to a structured copy on the test information, and the
+authoring agent imports the source's real steps — with their trained element
+finds — instead of re-deriving them. That is both faster and closer to the
+original than re-authoring from a reference. The source test is only read; it
+is never modified.
+
+Two things to keep in mind:
+
+- **Still say what's different.** A copy with a vague "and adjust as needed"
+  produces a duplicate. Name the step to change and what it becomes, and say
+  which steps must stay untouched.
+- **It changes the strategy calculus.** A copy-seeded test skips most of the
+  exploration an authoring run does, so it lands much faster than a normal
+  5–20 minute run. When most of a suite is variants of one anchor test, author
+  the anchor first and copy from it — you get `serial`'s consistency without
+  paying `serial`'s full wall-clock for every test after the first.
+
+If the workspace's planner doesn't support copying yet, nothing breaks — it
+just plans the test normally from the intent text, and the reference block is
+still doing its job.
 
 ## Coverage patterns (the question sets)
 

@@ -5,6 +5,22 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.3.0] - 2026-08-07
+### Added
+- `mabl-test-coverage-design` now validates the tests it authors instead of
+  stopping at the links. Each test is checked against the intent it was built
+  from — assertions actually present, actually run, actually passed — and the
+  suite is reported in three states: authored + validated, authored but
+  unverified (with what didn't match), and authoring failed. One test failing
+  validation doesn't stop the others.
+- Copying an existing test in `mabl-test-coverage-design`: when the workspace
+  already has a test that's nearly the one you need, seed from it and describe
+  only what differs, rather than authoring it from scratch.
+
+### Changed
+- `mabl-test-coverage-design` now requires mabl CLI 2.124.30 (was 2.111.0) for
+  the commands the validation step uses.
+
 ## [1.2.0] - 2026-08-04
 ### Added
 - `mabl-test-edit` skill — change a test that already exists. It routes each
