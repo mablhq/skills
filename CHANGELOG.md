@@ -15,7 +15,9 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   validation doesn't stop the others.
 - Copying an existing test in `mabl-test-coverage-design`: when the workspace
   already has a test that's nearly the one you need, seed from it and describe
-  only what differs, rather than authoring it from scratch.
+  only what differs, rather than authoring it from scratch. The fan-out step
+  now makes that choice per test, so a suite of variants copies from its anchor
+  instead of referencing it.
 
 ### Changed
 - `mabl-test-coverage-design` now requires mabl CLI 2.124.30 (was 2.111.0) for

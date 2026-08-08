@@ -100,8 +100,11 @@ If a test can't create its own subject, it must not delete anything.
    tests + what was dropped.
 8. **Fan out.** Author each intent with `mabl agent authoring` (below), using
    the strategy (default `serial`). Order the intents so the central happy-path
-   test is authored first — it seeds every test after it. Report each
-   `createdTestId` + `viewTestUrl`.
+   test is authored first — it seeds every test after it. For each test after
+   the first, decide whether it is a **variant** of one already authored (same
+   shape, one thing changed) or a genuinely different behavior: variants copy
+   from that test, the rest reference it. See *Referencing vs copying*. Report
+   each `createdTestId` + `viewTestUrl`.
 9. **Validate what got built.** A finished authoring run is not proof the test
    is right. Check each authored test against the intent it came from, then
    report the suite in the three states below. A suite of links to tests that
@@ -132,14 +135,20 @@ How the tests get authored relative to each other. Pick a mode; default to
 
 | Mode | Behavior | Wall-clock | Use when |
 |---|---|---|---|
-| `serial` (default) | author sequentially, central happy-path first; each test references **all** prior siblings (plus any existing team tests) | ~N tests | default — the first test seeds the rest and every test after it builds on what already worked |
+| `serial` (default) | author sequentially, central happy-path first; each test copies from a prior sibling it is a variant of, and references **all** the others (plus any existing team tests) | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
 | `parallel` | author all intents at once, independently | ~1 test | speed matters; consistency comes from existing team tests (reference those) |
 
 `serial` is the default because it *is* the seed: the central happy-path test
-is authored first, and every test after it references all the siblings already
+is authored first, and every test after it builds on the siblings already
 created, so the suite converges on one shape. Each cloud authoring run takes
 5–20 min, so `serial` of N tests ≈ N× the wall-clock of `parallel` — switch to
 `parallel` only when speed matters more than consistency and the user says so.
+
+Most suites contain at least one pair that differs by a single field, input, or
+role — the second of that pair is a **copy**, not a reference, and copying is
+both faster and closer to the original. Don't default the whole fan-out to
+references just because `serial` says "references": that is the fallback for
+tests whose shape is genuinely different, not the choice for a variant.
 
 **Degrade gracefully — these runs are slow and can fail or time out.** One
 failed authoring run must not abort the rest: keep going and report which tests
