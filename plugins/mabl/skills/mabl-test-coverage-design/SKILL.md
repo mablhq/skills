@@ -100,11 +100,11 @@ If a test can't create its own subject, it must not delete anything.
    tests + what was dropped.
 8. **Fan out.** Author each intent with `mabl agent authoring` (below), using
    the strategy (default `serial`). Order the intents so the central happy-path
-   test is authored first — it seeds every test after it. For each test after
-   the first, decide whether it is a **variant** of one already authored (same
-   shape, one thing changed) or a genuinely different behavior: variants copy
-   from that test, the rest reference it. See *Referencing vs copying*. Report
-   each `createdTestId` + `viewTestUrl`.
+   test is authored first — it seeds every test after it. Every test after the
+   first gets sibling context, never none: if it is a **variant** of one already
+   authored (same shape, one thing changed) copy from that one; otherwise
+   reference all prior siblings. See *Referencing vs copying*. Report each
+   `createdTestId` + `viewTestUrl`.
 9. **Validate what got built.** A finished authoring run is not proof the test
    is right. Check each authored test against the intent it came from, then
    report the suite in the three states below. A suite of links to tests that
