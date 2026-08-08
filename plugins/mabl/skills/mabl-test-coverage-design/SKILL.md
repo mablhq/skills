@@ -130,19 +130,25 @@ detail; this skill owns deciding *which* tests to author and *in what order*.
 
 ## Suite strategy — serial or parallel
 
-How the tests get authored relative to each other. Pick a mode; default to
-`serial`. The user may override ("author them in parallel").
+How the tests get authored relative to each other. **Use `serial` unless the
+user asked for `parallel` in words.** Speed alone is not a reason to switch —
+you will always be able to argue the suite would finish faster, which is why
+that judgement isn't yours to make here. And don't change mode part-way: a run
+that starts serial finishes serial.
 
 | Mode | Behavior | Wall-clock | Use when |
 |---|---|---|---|
 | `serial` (default) | author sequentially, central happy-path first; each test copies from a prior sibling it is a variant of, and references **all** the others (plus any existing team tests) | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
-| `parallel` | author all intents at once, independently | ~1 test | speed matters; consistency comes from existing team tests (reference those) |
+| `parallel` | author all intents at once, independently | ~1 test | **only when the user asks for it** — no sibling has finished, so nothing can copy or reference; consistency has to come from existing team tests |
 
 `serial` is the default because it *is* the seed: the central happy-path test
 is authored first, and every test after it builds on the siblings already
 created, so the suite converges on one shape. Each cloud authoring run takes
-5–20 min, so `serial` of N tests ≈ N× the wall-clock of `parallel` — switch to
-`parallel` only when speed matters more than consistency and the user says so.
+5–20 min, so `serial` of N tests ≈ N× the wall-clock of `parallel`. That gap is
+what makes `parallel` tempting, and it is mostly an illusion: firing several
+authoring sessions at once gets them **rate-limited and killed**, so you pay the
+wall-clock anyway and lose tests doing it. Launch the next test only after the
+previous one reaches a terminal status.
 
 Most suites contain at least one pair that differs by a single field, input, or
 role — the second of that pair is a **copy**, not a reference, and copying is
