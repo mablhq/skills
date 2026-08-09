@@ -101,10 +101,10 @@ If a test can't create its own subject, it must not delete anything.
 8. **Fan out.** Author each intent with `mabl agent authoring` (below), using
    the strategy (default `serial`). Order the intents so the central happy-path
    test is authored first — it seeds every test after it. Every test after the
-   first gets sibling context, never none: if it is a **variant** of one already
-   authored (same shape, one thing changed) copy from that one; otherwise
-   reference all prior siblings. See *Referencing vs copying*. Report each
-   `createdTestId` + `viewTestUrl`.
+   first gets sibling context, never none: **copy** from one prior test when
+   this one would repeat its steps, **reference** all prior siblings when it
+   only repeats their conventions. See *Referencing vs copying* for how to tell.
+   Report each `createdTestId` + `viewTestUrl`.
 9. **Validate what got built.** A finished authoring run is not proof the test
    is right. Check each authored test against the intent it came from, then
    report the suite in the three states below. A suite of links to tests that
@@ -138,7 +138,7 @@ that starts serial finishes serial.
 
 | Mode | Behavior | Wall-clock | Use when |
 |---|---|---|---|
-| `serial` (default) | author sequentially, central happy-path first; each test copies from a prior sibling it is a variant of, and references **all** the others (plus any existing team tests) | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
+| `serial` (default) | author sequentially, central happy-path first; each test then copies from one prior test or references **all** of them (plus any existing team tests) | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
 | `parallel` | author all intents at once, independently | ~1 test | **only when the user asks for it** — no sibling has finished, so nothing can copy or reference; consistency has to come from existing team tests |
 
 `serial` is the default because it *is* the seed: the central happy-path test
@@ -150,11 +150,8 @@ authoring sessions at once gets them **rate-limited and killed**, so you pay the
 wall-clock anyway and lose tests doing it. Launch the next test only after the
 previous one reaches a terminal status.
 
-Most suites contain at least one pair that differs by a single field, input, or
-role — the second of that pair is a **copy**, not a reference, and copying is
-both faster and closer to the original. Don't default the whole fan-out to
-references just because `serial` says "references": that is the fallback for
-tests whose shape is genuinely different, not the choice for a variant.
+Don't default the whole fan-out to references just because `serial` says
+"references" — decide per test, using the rule in *Referencing vs copying*.
 
 **Degrade gracefully — these runs are slow and can fail or time out.** One
 failed authoring run must not abort the rest: keep going and report which tests
@@ -291,12 +288,27 @@ at once:
 | | Reference block | Copy |
 |---|---|---|
 | What the planner does | studies N tests, plans fresh steps | plans a **diff** against one test's real steps |
-| Good for | consistency across a suite | a new test that is 90% an existing one |
+| Good for | consistency across a suite | a new test that repeats an existing one's steps |
 | How many | several | exactly one source |
 
-Reach for a copy when the workspace already has a test that is nearly the one
-you're about to author — a variant differing by one input, one payment method,
-one role. Say it plainly in the `--intent`, naming the test and its id:
+**Which one, per test: look at where the shared work lives.** Open the test you
+would copy from (`get_test_definition`) and look at the steps this new test
+would repeat — the login, the navigation, the setup and teardown:
+
+- **Those steps are inline in the test** → **copy**. You inherit them with their
+  trained element finds instead of making the agent rediscover the same
+  elements, which is both faster and more robust than re-recording them.
+- **They are already calls to reusable flows** (`Login - Execute`,
+  `Applications - Goto`, …) → **reference** is enough. Flows are shared by
+  reference already, the planner surfaces the relevant ones for every test, and
+  a copy would mostly drag in the source's middle for you to delete.
+
+So a workspace that keeps its setup in reusable flows will reference far more
+often than one that doesn't — the duplication a copy would save is simply not
+there. Judge the steps in front of you, not how similar the two tests sound.
+
+When the rule above says copy, say it plainly in the `--intent`, naming the
+test and its id:
 
 ```
 Start from an exact copy of the "Guest Checkout" test (<testId>), then change
@@ -316,9 +328,9 @@ Two things to keep in mind:
   which steps must stay untouched.
 - **It changes the strategy calculus.** A copy-seeded test skips most of the
   exploration an authoring run does, so it lands much faster than a normal
-  5–20 minute run. When most of a suite is variants of one anchor test, author
-  the anchor first and copy from it — you get `serial`'s consistency without
-  paying `serial`'s full wall-clock for every test after the first.
+  5–20 minute run. Where the rule says copy for most of a suite, author the
+  anchor first and copy from it — you get `serial`'s consistency without paying
+  `serial`'s full wall-clock for every test after the first.
 
 If the workspace's planner doesn't support copying yet, nothing breaks — it
 just plans the test normally from the intent text, and the reference block is
