@@ -102,8 +102,9 @@ If a test can't create its own subject, it must not delete anything.
    the strategy (default `serial`). Order the intents so the central happy-path
    test is authored first — it seeds every test after it. Every test after the
    first gets sibling context, never none: **copy** from one prior test when
-   this one would repeat its steps, **reference** all prior siblings when it
-   only repeats their conventions. See *Referencing vs copying* for how to tell.
+   this one walks the same path, **reference** all prior siblings when it walks
+   a different one. Within a feature area most tests walk the same path, so
+   expect to copy more often than you reference — see *Referencing vs copying*.
    Report each `createdTestId` + `viewTestUrl`.
 9. **Validate what got built.** A finished authoring run is not proof the test
    is right. Check each authored test against the intent it came from, then
@@ -291,21 +292,29 @@ at once:
 | Good for | consistency across a suite | a new test that repeats an existing one's steps |
 | How many | several | exactly one source |
 
-**Which one, per test: look at where the shared work lives.** Open the test you
-would copy from (`get_test_definition`) and look at the steps this new test
-would repeat — the login, the navigation, the setup and teardown:
+**Which one, per test: does this test walk the same path as one already
+authored?** Same entry point, same subject created the same way, same teardown
+— then **copy** it, even though the behavior it proves is different. Reference
+only when the path genuinely diverges: a different page, a different entity, a
+different way in.
 
-- **Those steps are inline in the test** → **copy**. You inherit them with their
-  trained element finds instead of making the agent rediscover the same
-  elements, which is both faster and more robust than re-recording them.
-- **They are already calls to reusable flows** (`Login - Execute`,
-  `Applications - Goto`, …) → **reference** is enough. Flows are shared by
-  reference already, the planner surfaces the relevant ones for every test, and
-  a copy would mostly drag in the source's middle for you to delete.
+Within one feature area most of a suite walks the same path, so **most of a
+suite copies from the anchor** and only the first test is authored cold.
 
-So a workspace that keeps its setup in reusable flows will reference far more
-often than one that doesn't — the duplication a copy would save is simply not
-there. Judge the steps in front of you, not how similar the two tests sound.
+Don't let reusable flows talk you out of it. It is tempting to reason "login and
+navigation are already flows, so there's nothing to inherit" — open the anchor
+with `get_test_definition` and count. The flows cover the walking about; the
+steps *between* them are inline, and they are the ones you actually want:
+
+- the variable setup that names and shapes the subject
+  (`Generate a string "editapp-{{digit:6}}"` → `appName`)
+- every assertion, with its trained element find and its exact wording — the
+  `GenAI Assert` phrasings especially
+- the waits and one-off clicks that no flow owns
+
+Re-authoring those means the agent rediscovers the same elements and reinvents
+the same phrasings, slower and weaker each time. A copy inherits them and you
+edit the few that differ.
 
 When the rule above says copy, say it plainly in the `--intent`, naming the
 test and its id:
