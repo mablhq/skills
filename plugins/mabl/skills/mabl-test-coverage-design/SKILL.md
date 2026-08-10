@@ -122,12 +122,48 @@ mabl agent authoring plan --intent "<the test_case: steps + self-isolation + saf
 mabl agent authoring initiate --planning-session-id <planningSessionId>
 # 3. Poll (every 30–60s) until terminal — completed/failed/terminated.
 #    The result carries createdTestId + viewTestUrl.
+#    A fourth outcome is possible: needs_attention means it stopped to ask you
+#    something and will wait forever. See "When a session pauses to ask".
 mabl agent authoring status --session-id <sessionId>
 ```
 
 The `mabl-test-authoring` skill covers this command in depth (the
 `--test-information` fields, API tests, local mode). Use it for the per-test
 detail; this skill owns deciding *which* tests to author and *in what order*.
+
+### When a session pauses to ask
+
+`needs_attention` is not terminal and does not resolve on its own — the agent
+is waiting on an answer, usually about which credential to use. **In `serial`
+this stalls the entire suite**, because the next test only launches once the
+previous one reaches a terminal status: one unanswered question and no test
+after it is ever authored. In `parallel` it strands that one test silently
+while the others finish.
+
+So treat a pause as something to act on, never to wait out:
+
+- **Answer it if you already know the answer** — which credential, app, or
+  environment, or what the intent you authored from asked for. `mabl-test-authoring`
+  step 3.1 owns the round-trip: the paused fields, `--expected-loop-number`, and
+  the 3-round-trip bound.
+- **Otherwise surface it and keep the suite moving.** Report the session id and
+  the question, then go on to the next intent rather than blocking on an answer
+  nobody has been asked for yet. A test whose question you couldn't answer is
+  **authoring failed** in the report below — say it paused and what it asked, so
+  the user can answer it and resume that one test on its own.
+- **Never guess to unblock the fan-out.** The pressure to guess is highest here,
+  because guessing appears to rescue N tests at once. A wrong credential authors
+  every test after it against the wrong account, which is worse than a short
+  suite.
+
+To sweep for anything you've stranded — it defaults to exactly this status:
+
+```bash
+mabl agent authoring list --status needs_attention
+```
+
+Worth a check before you report the suite, so a paused session shows up as a
+question waiting on the user rather than a test that never came back.
 
 ## Suite strategy — serial or parallel
 
@@ -154,11 +190,12 @@ previous one reaches a terminal status.
 Don't default the whole fan-out to references just because `serial` says
 "references" — decide per test, using the rule in *Referencing vs copying*.
 
-**Degrade gracefully — these runs are slow and can fail or time out.** One
-failed authoring run must not abort the rest: keep going and report which tests
-succeeded (with `createdTestId`) and which failed, so the run is resumable. In
-`serial`, if one test fails, don't block the suite — continue to the next test,
-referencing the siblings that did succeed (skip the failed one's ID).
+**Degrade gracefully — these runs are slow, and can fail, time out, or pause to
+ask a question.** One authoring run that doesn't finish must not abort the rest:
+keep going and report which tests succeeded (with `createdTestId`) and which
+didn't, so the run is resumable. In `serial`, if one test fails or pauses on a
+question you can't answer, don't block the suite — continue to the next test,
+referencing the siblings that did succeed (skip the unfinished one's ID).
 
 ## Validating each authored test
 
@@ -247,7 +284,7 @@ state:
 |---|---|---|
 | **Authored + validated** | assertions present, ran, passed for the right reason | `createdTestId` + `viewTestUrl` |
 | **Authored, not validated** | test exists but the check failed or couldn't run — missing assertion, skipped assertion, no `reportedTestRunId`, steps that wouldn't line up | id + url + **what specifically didn't match** |
-| **Authoring failed** | no usable test — `sessionStatus` `failed`/`terminated`, or timed out | what failed, so the run is resumable |
+| **Authoring failed** | no usable test — `sessionStatus` `failed`/`terminated`, timed out, or paused on a question you couldn't answer | what failed, so the run is resumable. For a pause, the question verbatim and the session id — that one is resumable by answering it |
 
 That three-state report is the deliverable. Never collapse the middle state
 into the first: "authored" and "verified" are different claims, and a suite

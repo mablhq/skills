@@ -38,7 +38,8 @@ mabl auth info    # verify you're logged in and the token hasn't expired
 2. Generate → mabl agent authoring initiate --planning-session-id <id>
               (kicks off cloud test authoring)
 3. Poll     → mabl agent authoring status --session-id <id>
-              (check until sessionStatus is terminal)
+              (check until sessionStatus is terminal; if it pauses on
+               needs_attention, answer it — see step 3.1)
 4. Validate → check the built test against the intent you asked for
               (see step 4 — a completed session is not proof)
 ```
@@ -201,6 +202,88 @@ When the session reaches a terminal state (`completed`, `failed`, or
 `terminated`), both verbose and non-verbose output include
 `createdTestId` and `viewTestUrl`, plus `reportedTestRunId` and
 `viewTestRunUrl` when the agent's validation replay passed.
+
+**`running` is the only status that waiting fixes.** Read `sessionStatus` on
+every poll and act on what it says — never infer progress from elapsed time.
+In particular `needs_attention` means the session stopped to ask you
+something, and no amount of polling will move it.
+
+### 3.1 `needs_attention` — the session is waiting on you
+
+This is not a slow `running`. The agent hit something it can't decide alone —
+most often which credential to use — and **it will never move again on its
+own.** No timeout resolves it. A loop that only watches for
+`completed`/`failed`/`terminated` polls until you give up, while the question
+sits unanswered in the web app where nobody is looking.
+
+On `needs_attention`, and on no other status, `status` adds these fields:
+
+| Field | Always there | What it is |
+|-------|--------------|------------|
+| `question` | no | What the agent is asking. If it's absent the session paused without a resolvable question — re-check the session instead of answering blind. |
+| `reClarification` | yes | `true` when this follows up an answer you already gave. |
+| `loopNumber` | yes | Which question this is. You pass it back. |
+| `planDiffSummary` | no | How the agent proposes to change the plan. |
+| `notesForAuthoringAgent` | no | Context the agent recorded for itself. |
+
+**`loopNumber` counts from zero, so the first pause reports `loopNumber: 0`.**
+That's a real value, not a missing one — and the first pause is the one you're
+most likely to hit, so code that reads `0` as "no loop number" drops the
+safety check below exactly when it matters.
+
+**Answer only what you already know.** Answer when the answer is something
+you're already holding: which credential, which application or environment, or
+what the intent you launched with asked for. Everything else goes to the user.
+
+Don't guess. A guessed credential sends the agent authoring against the wrong
+account and hands you a confident `completed` session that tested the wrong
+thing. Surfacing a question costs one message; guessing costs a bad test that
+nobody knows is bad.
+
+| The agent asks | Grounded? |
+|----------------|-----------|
+| "which credential should I use?" — and your intent named one | yes, answer it |
+| "which environment?" — and you launched from a `deployment_id` | yes, answer it |
+| "should it also verify the confirmation email?" | no — your intent never said. Ask. |
+| "the login page looks different than expected, continue?" | no — you can't see it. Ask. |
+
+To answer and resume:
+
+```bash
+# Note the shapes differ: status takes --session-id, answer takes a positional.
+mabl agent authoring answer <sessionId> "Use the 'Webapp user' credential" \
+  --expected-loop-number <loopNumber>
+```
+
+Pass `--expected-loop-number` with the `loopNumber` from **the same `status`
+read you based the answer on**. The flag is optional, and skipping it is how an
+answer lands on a question you never read: if the session moved on in between —
+say a dropped response on an earlier retry already committed a
+re-clarification — your answer silently rebinds to whatever question is
+current now. With the flag it fails loudly instead.
+
+`answer` prints one of two outcomes:
+
+- `{"outcome":"resumed","sessionStatus":"..."}` — running again. Go back to
+  polling.
+- `{"outcome":"re_clarification","question":"..."}` — the agent asked something
+  else. **Re-read `status` before answering again**, because `loopNumber` has
+  advanced and the one you're holding will now be rejected.
+
+A mismatch exits 1, names both loop numbers, and submits nothing. That's the
+check doing its job: re-read `status`, look at the question that's actually
+pending, and answer that one. **Never re-send the same answer with the number
+bumped** — that defeats the whole point of the flag.
+
+**Bound the round-trips at 3.** A session asking a fourth question isn't
+converging, and answering again is worse than stopping. Report what it keeps
+asking and let the user take it. `mabl agent authoring terminate --session-id
+<sessionId>` ends one that's no longer worth finishing.
+
+When you can't answer, say so plainly — the session id, the question verbatim,
+and `viewTestUrl` if you have one — and let the user either answer in the web
+app or tell you what to send. **A paused session is not a failure.** It's a
+question with nobody reading it, and reporting it is the whole fix.
 
 ---
 

@@ -5,6 +5,20 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.4.0] - 2026-08-10
+### Fixed
+- A cloud authoring session that stops to ask a question no longer strands the
+  skill that launched it. `needs_attention` isn't a terminal status, so both
+  authoring skills used to poll a session that would never move again while the
+  question sat unanswered in the web app. `mabl-test-authoring` now reads the
+  pending question and answers it when the answer is something it already
+  knows — which credential, app, or environment the intent asked for — and
+  surfaces it to you when it isn't, rather than guessing. In
+  `mabl-test-coverage-design` this mattered more than it looked: authoring is
+  serial, so one unanswered question meant no later test in the suite was ever
+  authored. A paused test is now reported with its question instead of quietly
+  blocking the fan-out.
+
 ## [1.3.0] - 2026-08-07
 ### Added
 - `mabl-test-coverage-design` now validates the tests it authors instead of
