@@ -18,6 +18,10 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   serial, so one unanswered question meant no later test in the suite was ever
   authored. A paused test is now reported with its question instead of quietly
   blocking the fan-out.
+- Polling an authoring session no longer runs forever on a status it doesn't
+  recognise. A session stuck on the same non-terminal status for 20 minutes is
+  reported as wedged, naming the status, rather than being waited on
+  indefinitely.
 
 ## [1.3.0] - 2026-08-07
 ### Added
