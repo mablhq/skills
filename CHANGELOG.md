@@ -5,6 +5,14 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.5.0] - 2026-08-17
+### Added
+- `bulk-manage-labels` — workspace-wide label hygiene. Classifies label drift
+  before writing, so case variants (which mabl matching already treats as one
+  label) are reported rather than rewritten, genuinely split suites get merged,
+  and near-duplicates that might be distinct concepts are raised as questions
+  instead of being collapsed.
+
 ## [1.4.0] - 2026-08-10
 ### Fixed
 - A cloud authoring session that stops to ask a question no longer strands the
