@@ -7,8 +7,10 @@ description: |
   and "tidying" case variants changes nothing while destroying nothing is
   guaranteed.
   Fire when the user wants to tidy, normalize, standardize, merge, rename,
-  audit or bulk-apply labels or tags on mabl tests or plans, or says their
-  labels/tags are "a mess", inconsistent, duplicated, or drifting.
+  audit or bulk-apply labels on mabl tests or plans, or says their labels or
+  tags are "a mess", inconsistent, duplicated, or drifting. Note that mabl
+  `tags` and `labels` are different fields with different vocabularies, so the
+  skill disambiguates which one the user means before reading or writing.
   One boundary: adding or removing a label on ONE named test belongs to
   `mabl-test-edit`, which treats it as a cheap reversible metadata op. This
   skill owns workspace-wide label hygiene, where the same operation stops being
@@ -53,6 +55,33 @@ Two consequences you must carry:
 2. **`smoke` vs `smoke-test` is a different story.** Different string, not a
    case variant, so a suite on `smoke` genuinely misses those tests. That one
    *is* a functional defect worth fixing.
+
+## `tags` is a different field from `labels` — disambiguate first
+
+A user who says "our tags are a mess" may mean either field. They are not two
+names for one thing. Measured on a 620-test workspace:
+
+| field | distinct values | tests carrying it |
+|---|---|---|
+| `tags` | **4** — `default`, `link crawler`, `smoke`, `training` | 526 |
+| `labels` | ~100 — the customer's own taxonomy | 387 |
+
+No test had identical sets for both. `default`, `link crawler` and `training`
+never appeared as a label. So `tags` is a system/product classification and
+`labels` is the user taxonomy that the UI calls "labels".
+
+Three consequences:
+
+1. **`list_mabl_tests` returns `labels` only — it does not return `tags` at all.**
+   In that workspace an audit built on it sees 387 rows and is blind to 526.
+   `get_mabl_test` returns both, per test.
+2. **`smoke` exists in both namespaces.** Conflating them produces a wrong count
+   with no error anywhere.
+3. **There is no write path for `tags`, and that is correct** — a system
+   classification is not yours to edit. If the user's mess is in `tags`, say so
+   and stop; do not "fix" it by writing labels that shadow it.
+
+Confirm which field the user means before reading anything.
 
 ## Step 1 — Classify before you touch anything
 
@@ -106,7 +135,9 @@ curl -sf -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Length: 0" \
 the CLI cannot see label casing by any route. Group and compare client-side —
 never with a server-side filter.
 
-Note the ceiling: `list_mabl_tests` caps at **200 with no cursor**. In a larger
+Note the ceiling: `list_mabl_tests` is hard-capped at **200 and returns no
+cursor at all** — measured on a 620-test workspace, the response carried exactly
+200 tests and no `nextCursor`, so nothing signals that 420 rows were dropped. In a larger
 workspace, shard by `applicationId` / `testType` / `authorId` and say so, or use
 the bulk endpoint above. Never report on the first 200 as if it were the catalog.
 
