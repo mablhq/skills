@@ -203,18 +203,33 @@ When the session reaches a terminal state (`completed`, `failed`, or
 `createdTestId` and `viewTestUrl`, plus `reportedTestRunId` and
 `viewTestRunUrl` when the agent's validation replay passed.
 
+**Those three are the only statuses non-verbose fills the ids in for.** A session
+that stops on any other terminal status — `merged`, say — reports that status and
+nothing more, so a test that really was authored comes back looking like a test
+with no id. Re-read with `--verbose` whenever a session stops on a word that
+isn't one of those three; the ids are there, the short output just doesn't carry
+them.
+
 **Read `sessionStatus` on every poll and act on what it says** — never infer
 progress from elapsed time. Most non-terminal statuses do clear on their own:
 `queued` and `resuming` both become `running`, so waiting is the right move.
+`rate_limited` clears too — the workspace caps how many cloud authoring
+sessions run at once, and a sweep admits the queued-up ones as slots free, so a
+session can sit there well past 20 minutes and still start. Keep polling it, and
+never re-launch the test: the session you'd be replacing is still going to run.
 `needs_attention` is the exception, and it's the one that costs you a run.
 
-For anything else — `rate_limited`, `terminating`, or a status you don't
-recognise — keep polling, but **give up after 20 minutes on that same status
-and report where it got stuck**, naming the status. A session that hasn't
-moved off one of these in 20 minutes isn't slow, it's wedged, and a wedged
-session you report is worth more than one you wait on. (This clock is per
-status, not for the run — a healthy `running` session is allowed to take
-longer than the usual 5–20 minutes.)
+Four more statuses are terminal, and none of them is wedged: `skipped` (the agent
+declined the work, so there is no test), `merged` and `accepted` (read both as
+`completed`), and `closed` (the user discarded the authored test, so there is no
+test either).
+
+For anything else — `terminating`, or a status you don't recognise — keep
+polling, but **give up after 20 minutes on that same status and report where it
+got stuck**, naming the status. A session that hasn't moved off one of these in
+20 minutes isn't slow, it's wedged, and a wedged session you report is worth more
+than one you wait on. (This clock is per status, not for the run — a healthy
+`running` session is allowed to take longer than the usual 5–20 minutes.)
 
 ### 3.1 `needs_attention` — the session is waiting on you
 
