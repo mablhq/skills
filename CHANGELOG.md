@@ -5,6 +5,45 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.6.0] - 2026-08-19
+### Changed
+- `mabl-test-coverage-design` now schedules the fan-out itself instead of
+  authoring every test one after another. The copy graph it already builds says
+  what each test is waiting for, so the skill reads it as waves: the central
+  anchor first, then everything whose parent has landed, and so on. A suite's
+  wall-clock becomes the number of waves rather than the number of tests.
+  Deciding this is no longer the user's job — "one at a time" and "all at once"
+  remain as spoken overrides.
+- Wide waves bring their own failure modes, so the skill now bounds them: a wave
+  ends once every session in it is terminal, paused on a question, or wedged, and
+  a wave that comes back with several failures at once gets re-run one at a time.
+  A wave wider than the workspace's concurrent-session cap isn't one of those
+  failures — those sessions queue and are admitted as slots free, so the skill
+  waits for them instead of relaunching and authoring the same test twice. The
+  wait is bounded rather than the session: if the queue is mostly work the suite
+  didn't launch, the skill stops waiting, reports those tests as still queued,
+  and leaves the sessions running for the user to pick up. Width also provokes
+  `skipped` — what a dedupe gate returns when several near-identical intents go
+  out together — so the skill calls that out and re-runs the intent alone. Which status is terminal stays `mabl-test-authoring`'s to say.
+- Polling a wave now reads each session's own `status` instead of listing the
+  workspace. `list --status all` pages through every authoring session the
+  workspace has ever run, and it returns neither the created-test id nor a paused
+  session's question — the two things the next step needs. `list` keeps its real
+  job, sweeping for sessions left waiting on an answer, and gains two more: it's
+  how the skill measures how deep the rate-limit queue is, and how it checks
+  whether a launch that errored actually created a session before retrying it —
+  a blind retry would author the test twice.
+- Both skills now say that the short `status` output carries the created-test id
+  only for `completed`, `failed`, and `terminated`. A session that stops any
+  other way, such as `merged`, needs `--verbose` to report its id, and without it
+  a test that was authored looks like one that never got built.
+- `mabl-test-authoring` now sorts the session statuses it didn't previously name.
+  It no longer gives up on a `rate_limited` session after 20 minutes — that
+  status is a queue, not a fault, so the skill keeps polling rather than
+  abandoning a run that was still going to start. And `skipped`, `merged`,
+  `accepted`, and `closed` are called out as terminal, so a session that already
+  stopped no longer reads as an unrecognised status waiting out the wedged clock.
+
 ## [1.5.1] - 2026-08-19
 ### Removed
 - `mabl-debug` no longer points at `get_runtime_recovery_session`. Runtime

@@ -98,15 +98,16 @@ If a test can't create its own subject, it must not delete anything.
 7. **Write the design record.** Emit a short doc capturing the reasoning:
    constraints → navigation path → observed surface → pattern overlay → chosen
    tests + what was dropped → the copy graph you'll author from.
-8. **Fan out.** Author each intent with `mabl agent authoring` (below), using
-   the strategy (default `serial`). Before the first `plan` call, decide the
-   whole shape at once — which test each test starts from, and the order that
-   makes those sources exist in time. That's the **copy graph**; build it with
-   *The copy graph* below. Every test after the first gets sibling context,
-   never none: **copy** from one prior test when this one walks the same path,
-   and **reference** at least one already-authored anchor either way — the copy
-   graph says which. Within a feature area most tests walk the same path, so
-   expect to copy more often than you reference — see *Referencing vs copying*.
+8. **Fan out.** Author each intent with `mabl agent authoring` (below). Before
+   the first `plan` call, decide the whole shape at once — which test each test
+   starts from, and therefore which wave it goes out in. That's the **copy
+   graph**; build it with *The copy graph* below and author it in **waves**:
+   everything whose parent has already landed goes out together. Every test
+   after the first gets sibling context, never none: **copy** from one prior
+   test when this one walks the same path, and **reference** at least one
+   already-authored anchor either way — the copy graph says which. Within a
+   feature area most tests walk the same path, so expect to copy more often
+   than you reference — see *Referencing vs copying*.
    Report each `createdTestId` + `viewTestUrl`.
 9. **Validate what got built.** A finished authoring run is not proof the test
    is right. Check each authored test against the intent it came from, then
@@ -136,13 +137,11 @@ detail; this skill owns deciding *which* tests to author and *in what order*.
 ### When a session pauses to ask
 
 `needs_attention` is not terminal and does not resolve on its own — the agent
-is waiting on an answer, usually about which credential to use. **In `serial`
-this stalls the entire suite**, because the next test only launches once the
-previous one reaches a terminal status: one unanswered question and no test
-after it is ever authored. In `parallel` it strands that one test silently
-while the others finish.
-
-So treat a pause as something to act on, never to wait out:
+is waiting on an answer, usually about which credential to use. **A pause counts
+as that session stopping**, so the wave ends without it and the tests below it
+re-parent by the rule in *The copy graph*. Count a pause as still-running
+instead and the wave never ends, which ends the suite there. So act on a pause,
+never wait it out:
 
 - **Answer it if you already know the answer** — which credential, app, or
   environment, or what the intent you authored from asked for:
@@ -159,15 +158,19 @@ So treat a pause as something to act on, never to wait out:
   `mabl-test-authoring` step 3.1 owns the rest: every paused field, both
   `answer` outcomes, and the 3-round-trip bound.
 - **Otherwise surface it and keep the suite moving.** Report the session id and
-  the question, then go on to the next intent rather than blocking on an answer
-  nobody has been asked for yet. A test whose question you couldn't answer is
-  **authoring failed** in the report below — say it paused and what it asked.
+  the question, then carry on with the rest of the wave rather than blocking on
+  an answer nobody has been asked for yet. A test whose question you couldn't
+  answer is **authoring failed** in the report below — say it paused and what it
+  asked.
   **Leave it paused rather than terminating it**: it waits indefinitely, so the
   user can answer it later and finish that one test on its own.
 - **Never guess to unblock the fan-out.** The pressure to guess is highest here,
   because guessing appears to rescue N tests at once. A wrong credential authors
-  every test after it against the wrong account, which is worse than a short
-  suite.
+  that test against the wrong account and the graph carries it: everything that
+  copies from it *transitively*, plus anything that references it, since a
+  reference block tells the planner to start from that test's structure. For the
+  wave-1 anchor that is the whole suite — every other test descends from it by a
+  copy or a reference. A short suite is the cheaper outcome.
 
 Before reporting the suite, sweep for anything you stranded — this is the
 command's default status, so the flag is just being explicit:
@@ -185,39 +188,115 @@ another test's credential authors against the wrong thing — the same mistake
 the grounded rule prevents, reached from the other side. If you can't tell
 which intent a session belongs to, report it instead of answering it.
 
-## Suite strategy — serial or parallel
+## Suite strategy — waves off the copy graph
 
-How the tests get authored relative to each other. **Use `serial` unless the
-user asked for `parallel` in words.** Speed alone is not a reason to switch —
-you will always be able to argue the suite would finish faster, which is why
-that judgement isn't yours to make here. And don't change mode part-way: a run
-that starts serial finishes serial.
+How the tests get authored relative to each other. **Decide this yourself; don't
+ask the user.** The copy graph already answers it. Every test waits on exactly
+one other test, its **parent**: the test it copies from, or for another group's
+anchor the first anchor it references. Author the graph in **waves** — every
+test whose parent has landed launches at once:
 
-| Mode | Behavior | Wall-clock | Use when |
-|---|---|---|---|
-| `serial` (default) | author sequentially, central happy-path first; each test then copies from one prior test on its own path and references that path's anchor (plus any existing team tests) — see *The copy graph* | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
-| `parallel` | author all intents at once, independently | ~1 test | **only when the user asks for it** — no sibling has finished, so nothing can copy or reference; consistency has to come from existing team tests |
+| Wave | What goes out |
+|---|---|
+| 1 | the suite's most central anchor, authored cold. That one test alone — see rule 1 in *The copy graph* for why the other groups' anchors wait a wave. |
+| k | every test whose parent landed in wave k−1. |
 
-`serial` is the default because it *is* the seed: the central happy-path test
-is authored first, and every test after it builds on the siblings already
-created, so the suite converges on one shape. Each cloud authoring run takes
-5–20 min, so `serial` of N tests ≈ N× the wall-clock of `parallel`. That gap is
-what makes `parallel` tempting, and it is mostly an illusion: firing several
-authoring sessions at once gets them **rate-limited and killed**, so you pay the
-wall-clock anyway and lose tests doing it. Launch the next test only after the
-previous one reaches a terminal status — **or after it pauses on a question you
-can't answer and you've reported it.** A pause is not terminal and never
-becomes terminal on its own, so waiting for one is waiting forever.
+A test's wave is one more than its parent's wave — that alone sets it.
 
-Don't default the whole fan-out to references just because `serial` says
-"references" — decide per test, using the rule in *Referencing vs copying*.
+**A wave is over when every session in it has stopped**, and a session stops in
+exactly three ways: terminal, paused on a question, or wedged.
+`mabl-test-authoring` step 3 owns which `sessionStatus` means which — read it
+there rather than keeping a second list here. Nothing else ends a wave.
+
+One terminal status is worth naming, because width is what provokes it:
+`sessionStatus: skipped` means the agent chose not to do the work, and
+near-identical intents launched together are what make a dedupe gate match. It
+leaves no test — **authoring failed**, and re-run that intent on its own.
+
+**`rate_limited` is a queue, not a failure, and a wide wave is what fills it.**
+The workspace caps how many authoring sessions run at once, so a wave wider than
+that cap doesn't fail — the extra sessions queue and are admitted in launch order
+as slots free. A wide wave can therefore sit in `rate_limited` far longer than 20
+minutes and still be working: it is not wedged, and it must never be re-launched
+or you author that test twice in a live workspace.
+
+The queue is first-come-first-served, so work that starts after your sessions
+can't push them back, and a slot frees on its own even when whatever holds it is
+stuck — that's what makes waiting the right move rather than a gamble. What the
+queue won't tell you is how long: a `rate_limited` session's `status` is one
+word, no position and no estimate. So read the depth once instead of guessing —
+`mabl agent authoring list --status rate_limited` is filtered, so it stays as
+small as the stranded sweep — and compare it to your own wave. If most of that
+backlog is sessions you didn't launch, you're queued behind someone else's work,
+and past about 30 minutes there **stop waiting rather than stop the session**:
+report those tests as *queued, not yet started*, leave the sessions running, and
+let the user pick them up the way they would a pause. Bound the wait, never the
+session. Terminating one to reclaim a slot throws away a test that was about to
+run, and polling forever reports nothing at all — the one outcome worse than a
+short suite.
+
+Poll a wave's sessions together on the same 30–60s cycle: one
+`status --session-id` per session still open, read off the run's ledger (*The
+copy graph* below). That's N small reads a tick — non-verbose `status` is a
+single line of JSON — and it's the only call that carries what you need next:
+`createdTestId`, `viewTestUrl`, `reportedTestRunId`, and a pause's `question` +
+`loopNumber`. **Non-verbose fills in those ids only for `completed`, `failed`,
+and `terminated`**, so when a session stops any other way — `merged`, or a
+terminal word you don't recognise — re-read it once with `--verbose` before you
+write it off. The ids are there; the short output just doesn't carry them, and
+without them a test you did author reports as a test that never got built. Drop
+each session from the poll set as it stops; when the set is empty, launch the next
+wave.
+
+Don't reach for `mabl agent authoring list --status all` to save those calls:
+with no status filter it pages through every authoring session the workspace has
+ever run, so a single read can dwarf a whole wave of `status` reads and it still
+carries none of those fields. `list` earns its place in the stranded sweep above,
+where the `needs_attention` filter is what keeps it small.
+
+Each cloud authoring run takes 5–20 min, so the suite's wall-clock tracks the
+number of waves rather than the number of tests — a wave wider than the
+workspace's cap costs more than one run, but still far less than authoring its
+tests one after another.
+
+Two overrides, and only when the user asks for them in words:
+
+| The user says | Do |
+|---|---|
+| "one at a time" | walk the waves in order but launch one session at a time. Same graph, same sources, waves of one. |
+| "all at once" | one wave, every test cold. Nothing has landed, so nothing copies and only existing team tests can be referenced — this trades the whole graph for speed. |
+
+**Re-run what width actually costs you.** A wave that comes back with several
+`failed`/`terminated` sessions at once and nothing test-specific to blame is
+width itself failing them — re-run those tests one at a time before moving on.
+Losing a test to width is not an acceptable outcome; the graph doesn't change,
+only how many sessions you hold open at once. `rate_limited` is not this signal:
+that one waits.
+
+Don't default the whole fan-out to references just because a wave is wide —
+decide per test, using the rule in *Referencing vs copying*.
 
 **Degrade gracefully — these runs are slow, and can fail, time out, or pause to
 ask a question.** One authoring run that doesn't finish must not abort the rest:
 keep going and report which tests succeeded (with `createdTestId`) and which
-didn't, so the run is resumable. In `serial`, if one test fails or pauses on a
-question you can't answer, don't block the suite — continue to the next test,
-referencing the siblings that did succeed (skip the unfinished one's ID).
+didn't, so the run is resumable. No session decides the fate of the tests below
+it: a test whose source didn't land still gets authored, by the re-parenting rule
+in *The copy graph*.
+
+Launching a wave is one `initiate` per test, and each can fail on its own — a
+wave of six is six chances to end up holding five sessions and a test you stopped
+tracking. Confirm every launch returned a session id before you start polling.
+Retry a failed launch once, alone — but **look before you relaunch**. A failed
+`initiate` doesn't prove nothing was created: a timeout or a dropped response can
+leave a session running whose id you never got, and a launch carries no
+idempotency key the way an `answer` does. So check first, with the same filtered
+reads as above — `mabl agent authoring list --status queued` and `--status
+rate_limited`. A session that shows up there seconds after your failed launch
+**is** that test: take its id and poll it. Retry only when neither shows one.
+Retrying blind is the same double-author `rate_limited` forbids, reached from the
+other side. If the retry fails too, that test is **authoring failed** with no
+session to resume, and anything parented to it re-parents by the rule in *The
+copy graph*.
 
 ## Validating each authored test
 
@@ -306,10 +385,12 @@ state:
 |---|---|---|
 | **Authored + validated** | assertions present, ran, passed for the right reason | `createdTestId` + `viewTestUrl` |
 | **Authored, not validated** | test exists but the check failed or couldn't run — missing assertion, skipped assertion, no `reportedTestRunId`, steps that wouldn't line up | id + url + **what specifically didn't match** |
-| **Authoring failed** | no usable test — `sessionStatus` `failed`/`terminated`, timed out, or paused on a question you couldn't answer | what failed, so the run is resumable. For a pause, the question verbatim and the session id — that one is resumable by answering it |
+| **Authoring failed** | no usable test — `initiate` never returned a session, `sessionStatus` `failed`/`terminated`/`skipped`, wedged on one status, paused on a question you couldn't answer, or still queued when you stopped waiting | what failed, so the run is resumable. For a pause, the question verbatim and the session id — that one is resumable by answering it. For one still queued, say so plainly — nothing failed and it may yet author itself, so give the id and let the user re-read it later. Also name the subject pattern it may have created and never torn down: a wide wave can strand one per unfinished session, in a live workspace |
 
-That three-state report is the deliverable. Never collapse the middle state
-into the first: "authored" and "verified" are different claims, and a suite
+**Authoring failed** is shorthand for "no usable test to hand over", not "something
+errored" — a test still sitting in the queue belongs there too, and the row says
+which it was. That three-state report is the deliverable. Never collapse the
+middle state into the first: "authored" and "verified" are different claims, and a suite
 that quietly reports unverified tests as done is the exact failure this step
 exists to prevent.
 
@@ -334,17 +415,24 @@ definition — the same mechanism the mabl web app's "Add reference tests" uses.
 
 - **Prefer existing team tests as references** whenever the workspace has good
   related ones — they're higher-signal than a freshly-generated sibling. Include
-  their IDs in the block in any mode, even `parallel`.
-- In `serial`, collect each `createdTestId` as authoring completes and feed the
-  prior created IDs from that test's own group into its reference block, always
-  including the group's anchor — see *The copy graph* for what a group is. Cap the
-  sibling IDs at the anchor plus the two most recent, on top of any team tests:
-  the planner fetches every ID with `get_test_definition`, and the siblings in
-  the middle cost a fetch each without adding shape or steps.
+  their IDs in the block in every wave, including the first.
+- Collect each `createdTestId` as authoring completes and feed the IDs from that
+  test's own group **that landed in an earlier wave** into its reference block,
+  always including the group's anchor — see *The copy graph* for what a group is.
+  Siblings in the same wave don't exist yet; that is what width costs, and the
+  anchor is what covers it. Cap the sibling IDs at the anchor plus the two
+  **closest in the graph** — its parent, then that test's parent — on top of
+  any team tests. "Most recent" stops meaning anything once a whole wave lands at
+  once, and closest is what you wanted anyway: the planner fetches every ID with
+  `get_test_definition`, and siblings off to the side cost a fetch each without
+  adding shape or steps.
 - A group's **own** anchor has no prior sibling in its group, so it references the
-  other groups' anchors instead. That's the diverging-path case above: it can't
-  copy from them, but it can still match their conventions. No test is ever
-  authored with an empty reference block.
+  suite's first anchor instead — which is why it waits for wave 2. That's the
+  diverging-path case above: it can't copy from that test, but it can still match
+  its conventions. Outside the "all at once" override, no test is authored with
+  an empty reference block. If the first anchor itself doesn't land, the remaining
+  anchors go out with the team tests alone; say so in the report, because that
+  suite has no single shape holding it together.
 
 ### Referencing vs copying — two different asks
 
@@ -408,14 +496,18 @@ Three things to keep in mind:
   source's variable setup, and that setup is what the fail-closed teardown rule
   deletes by exact name. A generator (`Generate a string "editapp-{{digit:6}}"`)
   is safe; a literal is not — every copy would then delete the *same* subject in
-  a live workspace, and a chain spreads it to every test downstream. If the source
-  uses a literal, tell the `--intent` to generate its own name instead.
+  a live workspace. Waves make that more than a downstream problem: siblings that
+  copy the same source go out **together**, so a shared literal means one test
+  deletes the subject another is still asserting on, mid-run. The failures read
+  like product bugs and the deletion is real. The name has to be unique per run,
+  so check the anchor's setup before the first wide wave, not just each copy's. If
+  the source uses a literal, tell the `--intent` to generate its own name
+  instead.
 - **It changes the strategy calculus.** A copy-seeded test skips most of the
   exploration an authoring run does, so it lands much faster than a normal
-  5–20 minute run. Where the rule says copy for most of a suite, author each
-  group's anchor first and copy along the graph from there — you get `serial`'s
-  consistency without paying `serial`'s full wall-clock for every test after the
-  first.
+  5–20 minute run. That is what makes a wide wave cheap: the first anchor pays
+  the full exploration cost, and most of what follows is a diff against
+  something that already works.
 
 If the workspace's planner doesn't support copying yet, nothing breaks — it
 just plans the test normally from the intent text, and the reference block is
@@ -436,9 +528,9 @@ paths has two of them.
 
 | | Rule |
 |---|---|
-| 1 | Take the groups in order of how central each one is, and **finish a group before starting the next**. Each group opens with its own anchor, authored cold — an anchor would only copy if it really walked another group's path, in which case it wasn't a separate group. |
+| 1 | Each group opens with its own anchor, authored cold — an anchor would only copy if it really walked another group's path, in which case it wasn't a separate group. The suite's most central anchor goes out first and alone; **every other anchor waits one wave and references it**. Anchors can't copy across groups, so that reference is the only thing holding two groups to one shape — a real edge, worth a wave. After that, groups don't wait on each other. |
 | 2 | Every other test copies from the authored test in its group **whose steps are closest to its own** — which is often a sibling, not the suite's first test. Closest means fewest edits to get from that test to this one, not most recently authored. |
-| 3 | Order each group by how far each test sits from the anchor, closest first, so a close source already exists by the time each test needs one. |
+| 3 | The graph sets each test's wave, not you — *Suite strategy* above has the rule. Order *inside* a wave doesn't matter; the whole wave launches together. |
 
 **Closest means the source you'd keep whole.** If you'd be telling the planner to
 remove steps the source added, pick an earlier test in the group instead.
@@ -450,39 +542,54 @@ cousin, not an ancestor.
 Copies chained off copies drift, and nothing else holds the group to one shape:
 the closest sibling gives you the short diff, the anchor gives you the shape.
 
-**This is a `serial` concept, and it doesn't add concurrency.** Under `parallel`
-nothing has finished, so there is no source to copy and no graph to walk. The
-win here is that more tests are cheap copies, not that anything overlaps.
+**A chain costs a wave, and you take the cost.** When the closest source is
+itself a copy, that test lands one wave later than if it copied the anchor. Don't
+rewrite the graph to flatten it: the sibling was chosen because it saves real
+edits, and one more wave is cheaper than a copy that arrives needing half its
+inherited steps replaced. Width is what the graph gives you, not something to
+engineer into it.
 
 **When a source doesn't land, don't strand the tests below it.** A source counts
-as landed only if it completed — failed, timed out, and paused-on-a-question all
-mean "no source". Walk *earlier* in the group's order to the last test that did
-complete and copy from that one. If nothing in the group has completed, author
-the next test cold and treat it as the group's new anchor. Never skip a test just
+as landed only if it completed — failed, timed out, paused-on-a-question, and
+still-queued-when-you-stopped-waiting all mean "no source". Walk *earlier* in
+the group's graph to the last test that did complete and copy from that one, and
+launch it in the **next** wave — an already-landed ancestor can't put a test back
+into a wave that has gone out, and
+re-parenting never delays one. If nothing in the group has completed, author the
+next test cold and treat it as the group's new anchor. Never skip a test just
 because its source didn't finish.
 
 Put the graph in the design record and print it before you start — each test,
-what it copies from, what it references, and the order you'll walk. **Show it,
-don't gate on it**; a wrong source costs one test's consistency, which step 9
-catches.
+what it copies from, what it references, and which wave it goes out in.
+**Show it, don't gate on it**; a wrong source costs one test's consistency, which
+step 9 catches.
+
+**Then keep it as the run's ledger.** Write each `sessionId` next to its test as
+you launch. With six sessions open asking near-identical credential questions,
+that mapping is the only way to obey *When a session pauses to ask*: match each
+id back to its intent before you answer anything.
 
 A five-behavior edit form plus two list checks is two groups: two cold runs and
-five copies, instead of seven cold runs.
+five copies, instead of seven cold runs — and three waves instead of seven
+sessions end to end.
 
-| | Test | Copies from |
-|---|---|---|
-| 1 | save persists — the central promise | nothing — it's this group's anchor |
-| 2 | loads pre-populated | 1 |
-| 3 | required field blocks save | 1 |
-| 4 | cancel discards changes | 3 — it already leaves the form dirty |
-| 5 | the avatar picker works | 1 — it needs the clean save path |
-| 6 | expected row present | nothing — it's the second group's anchor |
-| 7 | filter narrows the list | 6 |
+| | Test | Copies from | Wave |
+|---|---|---|---|
+| 1 | save persists — the central promise | nothing — it's this group's anchor | 1 |
+| 2 | loads pre-populated | 1 | 2 |
+| 3 | required field blocks save | 1 | 2 |
+| 4 | cancel discards changes | 3 — it already leaves the form dirty | 3 |
+| 5 | the avatar picker works | 1 — it needs the clean save path | 2 |
+| 6 | expected row present | nothing — it's the second group's anchor | 2 |
+| 7 | filter narrows the list | 6 | 3 |
 
 Test 4 is the whole point: 3 already clears the required field, so 4 inherits the
 dirty form and changes only the ending, where starting from the anchor would mean
-re-deriving that setup. Test 6 is the anchor exception — nothing in its group
-precedes it, so it copies from nothing and references test 1.
+re-deriving that setup — and the extra wave that costs is the trade rule 2
+already made. Test 6 is the anchor exception — nothing in its group
+precedes it, so it copies from nothing and references test 1. That reference is
+what puts it in wave 2 rather than in wave 1 beside test 1; it does not wait for
+the rest of test 1's group.
 
 ## Coverage patterns (the question sets)
 
