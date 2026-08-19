@@ -169,24 +169,16 @@ across calls.
 ### Recovered steps
 
 A step with `status: "recovered"` is a step that **failed**, then was
-salvaged by Runtime recovery so the run could continue. The trace
-shows it as `recovered` (not passed) precisely because it's still a
-real bug — Runtime recovery papered over it for the run, but the
-underlying cause stays.
+salvaged by Runtime recovery so the run could continue. Runtime
+recovery is sunset, so no new run produces this status, but the default
+trace still surfaces it on older runs. The status is `recovered` rather
+than `passed` precisely because it marked a real bug: recovery papered
+over it for that run, but the underlying cause stayed.
 
-Each recovered entry carries `recovery.session_id` (a `*-as` id). Feed
-it to the hosted MCP's `get_runtime_recovery_session` to see what
-Runtime recovery actually did — the action it took to advance the test:
-
-```
-mcp__mabl__get_runtime_recovery_session({ session_id: "<*-as>" })
-```
-
-The recovery action is your strongest signal for the user-facing fix.
-It shows what the test needed in order to advance — which tells you
-whether the *test* is wrong (a stale selector, a missing wait, an
-assertion expecting the wrong value) or whether the *app under test*
-regressed (a precondition that used to hold no longer holds).
+Debug a recovered step the same way as a failed one: the step's own
+find/assert failure is the signal, and the fix is either the test (a
+stale selector, a missing wait, a wrong assertion) or the app (a
+regressed precondition).
 
 ---
 
@@ -205,8 +197,7 @@ For higher-level analysis the hosted **`mabl` MCP server** exposes
 `analyze_failure` (root-cause inference, related-tests, last-passing
 deploy), `get_mabl_test_details`, `get_environments`, `get_credentials`.
 Use these when the shell tools don't give enough context — same APIs,
-no shell required. For recovered steps, `get_runtime_recovery_session`
-is covered in the Triage section above.
+no shell required.
 
 ### Is this a test bug or an app bug?
 
@@ -216,7 +207,7 @@ heuristic:
 | Signal | Likely owner |
 |---|---|
 | Stack trace points into product source; failed network call to an app endpoint; new uncaught JS error after a recent deploy | **App** — `git log <last_passing_deploy>..HEAD` on the relevant repo, then file/fix in product code |
-| `status: "recovered"` with a recovery action like "click a different selector" or "wait, then retry"; stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
+| `status: "recovered"`; stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
 | Test flakes on retry but app code, DOM, and network all look healthy | **Test** — usually a missing wait or a timing assumption |
 
 When in doubt, run the live session (§3) and step through — a real
@@ -438,7 +429,7 @@ Test / run / plan ids:
 *-pr   plan run        group of test runs     abc123-pr
 *-j    test definition live-session input     abc123-j
 *-p    plan definition                        abc123-p
-*-as   agent session   Runtime recovery       abc123-as
+*-as   agent session   any mabl agent         abc123-as
 mabl-debug-<ts>        live session ID (returned by `session start`)
 ```
 
