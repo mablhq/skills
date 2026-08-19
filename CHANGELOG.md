@@ -5,6 +5,17 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.5.1] - 2026-08-19
+### Removed
+- `mabl-debug` no longer points at `get_runtime_recovery_session`. Runtime
+  recovery is retired and that MCP tool no longer exists, so the skill was
+  telling agents to call something that would fail, and describing the tool's
+  output as their strongest signal for the fix. Guidance for reading an older
+  run that did recover is kept — those runs still carry the `recovered` status,
+  and a recovered step is debugged the same way as a failed one. The id table
+  also no longer claims `*-as` means Runtime recovery specifically; it is any
+  mabl agent session.
+
 ## [1.5.0] - 2026-08-19
 ### Added
 - `mabl-test-coverage-design` now plans a **copy graph** before it authors
