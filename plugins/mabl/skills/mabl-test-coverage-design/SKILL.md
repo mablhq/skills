@@ -97,13 +97,15 @@ If a test can't create its own subject, it must not delete anything.
    not a discovery.
 7. **Write the design record.** Emit a short doc capturing the reasoning:
    constraints → navigation path → observed surface → pattern overlay → chosen
-   tests + what was dropped.
+   tests + what was dropped → the copy graph you'll author from.
 8. **Fan out.** Author each intent with `mabl agent authoring` (below), using
-   the strategy (default `serial`). Order the intents so the central happy-path
-   test is authored first — it seeds every test after it. Every test after the
-   first gets sibling context, never none: **copy** from one prior test when
-   this one walks the same path, **reference** all prior siblings when it walks
-   a different one. Within a feature area most tests walk the same path, so
+   the strategy (default `serial`). Before the first `plan` call, decide the
+   whole shape at once — which test each test starts from, and the order that
+   makes those sources exist in time. That's the **copy graph**; build it with
+   *The copy graph* below. Every test after the first gets sibling context,
+   never none: **copy** from one prior test when this one walks the same path,
+   and **reference** at least one already-authored anchor either way — the copy
+   graph says which. Within a feature area most tests walk the same path, so
    expect to copy more often than you reference — see *Referencing vs copying*.
    Report each `createdTestId` + `viewTestUrl`.
 9. **Validate what got built.** A finished authoring run is not proof the test
@@ -193,7 +195,7 @@ that starts serial finishes serial.
 
 | Mode | Behavior | Wall-clock | Use when |
 |---|---|---|---|
-| `serial` (default) | author sequentially, central happy-path first; each test then copies from one prior test or references **all** of them (plus any existing team tests) | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
+| `serial` (default) | author sequentially, central happy-path first; each test then copies from one prior test on its own path and references that path's anchor (plus any existing team tests) — see *The copy graph* | ~N tests, less for copies | default — the first test seeds the rest and every test after it builds on what already worked |
 | `parallel` | author all intents at once, independently | ~1 test | **only when the user asks for it** — no sibling has finished, so nothing can copy or reference; consistency has to come from existing team tests |
 
 `serial` is the default because it *is* the seed: the central happy-path test
@@ -333,9 +335,16 @@ definition — the same mechanism the mabl web app's "Add reference tests" uses.
 - **Prefer existing team tests as references** whenever the workspace has good
   related ones — they're higher-signal than a freshly-generated sibling. Include
   their IDs in the block in any mode, even `parallel`.
-- In `serial`, collect each `createdTestId` as authoring completes and feed all
-  the prior created IDs into the reference block of the next test, so each test
-  sees every sibling built before it.
+- In `serial`, collect each `createdTestId` as authoring completes and feed the
+  prior created IDs from that test's own group into its reference block, always
+  including the group's anchor — see *The copy graph* for what a group is. Cap the
+  sibling IDs at the anchor plus the two most recent, on top of any team tests:
+  the planner fetches every ID with `get_test_definition`, and the siblings in
+  the middle cost a fetch each without adding shape or steps.
+- A group's **own** anchor has no prior sibling in its group, so it references the
+  other groups' anchors instead. That's the diverging-path case above: it can't
+  copy from them, but it can still match their conventions. No test is ever
+  authored with an empty reference block.
 
 ### Referencing vs copying — two different asks
 
@@ -351,17 +360,20 @@ at once:
 
 **Which one, per test: does this test walk the same path as one already
 authored?** Same entry point, same subject created the same way, same teardown
-— then **copy** it, even though the behavior it proves is different. Reference
-only when the path genuinely diverges: a different page, a different entity, a
-different way in.
+— then **copy** it, even though the behavior it proves is different. When the
+path genuinely diverges — a different page, a different entity, a different way
+in — there's nothing worth copying, so reference instead. Either way the
+reference block is populated; copying replaces cold authoring, not referencing.
 
 Within one feature area most of a suite walks the same path, so **most of a
-suite copies from the anchor** and only the first test is authored cold.
+suite is copies** and only one test per path is authored cold. Which authored
+test each copy starts from is its own decision — see *The copy graph* below.
 
 Don't let reusable flows talk you out of it. It is tempting to reason "login and
-navigation are already flows, so there's nothing to inherit" — open the anchor
-with `get_test_definition` and count. The flows cover the walking about; the
-steps *between* them are inline, and they are the ones you actually want:
+navigation are already flows, so there's nothing to inherit" — open the test
+you'd copy from with `get_test_definition` and count. The flows cover the
+walking about; the steps *between* them are inline, and they are the ones you
+actually want:
 
 - the variable setup that names and shapes the subject
   (`Generate a string "editapp-{{digit:6}}"` → `appName`)
@@ -387,20 +399,90 @@ finds — instead of re-deriving them. That is both faster and closer to the
 original than re-authoring from a reference. The source test is only read; it
 is never modified.
 
-Two things to keep in mind:
+Three things to keep in mind:
 
 - **Still say what's different.** A copy with a vague "and adjust as needed"
   produces a duplicate. Name the step to change and what it becomes, and say
   which steps must stay untouched.
+- **Check what names the subject before you inherit it.** A copy inherits the
+  source's variable setup, and that setup is what the fail-closed teardown rule
+  deletes by exact name. A generator (`Generate a string "editapp-{{digit:6}}"`)
+  is safe; a literal is not — every copy would then delete the *same* subject in
+  a live workspace, and a chain spreads it to every test downstream. If the source
+  uses a literal, tell the `--intent` to generate its own name instead.
 - **It changes the strategy calculus.** A copy-seeded test skips most of the
   exploration an authoring run does, so it lands much faster than a normal
-  5–20 minute run. Where the rule says copy for most of a suite, author the
-  anchor first and copy from it — you get `serial`'s consistency without paying
-  `serial`'s full wall-clock for every test after the first.
+  5–20 minute run. Where the rule says copy for most of a suite, author each
+  group's anchor first and copy along the graph from there — you get `serial`'s
+  consistency without paying `serial`'s full wall-clock for every test after the
+  first.
 
 If the workspace's planner doesn't support copying yet, nothing breaks — it
 just plans the test normally from the intent text, and the reference block is
-still doing its job.
+still doing its job. The copy graph below still decides the order and the
+reference blocks in that case; only the copying degrades.
+
+### The copy graph — which source, in what order
+
+The rule above answers *whether* to copy. Two questions are still open: **which**
+authored test to copy from when several qualify, and **what order** to author in
+so each source exists by the time it's needed. Decide both before the first
+`plan` call — once a test is authored you can't retroactively give it a source.
+
+Group the intents by path — same entry point, same subject created the same way,
+same teardown. Each group's most central behavior is its **anchor** — this
+skill's existing word for the test a suite builds on, except a suite spanning two
+paths has two of them.
+
+| | Rule |
+|---|---|
+| 1 | Take the groups in order of how central each one is, and **finish a group before starting the next**. Each group opens with its own anchor, authored cold — an anchor would only copy if it really walked another group's path, in which case it wasn't a separate group. |
+| 2 | Every other test copies from the authored test in its group **whose steps are closest to its own** — which is often a sibling, not the suite's first test. Closest means fewest edits to get from that test to this one, not most recently authored. |
+| 3 | Order each group by how far each test sits from the anchor, closest first, so a close source already exists by the time each test needs one. |
+
+**Closest means the source you'd keep whole.** If you'd be telling the planner to
+remove steps the source added, pick an earlier test in the group instead.
+"Change the payment step to PayPal" is a good diff; "change the payment step, drop
+the coupon step, and restore the original assertion" means you copied from a
+cousin, not an ancestor.
+
+**The anchor stays in the reference block even when you copy from a sibling.**
+Copies chained off copies drift, and nothing else holds the group to one shape:
+the closest sibling gives you the short diff, the anchor gives you the shape.
+
+**This is a `serial` concept, and it doesn't add concurrency.** Under `parallel`
+nothing has finished, so there is no source to copy and no graph to walk. The
+win here is that more tests are cheap copies, not that anything overlaps.
+
+**When a source doesn't land, don't strand the tests below it.** A source counts
+as landed only if it completed — failed, timed out, and paused-on-a-question all
+mean "no source". Walk *earlier* in the group's order to the last test that did
+complete and copy from that one. If nothing in the group has completed, author
+the next test cold and treat it as the group's new anchor. Never skip a test just
+because its source didn't finish.
+
+Put the graph in the design record and print it before you start — each test,
+what it copies from, what it references, and the order you'll walk. **Show it,
+don't gate on it**; a wrong source costs one test's consistency, which step 9
+catches.
+
+A five-behavior edit form plus two list checks is two groups: two cold runs and
+five copies, instead of seven cold runs.
+
+| | Test | Copies from |
+|---|---|---|
+| 1 | save persists — the central promise | nothing — it's this group's anchor |
+| 2 | loads pre-populated | 1 |
+| 3 | required field blocks save | 1 |
+| 4 | cancel discards changes | 3 — it already leaves the form dirty |
+| 5 | the avatar picker works | 1 — it needs the clean save path |
+| 6 | expected row present | nothing — it's the second group's anchor |
+| 7 | filter narrows the list | 6 |
+
+Test 4 is the whole point: 3 already clears the required field, so 4 inherits the
+dirty form and changes only the ending, where starting from the anchor would mean
+re-deriving that setup. Test 6 is the anchor exception — nothing in its group
+precedes it, so it copies from nothing and references test 1.
 
 ## Coverage patterns (the question sets)
 
