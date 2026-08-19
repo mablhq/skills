@@ -5,6 +5,20 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.5.0] - 2026-08-19
+### Added
+- `mabl-test-coverage-design` now plans a **copy graph** before it authors
+  anything: it groups the designed tests by the path they walk, authors one
+  anchor per group, and has every other test copy from whichever test in its
+  own group is closest to it, rather than from the suite's first test. A test
+  that only changes the ending of the test before it starts from that one, so
+  it inherits the setup that was already worked out. The graph is shown up
+  front and recorded in the design doc, and if a source fails to author, the
+  tests below it fall back toward their anchor instead of being skipped.
+  Because a copy also inherits the step that names the subject the test later
+  deletes, the skill now checks that the source generates that name rather
+  than hard-coding it.
+
 ## [1.4.0] - 2026-08-10
 ### Fixed
 - A cloud authoring session that stops to ask a question no longer strands the
