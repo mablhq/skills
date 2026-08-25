@@ -39,9 +39,9 @@ mabl auth info    # verify you're logged in and the token hasn't expired
 ```
 
 The metadata and structured-step lanes run entirely on the hosted `mabl` MCP
-server (no local browser). The step lanes are a preview behind a workspace
-feature flag — see [Lane availability](#lane-availability) for what to do when
-they're off.
+server (no local browser). The step lanes are a preview, so they aren't enabled
+in every workspace — see [Lane availability](#lane-availability) for what to do
+when they're off.
 
 ## The router
 
@@ -78,7 +78,7 @@ rather than *the step definition*, it belongs in the agent lane.
 
 ## Lane 1 — Metadata
 
-The always-available lane (no feature flag). One atomic call; a list of
+The always-available lane — every workspace has it. One atomic call; a list of
 operations applied in order, saved in a single PATCH — if any operation is
 invalid, nothing is saved.
 
@@ -189,8 +189,8 @@ mcp__mabl__mabl_get_authoring_guide({ uri: "mabl-author://authoring-patterns" })
 mcp__mabl__mabl_get_schema_resource({ uri: "mabl-schema://step" })
 ```
 
-(Both reference tools live behind the same `mabl_authoring_mcp` flag as the
-step-edit tools, so they're available exactly when Lane 2 is.)
+(Both reference tools ship with the same preview as the step-edit tools, so
+they're available exactly when Lane 2 is.)
 
 Steps are canonicalized on save (e.g. variable aliases are normalized); the
 response reports this under `canonicalization`.
@@ -299,20 +299,19 @@ no-branch agent edit targets the default branch before you start the session.
 
 ## Lane availability
 
-The lanes sit behind different feature flags, so "just fall back to the agent
-lane" isn't always possible. Check what's actually available before promising a
-change:
+The lanes are gated **independently**, so "just fall back to the agent lane"
+isn't always possible — one lane being closed tells you nothing about the other.
+Check what's actually available before promising a change:
 
-| Lane | Flag(s) required | If unavailable |
-|------|------------------|----------------|
-| Metadata | none | always available |
-| Structured step | `mabl_authoring_mcp` | the `edit_mabl_*_steps` tools aren't listed; calling one returns *"Mabl test authoring tools are not enabled for this workspace. Contact mabl support to join the preview."* |
-| Agent | `generative_ai` **and** `agentic_test_editing` | `mabl_authoring_edit` isn't listed / returns a not-enabled error |
+| Lane | If unavailable |
+|------|----------------|
+| Metadata | always available |
+| Structured step | the `edit_mabl_*_steps` tools aren't listed; calling one returns *"Mabl test authoring tools are not enabled for this workspace. Contact mabl support to join the preview."* |
+| Agent | `mabl_authoring_edit` isn't listed / returns a not-enabled error |
 
-Degrade honestly. You can't read a workspace's feature flags — so judge a lane
+Degrade honestly. You can't see which previews a workspace has — so judge a lane
 by what you *can* see: **a lane is open when its tool is in your tool list**, and
-closed when the tool is absent or returns the not-enabled error above. (The flag
-names are just there to explain *why* a tool might be missing.)
+closed when the tool is absent or returns the not-enabled error above.
 
 1. Prefer the structured lane for nameable step edits.
 2. If the `edit_mabl_*_steps` tools aren't in your tool list, the structured

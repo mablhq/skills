@@ -5,6 +5,20 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.6.1] - 2026-08-25
+### Changed
+- `mabl-test-edit` no longer names mabl's internal feature flags when it explains
+  which edit lanes a workspace has. The flag names were never usable: the skill
+  says two lines later that an agent can't read a workspace's flags and has to
+  judge a lane by whether its tool is in the tool list. What that column was
+  really carrying — the lanes are gated **independently**, so one being closed
+  tells you nothing about the other — is now said outright, and the observable
+  signals (the tool list, the "contact mabl support" error) are unchanged.
+- `mabl-debug`'s fix-and-retry cycle no longer tells you to rebuild the mabl CLI
+  from a script in a repo you don't have. For an app-code fix the thing to
+  rebuild is the app under test, and the reason to start a fresh session is an
+  upgraded CLI — both now say so.
+
 ## [1.6.0] - 2026-08-19
 ### Changed
 - `mabl-test-coverage-design` now schedules the fan-out itself instead of

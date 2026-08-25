@@ -407,16 +407,15 @@ stdout) is your green check.
 **Reuse vs. restart.** Keep using the same `<sid>` while iterating —
 the session holds the browser, cookies, and state from earlier steps,
 which is what you want. Start a fresh `session start --run-id <jr-id>`
-only when (a) the fix changed code the runtime loads at startup (a CLI
-rebuild, an executor change), (b) the browser is in a bad state you
-can't unstick, or (c) you want a clean reproduction to attach to the
-PR.
+only when (a) you upgraded the mabl CLI, since the runtime is loaded
+at startup, (b) the browser is in a bad state you can't unstick, or
+(c) you want a clean reproduction to attach to the PR.
 
-For app-code fixes, the productive cycle is: edit → rebuild CLI (see
-`build:local` in CLAUDE.md) → fresh `session start` → `run-to-step` →
-`run-step` on the failing id. For test-only fixes (selector, wait,
-assertion), no rebuild is needed — update the test definition and
-`run-step` directly.
+For app-code fixes, the productive cycle is: edit → rebuild the app
+under test → fresh `session start` → `run-to-step` → `run-step` on
+the failing id. For test-only fixes (selector, wait, assertion), no
+rebuild is needed — update the test definition and `run-step`
+directly.
 
 ---
 
