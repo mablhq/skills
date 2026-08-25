@@ -51,14 +51,14 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   with `get_test_definition`, which is the cloud planner's own tool, not yours;
   it now points at `mabl tests export`. And `mabl-test-edit`'s escape-hatch note
   no longer says "preview flags off".
-- `mabl-debug` no longer explains Runtime recovery, only the status you can see.
-  The feature is sunset, so the sunset note, the recovery session id framing, and
-  the claim about what new runs can produce are gone. The `recovered` status
-  stays: `mabl agent debug steps` still filters to failed **and** recovered by
-  default, so a reader triaging an older run still meets it, and now gets one
-  paragraph on how to debug it instead of a history lesson. The triage recipe no
-  longer depends on knowing the full status list — it selects anything that isn't
-  passed or skipped, and stops loudly when there's nothing to triage.
+- Runtime recovery is gone from the skills — the feature, the `recovered` status
+  it left behind, and the recovery session id. It's sunset, so explaining it costs
+  every reader something to serve the shrinking few opening a run old enough to
+  carry it. Nothing is stranded: the triage recipe no longer depends on knowing
+  the status list at all. It selects any step that isn't passed or skipped — so it
+  still finds a recovered step without naming one — and stops loudly when there's
+  nothing to triage, instead of quietly passing an empty step id to three artifact
+  calls the way it briefly did.
 - The skills validator now has tests, and it needed them: the description budget
   it enforces was passing a 2789-character description clean, because a blank
   line inside a plain scalar ended the measurement instead of folding into it. A

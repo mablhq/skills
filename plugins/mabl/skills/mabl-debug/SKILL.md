@@ -74,8 +74,8 @@ a real browser the agent drives directly.
 > shape that this CLI surface doesn't cover.
 
 ```bash
-# Step trace, default. Output is the failed and recovered steps plus
-# the summary block. Pass --all to see passed / skipped steps too.
+# Step trace, default. Output is the steps that didn't pass, plus the
+# summary block. Pass --all to see passed / skipped steps too.
 mabl agent debug steps <jr-id>
 mabl agent debug steps <jr-id> --all   # full trace
 ```
@@ -86,11 +86,11 @@ that as "the run executed more than the failed step, you just don't
 need to see the noise yet."
 
 Each entry has `index` (1-based), `step_run_id`, `flow`, `action`,
-`description`, `status` (`passed` / `failed` / `skipped` /
-`recovered`), `duration_ms`, `step_id` (per-flow — feed to
-live-session commands), and `step_id_in_test` (per-test). The trace
-also carries a top-level `summary` block on any run with a failed or
-recovered step; on those it also includes
+`description`, `status` (`passed` / `failed` / `skipped`),
+`duration_ms`, `step_id` (per-flow — feed to live-session commands),
+and `step_id_in_test` (per-test). The trace also carries a top-level
+`summary` block on any run with a step that didn't pass; on those it
+also includes
 `summary.step_id` — that's the value to copy straight into
 `debug session run-step` / `run-to-step` after triage. The top-level
 summary is the one to scan first; the API-side `failure_summary`
@@ -165,17 +165,6 @@ mabl agent debug artifact console abc123-jr --step-run-id "$SID" \
 Artifacts cache to `.mabl/debug/<jr-id>/` (gitignored) and are reused
 across calls.
 
-### Recovered steps
-
-A step with `status: "recovered"` failed and was then salvaged mid-run
-so the run could continue. The status is `recovered` rather than
-`passed` precisely because it marked a real bug. Debug it the same way
-as a failed one: the step's own find/assert failure is the signal, and
-the fix is either the test (a stale selector, a missing wait, a wrong
-assertion) or the app (a regressed precondition).
-
----
-
 ## 2. Hypothesize — map the failure to code
 
 The triage output gives you names that ground the search:
@@ -201,7 +190,7 @@ heuristic:
 | Signal | Likely owner |
 |---|---|
 | Stack trace points into product source; failed network call to an app endpoint; new uncaught JS error after a recent deploy | **App** — `git log <last_passing_deploy>..HEAD` on the relevant repo, then file/fix in product code |
-| `status: "recovered"`; stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
+| Stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
 | Test flakes on retry but app code, DOM, and network all look healthy | **Test** — usually a missing wait or a timing assumption |
 
 When in doubt, run the live session (§3) and step through — a real
