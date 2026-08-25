@@ -18,6 +18,10 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   from a script in a repo you don't have. For an app-code fix the thing to
   rebuild is the app under test, and the reason to start a fresh session is an
   upgraded CLI — both now say so.
+- The Cursor install notes no longer promise that the CLI installer will pick up
+  `chrome-devtools` later. The caveat that matters is unchanged: `mabl agent
+  install cursor` wires up two of the three MCP servers, so add the third by
+  hand.
 
 ## [1.6.0] - 2026-08-19
 ### Changed
