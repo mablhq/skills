@@ -5,6 +5,37 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.7.0] - 2026-08-25
+### Added
+- `mabl-compare-versions` — a new skill that answers "what changed in this
+  test" and stops there. It reads `mabl tests compare --output json` and reports
+  the difference as a classification: steps added, removed, changed and moved;
+  assertion counts per type on both sides; and the weakenings that a count alone
+  misses, where the test keeps its shape but proves less — an `AssertEquals`
+  swapped for an `AssertPresent`, an expected value emptied, a step disabled, an
+  assertion turned into a wait, a date literal baked in. It never edits,
+  restores, or runs anything.
+- The skill separates a **moved** step from a deleted one. `compare` renders a
+  relocated step as a removal plus an addition, so a check that reads removals
+  alone reports every moved assertion as lost coverage; pairing the two by step
+  id fixes that before anyone reasons about the number.
+- It reports what the diff cannot see rather than implying it looked: whether the
+  test as a whole is enabled, which steps fell inside an added `If`, and versions
+  created on another branch (both references resolve against the default branch).
+- Two lanes, and the skill says which it used. The mabl MCP server's
+  `list_mabl_test_versions` carries each version's creation time and change
+  description and its compare tool takes a `branch`, so "what changed since
+  Tuesday" and "diff the version on that feature branch" are answerable there;
+  the CLI's `mabl tests versions` carries neither, and `mabl tests compare`
+  resolves both references against the default branch. Same diff engine either
+  way, so the classification doesn't change — only what can be asked does.
+- Reusable flows get the same treatment via `compare_mabl_flow_versions`, with
+  the caveat that flow version numbers are discoverable only on the MCP lane.
+- Deliberately verdict-free. A diff is a fact and the verdict needs the intent, so
+  when a test was authored or healed in the same session, `mabl-test-authoring`'s
+  validation step still owns the decision — this skill hands it the classification
+  as input.
+
 ## [1.6.0] - 2026-08-19
 ### Changed
 - `mabl-test-coverage-design` now schedules the fan-out itself instead of
