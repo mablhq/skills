@@ -15,7 +15,8 @@ Below: artifact shape, install targets, and common runtime errors.
 `mabl agent debug steps <jr-id>` emits a `steps[]` array (YAML by
 default for readability; pass `--output json` when piping to tooling).
 Each entry carries `index` (1-based), `step_run_id`, `flow`, `action`,
-`description`, `status` (`passed` / `failed` / `skipped`),
+`description`, `status` (usually `passed` / `failed` / `skipped`; match
+on *not* `passed` and *not* `skipped` rather than on `failed`),
 `duration_ms`, `step_number_in_flow`, `step_id_in_test`,
 optional `url_before` / `url_after`, an `error` block on
 failed entries, and the list of artifact types captured for that

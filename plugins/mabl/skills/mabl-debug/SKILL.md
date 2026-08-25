@@ -86,8 +86,10 @@ that as "the run executed more than the failed step, you just don't
 need to see the noise yet."
 
 Each entry has `index` (1-based), `step_run_id`, `flow`, `action`,
-`description`, `status` (`passed` / `failed` / `skipped`),
-`duration_ms`, `step_id` (per-flow — feed to live-session commands),
+`description`, `status` (usually `passed` / `failed` / `skipped` —
+match it as *not* `passed` and *not* `skipped` rather than comparing to
+`failed`, the way the recipe below does), `duration_ms`, `step_id`
+(per-flow — feed to live-session commands),
 and `step_id_in_test` (per-test). The trace also carries a top-level
 `summary` block on any run with a step that didn't pass; on those it
 also includes
