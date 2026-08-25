@@ -134,9 +134,9 @@ The `mabl-test-authoring` skill covers this command in depth (the
 `--test-information` fields, API tests, local mode). Use it for the per-test
 detail; this skill owns deciding *which* tests to author and *in what order*.
 
-**Confirm `mabl-test-authoring` is in your available skills before starting the
-fan-out.** If it isn't, stop and tell the user which skill is missing by name —
-don't author the suite without it, and don't guess how to install it.
+**Requires `mabl-test-authoring`.** If that skill isn't there, stop and say
+which skill is missing — don't author the suite without it, and don't guess how
+to install it, because that depends on how this skill was installed.
 
 ### When a session pauses to ask
 

@@ -65,16 +65,18 @@ This repo is public — external developers read our PRs. Write them short and h
 For the same reason, a body that routes the reader to a **sibling skill** has to confirm that skill is there first — someone who installed only the skill they're reading has no other copy to route to. Keep the block to three lines, at the place the reference actually happens:
 
 ```markdown
-**Confirm `mabl-test-edit` is in your available skills before routing the fix
-there.** If it isn't, stop and tell the user which skill is missing by name —
-don't attempt the edit yourself, and don't guess how to install it.
+**Requires `mabl-test-edit`.** If that skill isn't there, stop and say which
+skill is missing — don't attempt the edit yourself, and don't guess how to
+install it, because that depends on how this skill was installed.
 ```
+
+**`**Requires \`<name>\`.**` is the checked token.** A structural declaration, not a sentence: CI verifies it exactly, it reads as prose, and it names the skill so the error message is right. Every other word around it is free to edit. What CI can't verify is that the fallback beside it is correct — that stays a review item.
 
 **Name the missing skill, never an install command.** A skill cannot know which of the five surfaces installed it, so `gh skill install ...` is wrong guidance for the four readers who used a marketplace instead. Report what's missing and let the user install it their way.
 
 Don't name a sibling where nothing routes there — say the thing itself instead.
 
-**Routing lives in `SKILL.md`.** A `references/` file carries mechanics, not hand-offs — a reference restating a route is a second copy of a decision `SKILL.md` owns. CI checks every `.md` in the skill folder and wants the availability check in the *same file* as the mention, because a reference is loaded on its own and an agent acting from one may not have `SKILL.md` in context. A reference that trips this usually wants rewording rather than a second copy of the check.
+**Routing lives in `SKILL.md`.** A `references/` file carries mechanics, not hand-offs — a reference restating a route is a second copy of a decision `SKILL.md` owns. CI checks every `.md` in the skill folder and wants the declaration in the *same file* as the mention, because a reference is loaded on its own and an agent acting from one may not have `SKILL.md` in context. A reference that trips this usually wants rewording rather than a second copy of the declaration.
 
 ### Folder name = frontmatter name
 

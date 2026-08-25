@@ -440,9 +440,9 @@ the `mabl-test-edit` skill's structured-step lane, which applies a named
 That lane is not just faster. **A structured insert cannot delete anything**, so
 it removes the whole risk this section is guarding against.
 
-**Confirm `mabl-test-edit` is in your available skills before routing the fix
-there.** If it isn't, stop and tell the user which skill is missing by name —
-don't attempt the edit yourself, and don't guess how to install it.
+**Requires `mabl-test-edit`.** If that skill isn't there, stop and say which
+skill is missing — don't attempt the edit yourself, and don't guess how to
+install it, because that depends on how this skill was installed.
 
 **Otherwise** — the fix needs the live app, e.g. "verify the toast appears" for
 an element nothing in the test has ever touched — edit through the authoring

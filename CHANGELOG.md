@@ -18,9 +18,9 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   first. A skill can be installed on its own, so "route this to
   `mabl-test-edit`" was a dead end for anyone who installed only the skill they
   were reading. The two places it happens — test authoring to test edit, and
-  coverage design to test authoring — now confirm the sibling is available and
-  name it if it isn't, so you find out from the skill rather than from it
-  quietly doing nothing.
+  coverage design to test authoring — now declare it with **Requires
+  `<name>`** and say which skill is missing when it isn't there, so you find out
+  from the skill rather than from it quietly doing nothing.
 - Three places named a sibling skill where nothing actually routes there:
   `mabl-test-coverage-design` explained which Chrome `chrome-for-mabl` attaches
   to by naming the skill that uses it, `mabl-test-edit` compared writing a

@@ -7,10 +7,10 @@
 //      truncates there, mid-word, so anything past it never reaches the matcher
 //      that decides whether the skill fires.
 //   3. Only the six frontmatter keys the Agent Skills spec allows.
-//   4. A body that routes to a sibling skill first has the reader confirm that
-//      skill is available — a skill can be installed on its own, and the skill
+//   4. A file that routes to a sibling skill declares it with
+//      "**Requires `<name>`.**" — a skill can be installed on its own, and it
 //      cannot know which of the five surfaces installed it, so it names the
-//      missing skill rather than an install command.
+//      skill it needs rather than an install command.
 // Exits non-zero with a clear message on any failure.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -31,10 +31,12 @@ const DESCRIPTION_LIMIT = 1024;
 // Cursor.
 const SPEC_KEYS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
 
-// The phrase a routing hand-off uses to make the reader check the sibling is
-// there. A fixed marker keeps check 4 greppable without asking CI to understand
-// prose.
-const AVAILABILITY_MARKER = 'in your available skills';
+// A hand-off declares its dependency with this token, naming the skill it needs.
+// A structural declaration rather than a sentence: CI can verify it exactly, it
+// reads as prose, it names the skill so the error message is right, and every
+// other word around it stays free to edit. What CI cannot verify is that the
+// fallback beside it is correct — that stays a review item.
+const requiresDeclaration = (sibling) => `**Requires \`${sibling}\`.**`;
 
 // Every .md under a skill folder, recursively, so a route stated in references/
 // is checked too.
@@ -200,9 +202,9 @@ for (const folder of skillNames) {
     for (const sibling of skillNames) {
       if (sibling === folder) continue;
       const mention = new RegExp(`(?<![a-z0-9-])${sibling}(?![a-z0-9-])`);
-      if (mention.test(text) && !text.includes(AVAILABILITY_MARKER)) {
+      if (mention.test(text) && !text.includes(requiresDeclaration(sibling))) {
         errors.push(
-          `${file}: names the sibling skill "${sibling}" but never has the reader confirm it is available — a skill can be installed on its own, so that pointer dangles for anyone who has only "${folder}"; add a check in this file saying to confirm "${sibling}" is "${AVAILABILITY_MARKER}" and to name it if it is missing, or reword the mention so nothing routes there (routing belongs in SKILL.md)`,
+          `${file}: names the sibling skill "${sibling}" but never declares it as a dependency — a skill can be installed on its own, so that pointer dangles for anyone who has only "${folder}"; add "${requiresDeclaration(sibling)}" in this file at the hand-off, followed by what to do when the skill isn't there, or reword the mention so nothing routes there (routing belongs in SKILL.md)`,
         );
       }
     }
@@ -216,5 +218,5 @@ if (errors.length) {
 }
 
 console.log(
-  `All ${skillNames.length} skills in plugins/mabl/skills/ are valid: name matches folder, description within ${DESCRIPTION_LIMIT} characters, spec-only frontmatter keys, and an availability check for every sibling it routes to.`,
+  `All ${skillNames.length} skills in plugins/mabl/skills/ are valid: name matches folder, description within ${DESCRIPTION_LIMIT} characters, spec-only frontmatter keys, and a declared dependency for every sibling it routes to.`,
 );
