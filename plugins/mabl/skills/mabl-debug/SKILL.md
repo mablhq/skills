@@ -74,9 +74,9 @@ a real browser the agent drives directly.
 > shape that this CLI surface doesn't cover.
 
 ```bash
-# Step trace, default. Output is the failed steps and the steps that
-# Runtime recovery recovered (plus the summary block). Pass --all if
-# you need to see passed / skipped steps as well.
+# Step trace, default. Output is the failed steps and any recovered
+# steps (plus the summary block) — see "Recovered steps" below. Pass
+# --all to see passed / skipped steps as well.
 mabl agent debug steps <jr-id>
 mabl agent debug steps <jr-id> --all   # full trace
 ```
@@ -170,11 +170,11 @@ across calls.
 ### Recovered steps
 
 A step with `status: "recovered"` is a step that **failed**, then was
-salvaged by Runtime recovery so the run could continue. Runtime
-recovery is sunset, so no new run produces this status, but the default
-trace still surfaces it on older runs. The status is `recovered` rather
-than `passed` precisely because it marked a real bug: recovery papered
-over it for that run, but the underlying cause stayed.
+recovered so the run could continue. Runtime recovery is sunset, so
+you'll normally only see this on older runs, which the default trace
+still surfaces. The status is `recovered` rather than `passed`
+precisely because it marked a real bug: recovery papered over it for
+that run, but the underlying cause stayed.
 
 Debug a recovered step the same way as a failed one: the step's own
 find/assert failure is the signal, and the fix is either the test (a
