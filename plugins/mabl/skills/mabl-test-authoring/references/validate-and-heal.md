@@ -60,7 +60,7 @@ Compare that against the number of things your intent asked to verify. If the
 intent named three checks and the test has one assertion, you know what's
 missing before you look at any run.
 
-`export` refuses performance tests and tests that aren't mablscript-backed
+`export` refuses performance tests and mabl's own default tests
 ("Default mabl tests can not be exported"). That is a real limit, not an error
 to work around — skip 4.1 and say the structure was not checked.
 

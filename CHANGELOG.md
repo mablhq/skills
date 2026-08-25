@@ -31,6 +31,10 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   with `get_test_definition`, which is the cloud planner's own tool, not yours;
   it now points at `mabl tests export`. And `mabl-test-edit`'s escape-hatch note
   no longer says "preview flags off".
+- "mablscript" is gone from the skills. It named the step format in three places
+  where the reader only ever sees the consequence — a `legacy_unsupported` flow
+  the structured lanes can't edit, or an export mabl refuses — so those now say
+  that instead.
 
 ## [1.6.0] - 2026-08-19
 ### Changed

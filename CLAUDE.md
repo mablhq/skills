@@ -103,4 +103,6 @@ To test the Codex plugin: `codex plugin marketplace add .` (or `mablhq/skills`) 
 
 ## Syncing with mabl-cli
 
-The skills originated from `mabl-cli` (`runtime/src/resources/skills/`). Content fixes that apply there too should be synced back in a follow-up PR on mabl-cli.
+These skills also ship inside the mabl CLI. mabl keeps the two copies in sync, so an outside contributor has nothing extra to do — fix it here.
+
+mabl maintainers: mirror content fixes into the CLI's copy in a follow-up PR.

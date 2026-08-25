@@ -59,7 +59,7 @@ this tag is the whole routing decision for step edits:
 |--------|------------|------------------|
 | `structural` | steps that live directly in this test | `edit_mabl_test_steps` |
 | `reusable` | a shared flow reused by other tests (carries a `used_by` sample) | `edit_mabl_flow_steps` |
-| `legacy_unsupported` | old mablscript flow | neither — see [Legacy flows](#legacy-and-unsupported-flows) |
+| `legacy_unsupported` | a flow in an older format | neither — see [Legacy flows](#legacy-and-unsupported-flows) |
 
 Pick the lane by the *kind of change*, then confirm the target:
 
@@ -326,7 +326,7 @@ closed when the tool is absent or returns the not-enabled error above.
 
 ## Legacy and unsupported flows
 
-A flow tagged `legacy_unsupported` (older mablscript format) can't be edited by
+A flow tagged `legacy_unsupported` (an older flow format) can't be edited by
 the structured lanes — `edit_mabl_test_steps` returns
 `reason: "wrong_authoring_boundary"` and `edit_mabl_flow_steps` returns
 `reason: "legacy_format_unsupported"`. Route these to the agent lane, or to the
