@@ -64,11 +64,15 @@ export function parseFrontmatter(raw) {
           // A loader folds a continuation in with one space — except straight
           // after a paragraph break, which already supplied the newline.
           parts.push(parts.at(-1) === '\n' ? line.trim() : ` ${line.trim()}`);
-        } else if (line.trim() === '' && /^\s+\S/.test(lines[end + 1] ?? '')) {
+        } else if (line.trim() === '') {
           // A blank line inside a plain scalar is a paragraph break the loader
-          // folds to a newline, NOT the end of the value. Stopping here handed
-          // every paragraph after the first an unmeasured free ride — a 2789-
-          // character description passed this check clean.
+          // folds to a newline, NOT the end of the value. Stopping at one hands
+          // every paragraph after the first an unmeasured free ride. The run
+          // has to be scanned whole: a double-spaced break is still one scalar,
+          // so a lookahead of exactly one line ends the value just as wrongly.
+          let next = end + 1;
+          while (next < closing && lines[next].trim() === '') next++;
+          if (next >= closing || !/^\s+\S/.test(lines[next])) break;
           parts.push('\n');
         } else break;
       }

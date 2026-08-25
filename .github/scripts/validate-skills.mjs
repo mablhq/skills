@@ -12,7 +12,7 @@
 //      cannot know which of the five surfaces installed it, so it names the
 //      skill it needs rather than an install command.
 // Exits non-zero with a clear message on any failure.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFrontmatter } from './lib/frontmatter.mjs';
@@ -87,7 +87,10 @@ if (!existsSync(skillsRoot)) {
 // reaches the pattern below.
 const validSkillNames = skillNames.filter((folder) => {
   if (SKILL_NAME.test(folder)) return true;
-  errors.push(`plugins/mabl/skills/${folder}/: folder name must be lowercase letters, numbers and hyphens only`);
+  // JSON.stringify, not the raw name: this is the one place a rejected name is
+  // still printed, and a directory name may contain a newline, which would put
+  // attacker text at the start of a log line where Actions reads `::` commands.
+  errors.push(`plugins/mabl/skills/${JSON.stringify(folder)}: folder name must be lowercase letters, numbers and hyphens only`);
   return false;
 });
 
@@ -99,8 +102,19 @@ const mentionPatterns = new Map(
 for (const folder of validSkillNames) {
   const rel = `plugins/mabl/skills/${folder}/SKILL.md`;
   const path = join(skillsRoot, folder, 'SKILL.md');
-  if (!existsSync(path)) {
+  // lstat, so a symlink reports as itself rather than as its target. Same rule
+  // markdownFilesIn applies to the rest of the folder, and it binds harder here:
+  // a linked SKILL.md is the file `gh skill install` must copy, so a link out of
+  // the folder ships broken to every surface while validating green. Reading one
+  // would also let a PR aim this at any path on the runner, or at a FIFO that
+  // blocks until the job timeout.
+  const stat = lstatSync(path, { throwIfNoEntry: false });
+  if (!stat) {
     errors.push(`${rel} is missing — every skill folder needs a SKILL.md`);
+    continue;
+  }
+  if (!stat.isFile()) {
+    errors.push(`${rel} must be a regular file — a symlink or pipe here is not copied by \`gh skill install\``);
     continue;
   }
 

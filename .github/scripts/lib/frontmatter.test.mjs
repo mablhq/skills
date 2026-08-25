@@ -24,6 +24,15 @@ test('a blank line inside a plain scalar is a fold point, not the end of the val
   assert.ok(values.description.length > 'para one'.length);
 });
 
+test('a RUN of blank lines inside a plain scalar is still one value', () => {
+  // A lookahead of exactly one line ends the value at a double-spaced
+  // paragraph break, which reported a 2730-character description as being
+  // within 1024 characters.
+  const { values } = parseFrontmatter(wrap('name: a\ndescription: para one\n\n\n  para two'));
+  assert.match(values.description, /para two/, 'text after a double blank must be measured');
+  assert.equal(values.description, 'para one\n\npara two');
+});
+
 test('a `|` block resolves to one string and does not count source indentation', () => {
   const { values } = parseFrontmatter(wrap('name: a\ndescription: |\n  line one\n  line two'));
   assert.equal(values.description, 'line one\nline two');
@@ -69,8 +78,32 @@ test('a colon inside a block scalar is not read as a new key', () => {
   assert.deepEqual(keys, ['name', 'description']);
 });
 
+test('a colon inside a one-line plain scalar is not read as a new key', () => {
+  // The block-scalar case above never reaches the key pattern — the block branch
+  // consumes those lines. This is the shape that does reach it, and the shape a
+  // description is most often written in, so it is what pins the anchor.
+  const { keys, values } = parseFrontmatter(wrap('name: a\ndescription: use this when: the user asks'));
+  assert.deepEqual(keys, ['name', 'description']);
+  assert.equal(values.description, 'use this when: the user asks');
+});
+
+test('a key AFTER a block scalar is still reported', () => {
+  // The only survivor of this suite that failed OPEN: consuming one line too
+  // many swallows the following key, and check 3 reads `keys` to reject the
+  // Claude-only frontmatter that breaks claude.ai upload. A swallowed `model`
+  // is a skill that validates green and then fails on the surface.
+  const { keys, values } = parseFrontmatter(wrap('name: a\ndescription: |\n  a block\n  of text\nmodel: opus'));
+  assert.deepEqual(keys, ['name', 'description', 'model']);
+  assert.equal(values.model, 'opus');
+});
+
 test('no opening delimiter resolves to null', () => {
   assert.equal(parseFrontmatter('name: a\ndescription: b\n'), null);
+  // With no `---` anywhere, the closing search returns null on its own and the
+  // opening check is never what answers. A `---` further down — a horizontal
+  // rule in a file that simply has no frontmatter — is what actually exercises
+  // it, and must not be read as the close of a block that never opened.
+  assert.equal(parseFrontmatter('intro prose\nname: sneaky\n---\nafter\n'), null);
 });
 
 test('an unclosed frontmatter block resolves to null', () => {
