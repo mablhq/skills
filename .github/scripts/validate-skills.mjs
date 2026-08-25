@@ -31,6 +31,23 @@ const DESCRIPTION_LIMIT = 1024;
 // Cursor.
 const SPEC_KEYS = ['name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools'];
 
+// The phrase a routing hand-off uses to make the reader check the sibling is
+// there. A fixed marker keeps check 4 greppable without asking CI to understand
+// prose.
+const AVAILABILITY_MARKER = 'in your available skills';
+
+// Every .md under a skill folder, recursively, so a route stated in references/
+// is checked too.
+function markdownFilesIn(dir) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...markdownFilesIn(full));
+    else if (entry.name.endsWith('.md')) found.push(full);
+  }
+  return found;
+}
+
 // Minimal frontmatter reader: enough for the flat `key: value` and block-scalar
 // shape a SKILL.md uses, so this script stays dependency-free like its
 // siblings. Returns the top-level keys in source order, each key's resolved
@@ -124,6 +141,15 @@ for (const folder of skillNames) {
   }
   const { keys, values, body } = frontmatter;
 
+  // SKILL.md contributes its body only (the description is exempt — see check
+  // 4); every other markdown file in the folder contributes its whole text.
+  const routableFiles = [[rel, body]];
+  for (const file of markdownFilesIn(join(skillsRoot, folder))) {
+    if (file === path) continue;
+    const relFile = `plugins/mabl/skills/${folder}/${file.slice(join(skillsRoot, folder).length + 1)}`;
+    routableFiles.push([relFile, readFileSync(file, 'utf8')]);
+  }
+
   // 1. Folder name equality. CLAUDE.md: a mismatched or prefixed name silently
   // fails to load in Copilot, so this can't be left to review.
   if (!values.name) {
@@ -156,23 +182,29 @@ for (const folder of skillNames) {
     }
   }
 
-  // 4. Every sibling skill the body routes to must come with an availability
-  // check. A skill can be installed on its own — `gh skill install` copies one
-  // folder, and the five surfaces install differently — so a pointer to a
-  // sibling dangles silently for anyone who has only this one. The skill must
-  // notice and say which skill is missing; it must NOT name an install
-  // mechanism, because it can't know which of the five surfaces the reader
-  // used. Match the mention in the body (the frontmatter description routes for
-  // the matcher, and has a 1024-char budget to keep) and accept the marker
-  // anywhere in the file.
-  const AVAILABILITY_MARKER = 'in your available skills';
-  for (const sibling of skillNames) {
-    if (sibling === folder) continue;
-    const mention = new RegExp(`(?<![a-z0-9-])${sibling}(?![a-z0-9-])`);
-    if (mention.test(body) && !body.includes(AVAILABILITY_MARKER)) {
-      errors.push(
-        `${rel}: the body names the sibling skill "${sibling}" but never has the reader confirm it is available — a skill can be installed on its own, so that pointer dangles for anyone who has only "${folder}"; add a check saying to confirm "${sibling}" is "${AVAILABILITY_MARKER}" and to name it if it is missing, or reword the mention so nothing routes there`,
-      );
+  // 4. Every sibling skill a file routes to must come with an availability
+  // check in THAT SAME FILE. A skill can be installed on its own, so a pointer
+  // to a sibling dangles silently for anyone who has only this one. The check
+  // must name the missing skill and must NOT name an install mechanism — the
+  // skill cannot know which of the five surfaces the reader installed from.
+  //
+  // Scoped per file, not per folder: a references/ file is loaded on its own, so
+  // an agent acting from one may not have SKILL.md in context. A route stated
+  // there with the check back in SKILL.md is a check the reader never sees.
+  // Routing belongs in SKILL.md anyway — a references/ file that trips this
+  // usually wants rewording rather than a second copy of the check.
+  //
+  // The frontmatter description is exempt: it routes for the matcher and has a
+  // 1024-character budget to keep.
+  for (const [file, text] of routableFiles) {
+    for (const sibling of skillNames) {
+      if (sibling === folder) continue;
+      const mention = new RegExp(`(?<![a-z0-9-])${sibling}(?![a-z0-9-])`);
+      if (mention.test(text) && !text.includes(AVAILABILITY_MARKER)) {
+        errors.push(
+          `${file}: names the sibling skill "${sibling}" but never has the reader confirm it is available — a skill can be installed on its own, so that pointer dangles for anyone who has only "${folder}"; add a check in this file saying to confirm "${sibling}" is "${AVAILABILITY_MARKER}" and to name it if it is missing, or reword the mention so nothing routes there (routing belongs in SKILL.md)`,
+        );
+      }
     }
   }
 }

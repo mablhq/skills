@@ -72,7 +72,9 @@ don't attempt the edit yourself, and don't guess how to install it.
 
 **Name the missing skill, never an install command.** A skill cannot know which of the five surfaces installed it, so `gh skill install ...` is wrong guidance for the four readers who used a marketplace instead. Report what's missing and let the user install it their way.
 
-Don't name a sibling where nothing routes there — say the thing itself instead. CI checks that every sibling named in a body is accompanied by that availability check.
+Don't name a sibling where nothing routes there — say the thing itself instead.
+
+**Routing lives in `SKILL.md`.** A `references/` file carries mechanics, not hand-offs — a reference restating a route is a second copy of a decision `SKILL.md` owns. CI checks every `.md` in the skill folder and wants the availability check in the *same file* as the mention, because a reference is loaded on its own and an agent acting from one may not have `SKILL.md` in context. A reference that trips this usually wants rewording rather than a second copy of the check.
 
 ### Folder name = frontmatter name
 

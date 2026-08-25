@@ -159,9 +159,10 @@ Note what you do *not* have: these runs capture screenshots only, no DOM
 snapshot. So a descriptor for an element the test never touched has to come from
 a live session — that is the case the agent lane exists for.
 
-When the edit is nameable, hand it to the `mabl-test-edit` skill's
-structured-step lane (`insert_after` / `replace` / `move`). Keep the decision —
-what is missing, and whether a fix weakened the test — in this loop.
+When the edit is nameable, hand it to the structured-step lane
+(`insert_after` / `replace` / `move`) the way step 4.3 describes — that step owns
+the routing, including checking the skill it routes to is there. Keep the
+decision — what is missing, and whether a fix weakened the test — in this loop.
 
 ### The agent lane
 
