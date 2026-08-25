@@ -15,6 +15,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseFrontmatter } from './lib/frontmatter.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const skillsRoot = join(repoRoot, 'plugins', 'mabl', 'skills');
@@ -38,81 +39,32 @@ const SPEC_KEYS = ['name', 'description', 'license', 'compatibility', 'metadata'
 // fallback beside it is correct — that stays a review item.
 const requiresDeclaration = (sibling) => `**Requires \`${sibling}\`.**`;
 
+// A skill name — folder or frontmatter — is lowercase letters, numbers, hyphens.
+const SKILL_NAME = /^[a-z0-9-]+$/;
+
+// A folder name reaches `new RegExp` below, and on a public repo anyone can open
+// a PR that adds a folder. An unbalanced bracket throws a raw SyntaxError before
+// any collected error prints; `(a+)+$` backtracks forever against any .md body,
+// which with no job timeout is a free six-hour runner. Gate, then escape.
+const escapeForRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // Every .md under a skill folder, recursively, so a route stated in references/
 // is checked too.
 function markdownFilesIn(dir) {
   const found = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    // Vendored and tooling trees are not ours to lint: a skill folder may ship
+    // scripts with their own dependencies, and a third-party README naming a
+    // mabl skill is not a hand-off anyone here can fix.
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
     const full = join(dir, entry.name);
+    // Never follow a symlink. `gh skill install` copies the folder, so a link
+    // out of it arrives broken on the reader's machine anyway.
+    if (entry.isSymbolicLink()) continue;
     if (entry.isDirectory()) found.push(...markdownFilesIn(full));
-    else if (entry.name.endsWith('.md')) found.push(full);
+    else if (entry.isFile() && entry.name.endsWith('.md')) found.push(full);
   }
   return found;
-}
-
-// Minimal frontmatter reader: enough for the flat `key: value` and block-scalar
-// shape a SKILL.md uses, so this script stays dependency-free like its
-// siblings. Returns the top-level keys in source order, each key's resolved
-// string value, and the body after the closing delimiter.
-function parseFrontmatter(raw) {
-  const lines = raw.split('\n');
-  if (lines[0]?.trim() !== '---') return null;
-  const closing = lines.indexOf('---', 1);
-  if (closing === -1) return null;
-
-  const keys = [];
-  const values = {};
-  for (let i = 1; i < closing; i++) {
-    // Continuation lines of a block scalar are indented, so they never match
-    // this anchored pattern — the block-scalar branch below consumes them.
-    const match = /^([A-Za-z0-9_-]+):(.*)$/.exec(lines[i]);
-    if (!match) continue;
-    const [, key, rest] = match;
-    keys.push(key);
-    const inline = rest.trim();
-
-    if (/^[|>][-+]?\d*$/.test(inline)) {
-      const block = [];
-      let end = i + 1;
-      for (; end < closing; end++) {
-        if (lines[end].trim() === '' || /^\s/.test(lines[end])) block.push(lines[end].trim());
-        else break;
-      }
-      // A YAML loader resolves a block scalar to ONE string — `>` folds the line
-      // breaks to spaces, `|` keeps them as newlines — so what a consumer
-      // measures is a single line either way. Measure that space-joined form;
-      // measuring the raw source lines would count the indentation too.
-      values[key] = block.filter(Boolean).join(' ');
-      i = end - 1;
-    } else if (inline === '') {
-      // A nested mapping or list. Its indented lines belong to this key, so
-      // consume them — none of the checked keys use that shape.
-      values[key] = '';
-      let end = i + 1;
-      for (; end < closing; end++) {
-        if (lines[end].trim() === '' || /^\s/.test(lines[end])) continue;
-        break;
-      }
-      i = end - 1;
-    } else {
-      // A plain or quoted scalar can continue onto indented lines, which a YAML
-      // loader folds into the value with single spaces. Fold them the same way —
-      // measuring only the first line would silently pass a description far
-      // over budget, which is the shape a contributor who doesn't know about
-      // `|` writes most naturally.
-      const parts = [inline];
-      let end = i + 1;
-      for (; end < closing; end++) {
-        if (/^\s+\S/.test(lines[end])) parts.push(lines[end].trim());
-        else break;
-      }
-      i = end - 1;
-      values[key] = parts.join(' ').replace(/^['"]|['"]$/g, '');
-    }
-  }
-
-  const body = lines.slice(closing + 1).join('\n');
-  return { keys, values, body };
 }
 
 // Report a missing skills root the way the sibling validators report a missing
@@ -125,9 +77,26 @@ const skillNames = existsSync(skillsRoot)
   : [];
 if (!existsSync(skillsRoot)) {
   errors.push('plugins/mabl/skills/ is missing — the plugin has no skills to validate');
+} else if (skillNames.length === 0) {
+  // Otherwise a wiped-out skills directory reports "All 0 skills are valid".
+  errors.push('plugins/mabl/skills/ has no skill folders — the plugin ships no skills');
 }
 
-for (const folder of skillNames) {
+// Report a folder name that can't be a skill name, and drop it before it is
+// used as one. Check 1 constrains the FRONTMATTER name; the FOLDER name is what
+// reaches the pattern below.
+const validSkillNames = skillNames.filter((folder) => {
+  if (SKILL_NAME.test(folder)) return true;
+  errors.push(`plugins/mabl/skills/${folder}/: folder name must be lowercase letters, numbers and hyphens only`);
+  return false;
+});
+
+// One pattern per sibling, compiled once from a name already proven clean.
+const mentionPatterns = new Map(
+  validSkillNames.map((name) => [name, new RegExp(`(?<![a-z0-9-])${escapeForRegExp(name)}(?![a-z0-9-])`)]),
+);
+
+for (const folder of validSkillNames) {
   const rel = `plugins/mabl/skills/${folder}/SKILL.md`;
   const path = join(skillsRoot, folder, 'SKILL.md');
   if (!existsSync(path)) {
@@ -199,9 +168,8 @@ for (const folder of skillNames) {
   // The frontmatter description is exempt: it routes for the matcher and has a
   // 1024-character budget to keep.
   for (const [file, text] of routableFiles) {
-    for (const sibling of skillNames) {
+    for (const [sibling, mention] of mentionPatterns) {
       if (sibling === folder) continue;
-      const mention = new RegExp(`(?<![a-z0-9-])${sibling}(?![a-z0-9-])`);
       if (mention.test(text) && !text.includes(requiresDeclaration(sibling))) {
         errors.push(
           `${file}: names the sibling skill "${sibling}" but never declares it as a dependency — a skill can be installed on its own, so that pointer dangles for anyone who has only "${folder}"; add "${requiresDeclaration(sibling)}" in this file at the hand-off, followed by what to do when the skill isn't there, or reword the mention so nothing routes there (routing belongs in SKILL.md)`,
@@ -218,5 +186,5 @@ if (errors.length) {
 }
 
 console.log(
-  `All ${skillNames.length} skills in plugins/mabl/skills/ are valid: name matches folder, description within ${DESCRIPTION_LIMIT} characters, spec-only frontmatter keys, and a declared dependency for every sibling it routes to.`,
+  `All ${validSkillNames.length} skills in plugins/mabl/skills/ are valid: name matches folder, description within ${DESCRIPTION_LIMIT} characters, spec-only frontmatter keys, and a declared dependency for every sibling it routes to.`,
 );

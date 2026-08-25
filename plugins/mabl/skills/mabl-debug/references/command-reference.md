@@ -15,10 +15,12 @@ Below: artifact shape, install targets, and common runtime errors.
 `mabl agent debug steps <jr-id>` emits a `steps[]` array (YAML by
 default for readability; pass `--output json` when piping to tooling).
 Each entry carries `index` (1-based), `step_run_id`, `flow`, `action`,
-`description`, `status` (`passed` / `failed` / `skipped`),
-`duration_ms`, `step_number_in_flow`, `step_id_in_test`,
-optional `url_before` / `url_after`, an `error` block on
-failed entries, and the list of artifact types captured for that
+`description`, `status` (`passed` / `failed` / `skipped` /
+`recovered`), `duration_ms`, `step_number_in_flow`,
+`step_id_in_test`, optional `url_before` / `url_after`, an `error`
+block on failed and recovered entries, an optional
+`recovery.session_id` on recovered entries, and the list of
+artifact types captured for that
 step. The trace also carries `total_steps` (unfiltered count),
 `displayed_steps` (when filtering hid entries), and a top-level
 `summary` block reflecting `failure_summary` from the API.
@@ -67,7 +69,7 @@ mabl agent debug artifact screenshot foo-jr --step-run-id step-1 --before
 ```
 
 Artifacts cache to `.mabl/debug/<jr-id>/`. Re-running the same call is
-free; bypassing the CLI to read the cached file directly works too,
+free; you can also bypass the CLI and read the cached file directly
 once you know its path.
 
 ---

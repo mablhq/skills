@@ -67,7 +67,7 @@ to the session; `status` surfaces its id plus a `viewTestRunUrl`. So:
 - **absent** → nothing proved the test works. Either the validation didn't
   pass, or the workspace can't report agent runs. Treat the test as unverified.
 
-Other things to do with the test:
+Other things you can do with the test:
 
 - **Run the test in the cloud:** `mabl tests run-cloud --id <createdTestId>`
 - **Run the test locally:** `mabl tests run --id <createdTestId>`

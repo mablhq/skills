@@ -76,6 +76,8 @@ install it, because that depends on how this skill was installed.
 
 Don't name a sibling where nothing routes there — say the thing itself instead.
 
+**A `description` routes for the matcher, not mid-workflow, so it needs no declaration.** Six of the eight cross-skill references in this repo sit in frontmatter descriptions (`for CREATING a new test use mabl-test-authoring`), and CI deliberately exempts them: that text tells a reader they're in the wrong skill, it isn't a hand-off they depend on to finish a task. Forcing a declaration there would also spend the 1024-character budget the description is fighting for.
+
 **Routing lives in `SKILL.md`.** A `references/` file carries mechanics, not hand-offs — a reference restating a route is a second copy of a decision `SKILL.md` owns. CI checks every `.md` in the skill folder and wants the declaration in the *same file* as the mention, because a reference is loaded on its own and an agent acting from one may not have `SKILL.md` in context. A reference that trips this usually wants rewording rather than a second copy of the declaration.
 
 ### Folder name = frontmatter name
@@ -113,7 +115,8 @@ node .github/scripts/validate-copilot-manifest.mjs     # root plugin.json (Copil
 node scripts/validate-template.mjs                      # Cursor manifests (official validator)
 node .github/scripts/validate-cursor-parity.mjs        # mcp.json == .mcp.json + Cursor/Claude parity
 node .github/scripts/validate-codex-parity.mjs         # Codex/Claude manifest parity + marketplace
-node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, sibling install commands
+node --test .github/scripts/lib/frontmatter.test.mjs    # the frontmatter reader's folding rules
+node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, sibling dependency declarations
 ```
 
 `scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (we ship no hooks), not an error.

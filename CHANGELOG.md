@@ -51,12 +51,27 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   with `get_test_definition`, which is the cloud planner's own tool, not yours;
   it now points at `mabl tests export`. And `mabl-test-edit`'s escape-hatch note
   no longer says "preview flags off".
-- Runtime recovery is gone from the skills entirely — the feature, the
-  `recovered` status, the recovery session id, and the claim about what new runs
-  can produce. It's sunset, so nothing about it is actionable: a status a reader
-  will never meet is worse than absent, because they stop and wonder what it is.
-  The step trace, the artifact envelope, and the test-vs-app routing table all
-  read as if failures are simply failures, which is now the only case.
+- `mabl-debug` no longer explains Runtime recovery, only the status you can see.
+  The feature is sunset, so the sunset note, the recovery session id framing, and
+  the claim about what new runs can produce are gone. The `recovered` status
+  stays: `mabl agent debug steps` still filters to failed **and** recovered by
+  default, so a reader triaging an older run still meets it, and now gets one
+  paragraph on how to debug it instead of a history lesson. The triage recipe no
+  longer depends on knowing the full status list — it selects anything that isn't
+  passed or skipped, and stops loudly when there's nothing to triage.
+- The skills validator now has tests, and it needed them: the description budget
+  it enforces was passing a 2789-character description clean, because a blank
+  line inside a plain scalar ended the measurement instead of folding into it. A
+  CRLF checkout also made every valid file report as having no frontmatter. The
+  reader moved to `.github/scripts/lib/frontmatter.mjs` so its folding rules can
+  be tested without running the validator, and CI runs those tests first.
+- The validator no longer trusts a folder name. A skill directory is
+  PR-author-controlled on a public repo and its name was compiled straight into a
+  pattern, so `evil(((` crashed the run before any finding printed and `(a+)+$`
+  backtracked past the six-hour job default. Names are now checked and escaped,
+  symlinks and vendored trees are skipped, an empty skills directory fails
+  instead of reporting "All 0 skills are valid", and the workflow runs read-only
+  with a ten-minute bound.
 - "mablscript" is gone from the skills. It named the step format in three places
   where the reader only ever sees the consequence — a `legacy_unsupported` flow
   the structured lanes can't edit, or an export mabl refuses — so those now say
