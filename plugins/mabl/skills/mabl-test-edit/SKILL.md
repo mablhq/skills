@@ -336,6 +336,7 @@ Trainer GUI.
 
 `mabl tests edit` opens the test in the **Trainer GUI** — an interactive desktop
 editor a person drives by hand. It isn't agent-drivable, so this skill doesn't
-use it, but it's the right answer when every automated lane is closed (preview
-flags off, a legacy flow, or a change too fiddly to describe). Mention it to the
+use it, but it's the right answer when every automated lane is closed (the
+previews aren't enabled, a legacy flow, or a change too fiddly to describe).
+Mention it to the
 user as the fallback; don't try to script it.

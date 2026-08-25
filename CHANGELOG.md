@@ -22,6 +22,15 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   `chrome-devtools` later. The caveat that matters is unchanged: `mabl agent
   install cursor` wires up two of the three MCP servers, so add the third by
   hand.
+- Four more places described mabl's internals rather than what you can see.
+  `mabl-debug` said a payload is absent on "TRA-recovered" runs — the status you
+  actually get is `recovered`, from Runtime recovery — and branched its step-id
+  guidance on whether a flow has persisted `json_steps` ids, which nothing you
+  can run reports; that branch is now the observable one, comparing the two id
+  strings before copying. `mabl-test-coverage-design` told you to open a test
+  with `get_test_definition`, which is the cloud planner's own tool, not yours;
+  it now points at `mabl tests export`. And `mabl-test-edit`'s escape-hatch note
+  no longer says "preview flags off".
 
 ## [1.6.0] - 2026-08-19
 ### Changed

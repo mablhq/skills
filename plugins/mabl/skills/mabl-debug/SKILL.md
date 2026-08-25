@@ -96,7 +96,8 @@ also includes `summary.step_id` — that's the value to copy straight
 into `debug session run-step` / `run-to-step` after triage. The
 top-level summary is the one to scan first; the API-side
 `failure_summary` payload (where `step_id_in_test` originates) is only
-present on hard failures, not on TRA-recovered runs. `step_run_id` is
+present on hard failures, not on runs Runtime recovery salvaged.
+`step_run_id` is
 what every `artifact` call below takes.
 
 ```bash
@@ -444,19 +445,19 @@ from triage to a `run-to-step`, copy `step_id` (not `step_id_in_test`).
 `debug session list-steps` shows `step_id` under the `id` field.
 
 **`step_id` is *usually* stable across the two surfaces — but not
-always.** When flows have persisted `json_steps` ids, the `step_id`
-string `debug steps` prints is the same one `list-steps` shows under
-`id` and the same one `run-step` / `run-to-step` / `set-current-step`
-accept. Direct copy, no translation.
+always.** Most of the time the `step_id` string `debug steps` prints
+is the same one `list-steps` shows under `id` and the same one
+`run-step` / `run-to-step` / `set-current-step` accept. Direct copy,
+no translation.
 
-For flows whose `json_steps` lack ids (older tests, freshly imported
-flows, some training paths), the two surfaces address the same step
-through different ids: `debug steps` prints whatever runtime stepId
-the trace recorded, and `list-steps` falls back to a synthetic
-`<flow-id>:<flat-index>` shape. Those strings won't match each other.
-**When you can't copy `step_id` straight through, address the live
-step by `position` instead** — `list-steps` always emits one
-(`"3"`, `"3.2"`) and every live command accepts it.
+On some tests — older ones, and freshly imported flows — the two
+surfaces address the same step through different ids: `debug steps`
+prints whatever runtime stepId the trace recorded, and `list-steps`
+falls back to a synthetic `<flow-id>:<flat-index>` shape. Those
+strings won't match each other, so **compare them before you copy.**
+If the `id` in `list-steps` isn't the `step_id` the trace gave you,
+address the live step by `position` instead — `list-steps` always
+emits one (`"3"`, `"3.2"`) and every live command accepts it.
 
 `set-current-step`'s JSON response includes a `stepId` field that's
 always the addressable form (canonical or synthetic) — safe to feed

@@ -458,8 +458,9 @@ suite is copies** and only one test per path is authored cold. Which authored
 test each copy starts from is its own decision — see *The copy graph* below.
 
 Don't let reusable flows talk you out of it. It is tempting to reason "login and
-navigation are already flows, so there's nothing to inherit" — open the test
-you'd copy from with `get_test_definition` and count. The flows cover the
+navigation are already flows, so there's nothing to inherit" — export the test
+you'd copy from (`mabl tests export <testId> --format json --file
+/tmp/source.json`) and count. The flows cover the
 walking about; the steps *between* them are inline, and they are the ones you
 actually want:
 
