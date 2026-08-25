@@ -51,12 +51,12 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   with `get_test_definition`, which is the cloud planner's own tool, not yours;
   it now points at `mabl tests export`. And `mabl-test-edit`'s escape-hatch note
   no longer says "preview flags off".
-- The skills no longer name Runtime recovery. It's sunset, so a reader can't act
-  on the feature — only on the `recovered` status it left behind. That guidance
-  is deliberately unchanged: the CLI still parses and prints `recovered`, it's
-  still in the default trace filter, and a recovered step is still debugged the
-  same way as a failed one. What's gone is the feature as an actor, and the claim
-  about what new runs can produce.
+- Runtime recovery is gone from the skills entirely — the feature, the
+  `recovered` status, the recovery session id, and the claim about what new runs
+  can produce. It's sunset, so nothing about it is actionable: a status a reader
+  will never meet is worse than absent, because they stop and wonder what it is.
+  The step trace, the artifact envelope, and the test-vs-app routing table all
+  read as if failures are simply failures, which is now the only case.
 - "mablscript" is gone from the skills. It named the step format in three places
   where the reader only ever sees the consequence — a `legacy_unsupported` flow
   the structured lanes can't edit, or an export mabl refuses — so those now say

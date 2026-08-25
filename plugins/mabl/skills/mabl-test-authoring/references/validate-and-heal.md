@@ -70,9 +70,9 @@ to work around — skip 4.1 and say the structure was not checked.
 mabl agent debug steps <reportedTestRunId> --all --output json
 ```
 
-Pass `--all`. Without it the output filters to failed and recovered steps,
-which on a passing validation run means an empty `steps` array — correct, but
-not what you want here.
+Pass `--all`. Without it the output filters to failed steps, which on a passing
+validation run means an empty `steps` array — correct, but not what you want
+here.
 
 The envelope carries `step_addressing: "index"`, which is how you know this is
 an agent-reported run rather than an ordinary cloud run. Entries look like:

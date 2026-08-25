@@ -74,30 +74,27 @@ a real browser the agent drives directly.
 > shape that this CLI surface doesn't cover.
 
 ```bash
-# Step trace, default. Output is the failed steps and any recovered
-# steps (plus the summary block) — see "Recovered steps" below. Pass
-# --all to see passed / skipped steps as well.
+# Step trace, default. Output is the failed steps plus the summary
+# block. Pass --all to see passed / skipped steps as well.
 mabl agent debug steps <jr-id>
 mabl agent debug steps <jr-id> --all   # full trace
 ```
 
 When the default trace hides entries, it tells you so via a top-level
-`note` field — the exact string is `"Filtered to failed/recovered
-steps (N hidden). Pass --all to see the full trace."`. Treat that as
-"the run executed more than the failed step, you just don't need to
-see the noise yet."
+`note` field saying how many it hid and that `--all` shows them. Treat
+that as "the run executed more than the failed step, you just don't
+need to see the noise yet."
 
 Each entry has `index` (1-based), `step_run_id`, `flow`, `action`,
-`description`, `status` (`passed` / `failed` / `skipped` /
-`recovered`), `duration_ms`, `step_id` (per-flow — feed to live-session
-commands), and `step_id_in_test` (per-test). The trace also carries a
-top-level `summary` block on any failed-or-recovered run; on those it
-also includes `summary.step_id` — that's the value to copy straight
-into `debug session run-step` / `run-to-step` after triage. The
-top-level summary is the one to scan first; the API-side
-`failure_summary` payload (where `step_id_in_test` originates) is only
-present on hard failures, not on runs that recovered. `step_run_id` is
-what every `artifact` call below takes.
+`description`, `status` (`passed` / `failed` / `skipped`),
+`duration_ms`, `step_id` (per-flow — feed to live-session commands),
+and `step_id_in_test` (per-test). The trace also carries a top-level
+`summary` block on any failed run; on those it also includes
+`summary.step_id` — that's the value to copy straight into
+`debug session run-step` / `run-to-step` after triage. The top-level
+summary is the one to scan first; the API-side `failure_summary`
+payload (where `step_id_in_test` originates) is only present on hard
+failures. `step_run_id` is what every `artifact` call below takes.
 
 ```bash
 # Drill into one artifact for the failing step.
@@ -149,7 +146,7 @@ Example — full triage of a failing click:
 
 ```bash
 SID=$(mabl agent debug steps abc123-jr --output json \
-  | jq -r '.steps[] | select(.status == "failed" or .status == "recovered") | .step_run_id' | head -1)
+  | jq -r '.steps[] | select(.status == "failed") | .step_run_id' | head -1)
 
 # What did the network look like at the failing step?
 mabl agent debug artifact network abc123-jr --step-run-id "$SID" \
@@ -165,22 +162,6 @@ mabl agent debug artifact console abc123-jr --step-run-id "$SID" \
 
 Artifacts cache to `.mabl/debug/<jr-id>/` (gitignored) and are reused
 across calls.
-
-### Recovered steps
-
-A step with `status: "recovered"` is a step that **failed**, then was
-recovered so the run could continue. You'll normally meet it only on
-older runs, which the default trace still surfaces. The status is
-`recovered` rather than `passed` precisely because it marked a real
-bug: the recovery papered over it for that run, but the underlying
-cause stayed.
-
-Debug a recovered step the same way as a failed one: the step's own
-find/assert failure is the signal, and the fix is either the test (a
-stale selector, a missing wait, a wrong assertion) or the app (a
-regressed precondition).
-
----
 
 ## 2. Hypothesize — map the failure to code
 
@@ -207,7 +188,7 @@ heuristic:
 | Signal | Likely owner |
 |---|---|
 | Stack trace points into product source; failed network call to an app endpoint; new uncaught JS error after a recent deploy | **App** — `git log <last_passing_deploy>..HEAD` on the relevant repo, then file/fix in product code |
-| `status: "recovered"`; stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
+| Stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
 | Test flakes on retry but app code, DOM, and network all look healthy | **Test** — usually a missing wait or a timing assumption |
 
 When in doubt, run the live session (§3) and step through — a real
@@ -261,7 +242,7 @@ The `stepCount` field on the session-start envelope is the size of the
 fully-expanded runtime step list (top-level + every nested
 EvaluateFlow / StepGroup child). The forensic `debug steps` trace
 reports `total_steps` for the steps the run actually executed — which
-is normally smaller because branches, recovered shortcuts, or early
+is normally smaller because branches or an early
 failures stop the walk before every nested step runs. The two numbers
 describing the same test will disagree by design; don't try to
 reconcile them.
