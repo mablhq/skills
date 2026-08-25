@@ -62,9 +62,29 @@ This repo is public — external developers read our PRs. Write them short and h
 
 `gh skill install` copies ONE skill folder at a time. Anything a skill needs (references, scripts, version pins) must live inside its own `plugins/mabl/skills/<name>/` folder. Never reference files from outside the skill folder.
 
+For the same reason, a body that routes the reader to a **sibling skill** has to confirm that skill is there first — someone who installed only the skill they're reading has no other copy to route to. Keep the block to three lines, at the place the reference actually happens:
+
+```markdown
+**Confirm `mabl-test-edit` is in your available skills before routing the fix
+there.** If it isn't, stop and tell the user which skill is missing by name —
+don't attempt the edit yourself, and don't guess how to install it.
+```
+
+**Name the missing skill, never an install command.** A skill cannot know which of the five surfaces installed it, so `gh skill install ...` is wrong guidance for the four readers who used a marketplace instead. Report what's missing and let the user install it their way.
+
+Don't name a sibling where nothing routes there — say the thing itself instead. CI checks that every sibling named in a body is accompanied by that availability check.
+
 ### Folder name = frontmatter name
 
-The frontmatter `name` in `SKILL.md` must match the folder name exactly, lowercase with hyphens. Mismatched or prefixed names (`mabl/debug`, `mabl:debug`) silently fail to load in Copilot.
+The frontmatter `name` in `SKILL.md` must match the folder name exactly, lowercase with hyphens. Mismatched or prefixed names (`mabl/debug`, `mabl:debug`) silently fail to load in Copilot. CI checks this.
+
+### Descriptions have a 1024-character budget
+
+OpenAI Codex hard-truncates a skill description at 1024 characters, mid-word, so anything past that never reaches the matcher that decides whether the skill fires. CI measures the description the way a YAML loader resolves it — a block scalar joined into one line — and fails over budget. Front-load scope and triggers, and keep boundary clauses and negative triggers ahead of anything optional so truncation can't eat them.
+
+### Frontmatter carries only the six spec keys
+
+`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools` — the full list the Agent Skills spec allows. Any other key makes claude.ai skill upload, the Skills API, and `package_skill.py` fail with a hard "Unexpected key(s)" error, so Claude Code-only fields (`disable-model-invocation`, `user-invocable`, `model`, `context`, `hooks`) stay out; a plugin-delivered skill carrying `disable-model-invocation` is also invisible in Cursor. CI checks this.
 
 ### Every skill starts with the mabl CLI prerequisite block
 
@@ -89,6 +109,7 @@ node .github/scripts/validate-copilot-manifest.mjs     # root plugin.json (Copil
 node scripts/validate-template.mjs                      # Cursor manifests (official validator)
 node .github/scripts/validate-cursor-parity.mjs        # mcp.json == .mcp.json + Cursor/Claude parity
 node .github/scripts/validate-codex-parity.mjs         # Codex/Claude manifest parity + marketplace
+node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, sibling install commands
 ```
 
 `scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (we ship no hooks), not an error.

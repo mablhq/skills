@@ -44,3 +44,10 @@ jobs:
       # in parity with the Claude manifest and the marketplace points at it.
       - name: Validate Codex cross-surface parity
         run: node .github/scripts/validate-codex-parity.mjs
+      # No validator checks the skills themselves against what the install
+      # surfaces require, so check that here: frontmatter name == folder name,
+      # a description short enough that Codex won't truncate it, only the keys
+      # the Agent Skills spec allows, and an install command for every sibling
+      # skill a body points at.
+      - name: Validate skills
+        run: node .github/scripts/validate-skills.mjs

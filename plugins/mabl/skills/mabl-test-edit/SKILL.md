@@ -2,22 +2,20 @@
 name: mabl-test-edit
 description: |
   Change a mabl test that already exists — rename it, relabel it,
-  enable/disable it, or edit its steps (replace / insert / delete / move).
-  This skill is mostly a router: it reads the test, then picks the cheapest
-  lane that can make the change deterministically, and only spins up a live
-  browser agent when the change genuinely needs to look at the app.
-  Fire when the user names an existing test (a `*-j` id or a test name) and
-  wants to modify it: "rename this test", "add a label", "disable that test",
-  "delete step 7", "make step 4 wait for the spinner to disappear", "insert a
-  click before the assertion", "change the URL that step 2 opens".
-  For CREATING a new test use mabl-test-authoring; for debugging a FAILING
-  test use mabl-debug. This skill edits a test that already exists.
-  One boundary: if the test was just authored in this session and its own
-  validation found a gap, mabl-test-authoring's validate-and-fix step owns that
-  decision — it holds the authoring intent and the rule against converging by
-  deleting coverage. Don't take the decision over. Do accept the work: that step
-  routes its specifiable fixes here on purpose, because a structured step edit
-  is instant and cannot delete anything.
+  enable/disable it, or edit its steps (replace, insert, delete, move). Reads the
+  test, then routes to the cheapest lane that can make the change
+  deterministically — a live browser agent only when it needs the running app.
+  Fire when the user names an existing test (a `*-j` id or a test name) and wants
+  to modify it: "rename this test", "add a label", "disable that test", "delete
+  step 7", "make step 4 wait for the spinner to disappear", "change the URL that
+  step 2 opens".
+  For CREATING a new test use mabl-test-authoring; for debugging a FAILING test
+  use mabl-debug.
+  One boundary: if the test was just authored this session and its validation
+  found a gap, mabl-test-authoring's validate-and-fix step owns that decision —
+  it holds the authoring intent and the rule against converging by deleting
+  coverage. Don't take the decision over. Do accept the specifiable fixes it
+  routes here: a structured step edit is instant and cannot delete anything.
 allowed-tools: Bash, mcp__mabl__*
 ---
 
@@ -279,15 +277,14 @@ mcp__mabl__mabl_authoring_edit({
 
 This is the only lane that needs a `workspaceId` (the others key off the test or
 flow id). Get it from `mcp__mabl__get_current_user` or
-`mcp__mabl__list_mabl_workspaces` — or reuse the workspace `mabl-init` saved to
-your agent memory.
+`mcp__mabl__list_mabl_workspaces` — or reuse the workspace already saved in your
+agent memory.
 
 Returns `{ sessionId, viewTaskUrl }`. It's an async cloud session (minutes, real
 compute), not a deterministic edit — track it with
 `mcp__mabl__mabl_authoring_status({ sessionId })` and, once it completes,
 verify with `mcp__mabl__run_mabl_test_cloud`. Write the `test_case` the way you
-would for `mabl-test-authoring`: concrete about what to change and what to
-verify.
+would an authoring intent: concrete about what to change and what to verify.
 
 The agent lane runs its **own** branch handling (a `branch` name in
 `testInformation`, resolved server-side), so the Lane 2 confirmation mechanic

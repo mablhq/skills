@@ -68,7 +68,7 @@ mabl agent debug artifact screenshot foo-jr --step-run-id step-1 --before
 ```
 
 Artifacts cache to `.mabl/debug/<jr-id>/`. Re-running the same call is
-free; you can also bypass the CLI and read the cached file directly
+free; bypassing the CLI to read the cached file directly works too,
 once you know its path.
 
 ---

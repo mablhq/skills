@@ -32,8 +32,8 @@ mabl auth login --auto   # one-time OAuth in browser — required before any com
 
 You also need the **`chrome-devtools` MCP**, which drives its own real Chrome
 instance, to explore the app during the design phase. Don't use
-`chrome-for-mabl` here — that server is reserved for `mabl-debug`, where it
-attaches to the specific Chrome instance `mabl agent debug session` launches.
+`chrome-for-mabl` here — that server attaches to the specific Chrome instance
+`mabl agent debug session` launches, so it can't drive a browser of its own.
 
 ## The two constraints — fix these before anything else
 
@@ -133,6 +133,10 @@ mabl agent authoring status --session-id <sessionId>
 The `mabl-test-authoring` skill covers this command in depth (the
 `--test-information` fields, API tests, local mode). Use it for the per-test
 detail; this skill owns deciding *which* tests to author and *in what order*.
+
+**Confirm `mabl-test-authoring` is in your available skills before starting the
+fan-out.** If it isn't, stop and tell the user which skill is missing by name —
+don't author the suite without it, and don't guess how to install it.
 
 ### When a session pauses to ask
 
@@ -437,7 +441,7 @@ definition — the same mechanism the mabl web app's "Add reference tests" uses.
 ### Referencing vs copying — two different asks
 
 A reference says *"match this test's conventions."* A copy says *"start from
-this test's actual steps."* They solve different problems and you can use both
+this test's actual steps."* They solve different problems and both apply
 at once:
 
 | | Reference block | Copy |

@@ -7,6 +7,26 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 
 ## [1.6.1] - 2026-08-25
 ### Changed
+- `mabl-test-edit`'s description now fits the 1024-character budget every skill
+  matcher reads. It was 1201, and Codex truncates at 1024 mid-word, so the
+  boundary clause — that a just-authored test's validation gap is the authoring
+  skill's decision, and this skill should take the specifiable fixes it routes
+  over because a structured step edit is instant and can't delete anything —
+  was being cut off before any matcher saw it. Scope and sibling routing are
+  unchanged; one redundant trigger phrase was dropped.
+- Every skill that routes you to a sibling skill now checks the sibling is there
+  first. A skill can be installed on its own, so "route this to
+  `mabl-test-edit`" was a dead end for anyone who installed only the skill they
+  were reading. The two places it happens — test authoring to test edit, and
+  coverage design to test authoring — now confirm the sibling is available and
+  name it if it isn't, so you find out from the skill rather than from it
+  quietly doing nothing.
+- Three places named a sibling skill where nothing actually routes there:
+  `mabl-test-coverage-design` explained which Chrome `chrome-for-mabl` attaches
+  to by naming the skill that uses it, `mabl-test-edit` compared writing a
+  `test_case` to writing one for the authoring skill, and it cited `mabl-init` as
+  the source of a saved workspace it reads out of agent memory either way. All
+  three now say the thing itself.
 - `mabl-test-edit` no longer names mabl's internal feature flags when it explains
   which edit lanes a workspace has. The flag names were never usable: the skill
   says two lines later that an agent can't read a workspace's flags and has to
