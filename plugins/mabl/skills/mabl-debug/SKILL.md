@@ -96,8 +96,7 @@ also includes `summary.step_id` — that's the value to copy straight
 into `debug session run-step` / `run-to-step` after triage. The
 top-level summary is the one to scan first; the API-side
 `failure_summary` payload (where `step_id_in_test` originates) is only
-present on hard failures, not on runs Runtime recovery salvaged.
-`step_run_id` is
+present on hard failures, not on runs that recovered. `step_run_id` is
 what every `artifact` call below takes.
 
 ```bash
@@ -170,11 +169,11 @@ across calls.
 ### Recovered steps
 
 A step with `status: "recovered"` is a step that **failed**, then was
-recovered so the run could continue. Runtime recovery is sunset, so
-you'll normally only see this on older runs, which the default trace
-still surfaces. The status is `recovered` rather than `passed`
-precisely because it marked a real bug: recovery papered over it for
-that run, but the underlying cause stayed.
+recovered so the run could continue. You'll normally meet it only on
+older runs, which the default trace still surfaces. The status is
+`recovered` rather than `passed` precisely because it marked a real
+bug: the recovery papered over it for that run, but the underlying
+cause stayed.
 
 Debug a recovered step the same way as a failed one: the step's own
 find/assert failure is the signal, and the fix is either the test (a
