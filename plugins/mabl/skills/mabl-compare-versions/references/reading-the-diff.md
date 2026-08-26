@@ -60,7 +60,7 @@ Two fields inside are worth naming:
 
 ## jq recipes
 
-`DIFF=/tmp/compare-<file>.json` for all of these. Two helpers do most of the
+`DIFF=.mabl/compare/<file>.json` for all of these. Two helpers do most of the
 work: `(.to // .from) | to_entries[0].key` is the step type, and
 `.value.id` off the same entry is the step id.
 

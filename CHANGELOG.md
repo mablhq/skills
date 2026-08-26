@@ -63,8 +63,11 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - A description-only change is reclassified, not suppressed: it is reported with
   its step numbers and both texts, and the report says the diff carries no signal
   for whether a person wrote it or the platform regenerated it.
-- Captured diffs and the written report go to scratch paths, not into the user's
-  repository, unless the user names somewhere.
+- Captured diffs and the written report go to the CLI's own `.mabl/` cache, and
+  the skill guarantees that directory is ignored rather than assuming it: the
+  root `.gitignore` entry for `.mabl/` is written by `mabl agent debug`, so in a
+  repo where only `compare` has run it is absent. A `.gitignore` of `*` inside
+  `.mabl/` covers the tree including itself and edits no tracked file.
 - The report gains an **Unclassified** section for real changes that fit no
   class, so nothing is dropped or force-fit — the caller is owed every change,
   not only the ones this skill has a name for.

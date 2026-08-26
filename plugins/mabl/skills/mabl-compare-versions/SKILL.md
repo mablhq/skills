@@ -157,8 +157,17 @@ compare_mabl_test_versions({ source_test_id: "<*-j>:4", target_test_id: "<*-j>:5
 ```
 
 ```bash
-mabl tests compare <source> <target> --output json > /tmp/compare-<id>-<a>-<b>.json
+mkdir -p .mabl/compare
+printf '*\n' > .mabl/.gitignore   # idempotent; see below
+mabl tests compare <source> <target> --output json > .mabl/compare/<id>-<a>-<b>.json
 ```
+
+**Guarantee the ignore; don't assume it.** `.mabl/` is the CLI's own cache
+directory, but the root `.gitignore` entry for it is written by `mabl agent
+debug`. In a repo where only `compare` has run, `.mabl/` shows up as untracked.
+A `.gitignore` of `*` inside `.mabl/` covers the whole tree including itself,
+needs no edit to a tracked file, and coexists with the root entry if a debug
+command adds it later.
 
 `--output json` is the only structured form; `-a` affects the human view, not the
 JSON. Diffs are large — every `unchanged` step carries its full descriptor — so
@@ -406,9 +415,8 @@ Say these rather than implying they were covered:
 
 ## 5. Report
 
-Write to `/tmp/compare-<id>-<source>-<target>.md`. **Scratch paths only unless
-the user names somewhere** — a comparison is a read, and it shouldn't leave files
-in someone's repo.
+Write to `.mabl/compare/<id>-<source>-<target>.md` — the same ignored cache as
+the captured diff, so a read-only comparison leaves nothing in `git status`.
 
 - **Compared** — the two versions as integers, which lane, and why those two.
 - **Behavioural summary first** — *N functional changes, M nonfunctional*. If
