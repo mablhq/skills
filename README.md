@@ -68,7 +68,7 @@ The repo is also a Cursor plugin (`.cursor-plugin/`). It installs through a Curs
 2. Enter the repo URL: `https://github.com/mablhq/skills`
 3. Developers then install `mabl` from the **Customize** panel in the Cursor sidebar.
 
-Skills and all three MCP servers are configured in one step. For a quick per-project setup without a marketplace, run `mabl agent install cursor` from the mabl CLI instead — it currently wires up `chrome-for-mabl` and `mabl` only, so add `chrome-devtools` by hand (see the `gh skill install` JSON below) until the CLI installer picks it up too.
+Skills and all three MCP servers are configured in one step. For a quick per-project setup without a marketplace, run `mabl agent install cursor` from the mabl CLI instead — it currently wires up `chrome-for-mabl` and `mabl` only, so add `chrome-devtools` by hand (see the `gh skill install` JSON below).
 
 ### GitHub Copilot in VS Code
 
