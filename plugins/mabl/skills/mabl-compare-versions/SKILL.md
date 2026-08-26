@@ -159,8 +159,18 @@ lane**, since both end as a file.
 ```
 
 Each side is a **single-key object keyed by step type**, carrying the step's `id`
-when it has one. **If either reference fails to resolve, report the comparison as
-*not run*** — never substitute a single-version export and call it a diff.
+when it has one. Two things about that `id`, because Gate B depends on it:
+
+- **Steps written by hand through the step-edit tools carry no `id` at all.**
+  Agent-authored steps do. Where ids are absent, Gate B below degrades to the
+  body comparison — say so, because that cannot tell a move from a
+  delete-plus-identical-add.
+- **`mabl tests export --format json` drops step ids entirely** (the only `id` in
+  the file is the test's own). An export can count assertions but never resolve a
+  removal, so it is the wrong surface for this work.
+
+**If either reference fails to resolve, report the comparison as *not run*** —
+never substitute a single-version export and call it a diff.
 
 ## 3. Normalize before you count
 
@@ -386,6 +396,3 @@ how this skill was installed. This applies only to that hand-off: a standalone
 - `references/reading-the-diff.md` — the JSON field by field, jq recipes for
   every gate and class, the no-jq fallback, and the traps that make a naive count
   wrong.
-- `references/measured-behaviour.md` — what these classes look like in real
-  diffs, measured rather than assumed, including the extraction signature and the
-  empty-flow trap.

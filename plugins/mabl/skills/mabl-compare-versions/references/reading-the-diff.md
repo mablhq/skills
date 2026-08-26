@@ -229,7 +229,8 @@ get_mabl_flow_steps({ flow_id: "<*-f>", branch: "<that branch>" })
 **Pass the branch.** `get_mabl_flow_steps` accepts only a bare invariant id and
 defaults to master, so a flow created on an agent-edit branch reads back as
 `step_count: 0` — which looks exactly like the assertions having been deleted
-into an empty flow. See `measured-behaviour.md`.
+into an empty flow. Nothing in that response says "wrong branch", so this is the
+one check here that does not fail safe.
 
 Finally, match the removed ids against the flow's step ids:
 

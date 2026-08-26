@@ -40,6 +40,10 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - States what the diff cannot see rather than implying otherwise: who changed it
   (no version carries an author), whether the test is enabled, what a nested flow
   did, and run results. A metadata-only edit creates no version at all.
+- Notes two facts about step ids that Gate B depends on: steps written by hand
+  through the step-edit tools carry no id at all (agent-authored ones do), and
+  `mabl tests export --format json` drops ids entirely — so an export can count
+  assertions but never resolve a removal.
 - Works over the mabl MCP server or the CLI — the diff is byte-identical on both.
   The CLI cannot date a version, list a flow's versions, or read a flow on a
   branch, so the extraction check is closed there and unresolved removals are
