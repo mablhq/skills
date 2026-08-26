@@ -55,7 +55,7 @@ Every grant here is read-only. Nothing edits, restores, re-runs, or merges.
 | Diff a flow | `compare_mabl_flow_versions` | `mabl flows compare --output json` |
 | Test version list | `list_mabl_test_versions` — **carries `created_time`** | `mabl tests versions` — version and branch only |
 | Flow version list | `list_mabl_flow_versions` | **no such command** |
-| Read a flow's steps on a branch | `get_mabl_flow_steps` | — |
+| Read a flow's steps on a branch | `get_mabl_flow_steps` | `mabl flows export --mabl-branch` — but **without step ids** |
 
 **The diff itself is identical on both lanes** — same engine, byte-for-byte the
 same JSON — so no lane classifies better and step 4 applies either way. Judge
@@ -66,15 +66,24 @@ They differ only in what you can *ask*:
 
 - **MCP alone is enough for everything here**, including the flow reads that
   step 3's relocation gate depends on.
-- **The CLI alone diffs tests and flows** but cannot date a version, cannot list
-  a flow's versions, and cannot read a flow's steps on a branch — which means
-  **the extraction check in step 3 is closed on the CLI-only lane.** Say that
-  outright: a removal you could not disprove is reported as unresolved, never as
-  a deletion.
+- **The CLI alone diffs tests and flows** but cannot date a version and cannot
+  list a flow's versions. It *can* read a flow on a branch —
+  `mabl flows export --mabl-branch` — but **the export carries no step ids**, so
+  it corroborates step 3's extraction check without completing it: it shows the
+  flow is non-empty and which step types are in it, and cannot prove that
+  *these* removed steps are the ones inside. On that lane, say extraction is
+  corroborated rather than confirmed, and never report an unproven removal as a
+  deletion.
 
 Say which lane you used.
 
 ## Prerequisites
+
+**The MCP lane needs nothing installed.** If `compare_mabl_test_versions` is in
+your tool list, skip this section — everything below is the CLI lane's
+requirement, and running it buys an MCP-only agent nothing.
+
+For the CLI lane:
 
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
@@ -301,29 +310,52 @@ literal replaced by `{{@user.some.var}}` is usually a fix, the reverse pins the
 test to one input. Read it from the body field (`text`,
 `condition.comparatorValue`, `generator.pattern`, `url`), never the description.
 
-### The fields that make an assertion bind
+### Report every field that differs
 
-An assertion's force comes from a bounded set of fields. **Report every change to
-any of them.** This list is closed and comes from the step schema, so it does not
-depend on having anticipated the failure mode:
+Don't work from a list of fields worth checking. **Both full step descriptors are
+already in the diff, so compare them and report every field that differs**, minus
+a short exclusion list. That is complete by construction — it covers step types
+and condition types this skill has never heard of, which an enumeration cannot.
 
-| Field | What it controls |
+Exclude only these, each for a stated reason:
+
+| Excluded | Why |
 |---|---|
-| `onFailure` | whether a failure gates the run: `terminate` stops the test · `failAtEnd` runs on and fails at the end · `continue` **does not fail the test at all** |
-| `condition.comparisonType` | the operator (`equals`, `contains`, `matches_regex`, `greater_than`, and the negations) |
-| `condition.comparatorValue` | what it compares against |
-| `condition.caseInsensitive` | whether case is ignored |
-| `condition.presenceType` | `present` or `not_present` |
-| `extract` | which value is read before comparing (e.g. `aria-label` vs `innerText`) |
-| `target` | what is asserted about — an element find, a variable, the URL, the viewport |
-| `observationScope` | for an AI-prompt assertion, page or element |
-| `count` | whether it counts matching elements instead of asserting one |
-| `disabled` | whether the step runs |
+| `description`, `annotation` | server-rendered commentary — Gate A already |
+| `id` | identity, not behaviour — Gate B's job |
+| `condition.attribute` | execution-inert on a presence condition; it round-trips the UI selection and never affects the run |
+| absent ↔ its explicit default | serialization churn, not a change — see below |
 
-`onFailure` deserves the emphasis: an assertion switched to `continue` still
-appears in the test, still executes, and stops failing it. Nothing about the step
-type or its value changes. It is the least visible way an assertion stops
-mattering, so state it explicitly whenever it moves.
+**The absent-default trap.** Several fields mean something specific when missing,
+so a diff showing absent → the default value is churn:
+
+| Field | Absent means |
+|---|---|
+| `onFailure` | `terminate` |
+| `observationScope` | `page` |
+| `caseInsensitive` | case-sensitive |
+| `disabled` | the step runs |
+
+Treat absent and the explicit default as equal. **The asymmetry is the point** —
+absent → `terminate` is nothing, absent → `continue` is an assertion that stopped
+failing the test.
+
+### Two effects that are easy to under-read
+
+Everything else you can read straight off the field names. These two you can't:
+
+**`onFailure` decides whether a failure gates the run at all** — `terminate`
+stops the test, `failAtEnd` runs on and fails at the end, `continue` **does not
+fail the test**. Switched to `continue`, an assertion still appears, still
+executes, and stops mattering, with nothing about its type or value changed. It
+is the least visible way an assertion stops binding, so name it whenever it moves.
+
+**A prose condition has no operator and no axis.** An `ai_prompt` condition holds
+its entire requirement in `userPrompt` (plus `criteria` and `metaPrompt`), and
+`truthy` holds none at all — so a `comparison` → `truthy` flip drops the
+comparator outright. Reword a prompt and everything it verifies can change while
+every other field stays put. Quote both texts verbatim and let the caller read
+them.
 
 ### Saying which way it moved
 

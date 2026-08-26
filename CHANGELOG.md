@@ -17,13 +17,13 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   this skill feeds it.
 - **Two normalization gates run before anything is counted**, because both change
   what the counts mean. `description` and `annotation` are server-rendered and
-  drift from the step body — one real version reported 22 changed steps of which
-  17 were byte-identical once commentary was stripped. And a step that left its
-  position has four possible causes, only one of which is deletion.
+  drift from the step body, so a version can report many changed steps that
+  changed no behaviour. And a step that left its position has four possible
+  causes, only one of which is deletion.
 - **A removed step is never assumed deleted.** It may have moved (matching step
   id), had its id regenerated, been part of a flow-invocation id migration, or
-  been extracted into a reusable flow. Measured on real diffs, 3 removals were
-  moves and 15 were platform churn presented as deletions.
+  been extracted into a reusable flow. On real diffs, platform churn presented
+  as deletions outnumbered genuine moves several times over.
 - **Extraction into a reusable flow gets its own resolution path**, because it is
   the most destructive-looking change that removes nothing and it produces no
   added step to pair against: the existing step group *becomes* the flow
@@ -44,13 +44,18 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   assertion going from an exact match to a substring is reported as less strict,
   because that is a fact about the step; whether it was wanted depends on what
   was asked for, which this skill does not know.
-- Assertion analysis is built on the closed set of fields that make an assertion
-  bind — `onFailure`, the comparison operator and its value, case sensitivity,
-  presence type, `extract`, `target`, observation scope, `count`, `disabled` —
-  rather than on a list of ways a test can get worse. A field list from the
-  schema is bounded; a list of anticipated failure modes never is. `onFailure`
-  earns its own note: switched to `continue`, an assertion still appears in the
-  test, still runs, and stops failing it.
+- Assertion analysis works by diffing the two step descriptors and reporting
+  **every** field that differs, minus a short exclusion list with a stated reason
+  per entry: server-rendered commentary, step identity, the execution-inert
+  `condition.attribute`, and a field absent versus set to its own default. That
+  is complete by construction, so it covers step and condition types this skill
+  has never heard of — where any list of fields worth checking, or of ways a test
+  can get worse, is only as complete as whoever wrote it.
+- Two effects are called out because the field name doesn't reveal them.
+  `onFailure` switched to `continue` leaves an assertion that still appears,
+  still runs, and stops failing the test. And a prose condition has no operator
+  at all — an `ai_prompt` holds its whole requirement in `userPrompt`, `truthy`
+  holds none, so both are reported by quoting the texts rather than by ranking.
 - Movements off the one defined axis are said plainly instead of forced onto it:
   a positive operator becoming its negation is **inverted**, not looser;
   `AssertStartsWith` ↔ `AssertContains` is **lateral**; a changed target is
@@ -64,6 +69,12 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   `mabl tests export --format json` drops ids entirely — so an export can count
   assertions but never resolve a removal.
 - Works over the mabl MCP server or the CLI — the diff is byte-identical on both.
+  The MCP lane needs nothing installed, so the CLI prerequisite is marked as the
+  CLI lane's alone rather than opening the skill unconditionally. On the CLI-only
+  lane the extraction check is corroborated rather than closed: `mabl flows
+  export --mabl-branch` does read a flow on a branch, but the export carries no
+  step ids, so it shows the flow is non-empty without proving which steps are in
+  it.
   The CLI cannot date a version, list a flow's versions, or read a flow on a
   branch, so the extraction check is closed there and unresolved removals are
   reported as unresolved rather than as deletions.
