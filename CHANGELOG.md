@@ -40,6 +40,25 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - States what the diff cannot see rather than implying otherwise: who changed it
   (no version carries an author), whether the test is enabled, what a nested flow
   did, and run results. A metadata-only edit creates no version at all.
+- States what changed and which way, without a verdict in the vocabulary. An
+  assertion going from an exact match to a substring is reported as less strict,
+  because that is a fact about the step; whether it was wanted depends on what
+  was asked for, which this skill does not know.
+- Assertion analysis is built on the closed set of fields that make an assertion
+  bind — `onFailure`, the comparison operator and its value, case sensitivity,
+  presence type, `extract`, `target`, observation scope, `count`, `disabled` —
+  rather than on a list of ways a test can get worse. A field list from the
+  schema is bounded; a list of anticipated failure modes never is. `onFailure`
+  earns its own note: switched to `continue`, an assertion still appears in the
+  test, still runs, and stops failing it.
+- Movements off the one defined axis are said plainly instead of forced onto it:
+  a positive operator becoming its negation is **inverted**, not looser;
+  `AssertStartsWith` ↔ `AssertContains` is **lateral**; a changed target is
+  **rescoped**. Anything else is reported with its field and both values and no
+  invented rank.
+- The report gains an **Unclassified** section for real changes that fit no
+  class, so nothing is dropped or force-fit — the caller is owed every change,
+  not only the ones this skill has a name for.
 - Notes two facts about step ids that Gate B depends on: steps written by hand
   through the step-edit tools carry no id at all (agent-authored ones do), and
   `mabl tests export --format json` drops ids entirely — so an export can count

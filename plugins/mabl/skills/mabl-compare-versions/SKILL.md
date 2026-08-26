@@ -4,9 +4,9 @@ description: |
   Report what changed between two versions of a mabl test or reusable flow — or
   between two of them — separating changes that alter behaviour from ones that
   only reorganize: steps added / removed / changed / moved, assertion counts by
-  type, weakening (a strict assertion swapped for a looser one, a value emptied,
-  a step disabled), data-binding changes, and date literals introduced. It
-  classifies; the caller decides. Read-only — never edits, restores, or runs.
+  type, strictness (exact match to substring, a value emptied, a check no longer
+  gating), data bindings, and date literals. It states what changed and which
+  way; the caller decides if that was wanted. Read-only — never edits or runs.
   Fire when someone asks "what changed in this test", "diff these two versions",
   "compare these two tests", "what changed in this flow", "did that edit weaken
   the test", or "what did the heal attempt actually do", with a test id (`*-j`)
@@ -27,6 +27,18 @@ is good.
 That split is the point. A diff is a fact; the verdict needs the intent, and the
 intent lives with whoever asked for the change. So the output is a classification
 and a set of counts — never an approval, a rejection, or a score.
+
+The caller is owed two things, and they are the whole contract:
+
+- **Completeness.** Every change is stated, whether or not this skill can put it
+  on a named axis. An unrecognized change is reported as unclassified, never
+  dropped and never forced into a class that nearly fits.
+- **Fidelity.** What is stated is what actually changed. That is what the two
+  gates in step 3 are for — the caller should never have to sift churn.
+
+Stating a direction is not judging it. "The match went from exact to substring,
+so it is less strict" is a fact about the step. Whether that is an improvement
+depends on what was asked for, which this skill does not know.
 
 **The input is a test id or a flow id.** This skill takes the entity as given and
 resolves what it needs from it. It does not search for the entity, and it cannot
@@ -278,7 +290,7 @@ Two asymmetries not to flatten:
 |---|---|
 | Coverage added | new `Assert*` / `AccessibilityCheck` steps |
 | Coverage deleted | Gate B exhausted with no match |
-| Weakening | the table below |
+| Strictness | a change in what the assertion requires — see the binding fields below |
 | Retargeting | same check, different selector — a `findTarget` swapped for a `locator`, a class chain for a `role=` |
 | Data binding | a `{{@…}}` token appearing or disappearing in a body field |
 | Date literal | a month name, `YYYY-MM-DD`, or today's date in `to` and not `from` |
@@ -289,31 +301,58 @@ literal replaced by `{{@user.some.var}}` is usually a fix, the reverse pins the
 test to one input. Read it from the body field (`text`,
 `condition.comparatorValue`, `generator.pattern`, `url`), never the description.
 
-### The weakening table
+### The fields that make an assertion bind
 
-Same step count, less proved.
+An assertion's force comes from a bounded set of fields. **Report every change to
+any of them.** This list is closed and comes from the step schema, so it does not
+depend on having anticipated the failure mode:
 
-| Weakening | Source | Target |
-|---|---|---|
-| Assertion loosened | `AssertEquals` / a regex assertion | `AssertContains`, then `AssertPresent` |
-| Expected value emptied | a non-empty expected value | empty, absent, or wildcard-only |
-| Pattern widened | a specific regex | one that also matches the old failure |
-| Check disabled | no `disabled` key | `"disabled": true` |
-| Check made conditional | runs unconditionally | an `If` / `ElseIf` added above it |
-| Assertion → wait | `Assert*` | `WaitUntil` (waits, proves nothing) |
+| Field | What it controls |
+|---|---|
+| `onFailure` | whether a failure gates the run: `terminate` stops the test · `failAtEnd` runs on and fails at the end · `continue` **does not fail the test at all** |
+| `condition.comparisonType` | the operator (`equals`, `contains`, `matches_regex`, `greater_than`, and the negations) |
+| `condition.comparatorValue` | what it compares against |
+| `condition.caseInsensitive` | whether case is ignored |
+| `condition.presenceType` | `present` or `not_present` |
+| `extract` | which value is read before comparing (e.g. `aria-label` vs `innerText`) |
+| `target` | what is asserted about — an element find, a variable, the URL, the viewport |
+| `observationScope` | for an AI-prompt assertion, page or element |
+| `count` | whether it counts matching elements instead of asserting one |
+| `disabled` | whether the step runs |
 
-Three rules keep this honest:
+`onFailure` deserves the emphasis: an assertion switched to `continue` still
+appears in the test, still executes, and stops failing it. Nothing about the step
+type or its value changes. It is the least visible way an assertion stops
+mattering, so state it explicitly whenever it moves.
 
-- **The ladder is exact match → substring → existence.** `disabled: true` on any
-  check is the bottom of it.
-- **The ladder does not cover every type, and that's fine.** `AssertStartsWith` /
-  `AssertEndsWith` flipping to or from `AssertContains` is **lateral, not
-  weaker** — say so. For anything else off the ladder (`AssertAIPrompt`,
-  `AssertNotPresent`, numeric comparators), describe what it was and what it is
-  and let the reader rank it. Inventing a ranking is worse than declining.
-- **`WaitUntil`, `If`, and `ElseIf` are not assertions** despite the shared
-  condition shape. Count by the type key starting with `Assert`, plus
-  `AccessibilityCheck`; counting "has a condition" over-counts every wait.
+### Saying which way it moved
+
+State the direction as a fact. There is one defined axis:
+
+**exact match → substring → existence.** `AssertEquals` → `AssertContains` →
+`AssertPresent` moves down it; `disabled: true` is off the end of it. Say "less
+strict" or "more strict" and name the two states.
+
+Movements that are **not** on that axis get said plainly rather than forced onto
+it:
+
+| Change | State it as |
+|---|---|
+| A positive operator becomes its negation (`contains` → `does_not_contain`, `present` → `not_present`) | **inverted** — it now requires the opposite, which is neither looser nor tighter |
+| `AssertStartsWith` ↔ `AssertContains` | **lateral** — both are substring-class |
+| A different `target` — element to viewport, element to variable | **rescoped**, and say from what to what |
+| `extract` changes | **asserting on a different value**, and name both |
+| `Assert*` → `WaitUntil` | the step now waits for the condition instead of requiring it |
+| Anything else | **changed, direction not on a defined axis** — give the field, the old value, and the new one |
+
+That last row is not a gap to apologize for. A stated change the caller can read
+is the deliverable; a rank this skill invented would be the caller's job done
+badly.
+
+One counting rule, because it is easy to get wrong: **`WaitUntil`, `If`, and
+`ElseIf` are not assertions** despite sharing the condition shape. Count
+assertions by the type key beginning with `Assert`, plus `AccessibilityCheck`.
+Counting "has a condition" over-counts every wait in the test.
 
 ### What this diff cannot see
 
@@ -341,14 +380,18 @@ Write to `.mabl/compare/<id>-<source>-<target>.md`:
   nothing survived the gates, say the version changed no behaviour.
 - **Nonfunctional** — one line per class that fired, with counts.
 - **Functional** — structure (added / deleted, with the Gate B method named),
-  assertions per type source → target with the net, weakening one row per
-  instance, then bindings, dates, conditionals.
+  assertions per type source → target with the net, then one row per changed
+  binding field with its direction, then data bindings, dates, conditionals.
+- **Unclassified** — every real change that fits no class above, with its field,
+  old value and new value. Empty is a strong claim; make it earn that.
 - **Unresolved** — removals you could not disprove, and what was missing.
 - **Not covered** — every applicable item from the list above.
 
-**No verdict, no score, no recommendation to restore or re-edit.** "Seven steps
-left the test; all seven are in the extracted flow" is this skill's answer.
-"This fix is bad" is the caller's.
+**No verdict, no score, no recommendation to restore or re-edit** — and no
+valence in the vocabulary either. "Step 28's match went from exact to substring"
+is this skill's answer; "step 28 was weakened" is the caller's, because only they
+know whether it was asked for. Same for "seven steps left the test; all seven are
+in the extracted flow" versus "this refactor was fine".
 
 ## Comparing flows
 
