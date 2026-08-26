@@ -48,6 +48,17 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   that assigns ids to flow invocations both render as remove-plus-add, and on
   real data produced 15 false deletions against 3 true moves. Pairing now falls
   through to a body comparison and, for `EvaluateFlow`, to `flow.invariant_id`.
+- Adds a **data binding** class, which the counts never show and which cuts both
+  ways: a hardcoded literal replaced by a `{{@…}}` token is usually a fix, the
+  reverse pins a test to one input, and a binding that only changed shape — a
+  `{name, tokens}` object becoming an inline token string that resolves to the
+  same variable — is a schema migration rather than a credential edit. Read from
+  the body field, never the description.
+- States plainly that **MCP alone is sufficient** for every comparison the skill
+  makes, since not every agent has the CLI. Attribution is marked as an adjunct
+  to the diff rather than part of it, with the MCP lane's partial answer spelled
+  out (creator is not last editor) instead of routing an MCP-only agent to a CLI
+  command it can't run.
 - Adds what the tools actually support: attribution comes from the CLI's
   `last_updated_by_user` (versions carry no author on either lane), agent-vs-human
   from `list_authoring_sessions` by **branch** id rather than test id, and the

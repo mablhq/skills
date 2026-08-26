@@ -42,17 +42,25 @@ re-runs, or merges.
 | Flow versions | `list_mabl_flow_versions` | no such command |
 | Who edited it | nothing | `mabl tests list -o json` → `last_updated_by_user` |
 
-Neither lane is behind a feature flag, so judge by what you can see: **the MCP
-lane is open when `compare_mabl_test_versions` is in your tool list.** Both lanes
-run the **same diff engine** — the JSON is byte-for-byte identical — so
-everything in step 3 applies either way, and step 2's choice is about which
-*question* you're answering, not which diff you get:
+**The comparison itself is identical on both lanes.** They call the same diff
+engine and the JSON comes back byte-for-byte the same, so no lane produces a
+better classification and everything in step 3 applies either way. Judge
+availability by what you can see: **the MCP lane is open when
+`compare_mabl_test_versions` is in your tool list.**
 
-- **A dated question** ("what changed since Tuesday") needs `created_time`, so it
-  needs the MCP lane. The CLI's version list has no timestamps at all.
-- **Anything about a flow's history** needs the MCP lane; there is no
-  `mabl flows versions`.
-- **"Who changed it"** needs the **CLI** — see [Attribution](#attribution-who-changed-it).
+The lanes differ only in what they let you *ask*, and the MCP lane is the more
+complete one for this skill:
+
+- **MCP alone is enough for everything here.** Test diffs, flow diffs, dated
+  questions, branch-scoped history.
+- **The CLI alone covers test and flow diffs** but cannot date a version and
+  cannot list a flow's versions — there is no `mabl flows versions` command. With
+  the CLI only, say that flow version numbers weren't discoverable rather than
+  guessing an integer.
+- **Attribution is adjunct, not the comparison.** Nobody's version list carries
+  an author. If someone asks *who* changed a test, that is a separate lookup with
+  its own limits — see [Attribution](#attribution-who-changed-it) — and it is the
+  one place the CLI reaches something the MCP lane doesn't.
 
 Say which lane you used.
 
@@ -152,18 +160,29 @@ run's start time, a deployment) — and say you dated it indirectly.
 
 ## Attribution — who changed it
 
-**No version list carries an author, on either lane.** If someone asks who made
-a change, that is a separate lookup, and the best one is on the CLI:
+This is an **adjunct to the comparison, not part of it** — the skill's job is the
+diff. Reach for it only when someone actually asks who changed something, and
+skip it otherwise.
+
+**No version list carries an author, on either lane.** The best available lookup
+is on the CLI:
 
 ```bash
-mabl tests list -o json --limit 2000    # every test, with resolved user objects
+mabl tests list -w <workspace-id> -o json --limit 2000
 ```
 
 Each test carries `created_by_user` and `last_updated_by_user` as
-`{id, name, email}` — already resolved, no second call. This is the one place the
-CLI beats the MCP lane outright: the MCP listing tools either return the
-*creator* rather than the last editor, or order by creation time and cap well
-below the full set.
+`{id, name, email}` — already resolved, no second call. `--limit` defaults to
+**10**, so pass it explicitly or you'll silently see a handful of tests; and pass
+`-w` unless you know the CLI's configured workspace is the one you mean.
+
+**With the MCP lane only, attribution is partial, and say so.**
+`list_mabl_tests` returns an `authorId`, but that is the test's *creator*, not
+its last editor. `list_mabl_authored_tests` does carry an enriched
+`lastUpdatedBy`, but it orders by creation time and caps well below a full
+workspace, so it answers "who created these recent tests", not "who last edited
+this one". Report what you could establish and what you couldn't — don't
+substitute creator for editor without flagging it.
 
 Three limits to state rather than paper over:
 
@@ -174,7 +193,8 @@ Three limits to state rather than paper over:
   disabling a test updates `last_updated_time` and leaves the version history
   untouched — so a test can be "edited today" with its newest version months
   old, and `compare` has nothing to show. Say that rather than reporting an
-  empty diff as if nothing happened.
+  empty diff as if nothing happened. On a real corpus this was the single most
+  common shape of "edit".
 - **Branch creators may be API keys.** `list_mabl_branches` gives each branch a
   `created_by`, but an id ending `-k` is an API key (CI, automation), and
   `list_mabl_users` **silently omits ids it can't resolve** — an absent name is
@@ -285,6 +305,24 @@ in the report. When you mention a description at all, say it's the rendered labe
 | **Weakening** | same check, less proved | the table below |
 | **Conditional** | `If` / `ElseIf` / `Loop` added — later checks may now be skippable | an added control-flow step |
 | **Date literals** | a fixed date baked into a step | a month name, `YYYY-MM-DD`, or today's date in `to` and not `from` |
+| **Data binding** | a value became variable-driven, or stopped being | a `{{@…}}` token appearing or disappearing in a body field |
+
+A data-binding change is worth its own line because it cuts both ways and the
+counts never show it. A hardcoded literal replaced by `{{@user.some.var}}` is
+usually a fix; the reverse pins a test to one input. Two cases to distinguish and
+report differently:
+
+- **The bound value changed** — a different variable, or a literal where a
+  variable was. A real change.
+- **Only the binding's representation changed** — e.g. a structured
+  `{name, tokens}` object becoming an inline `"{{@web.defaults.credentials.username}}"`
+  string that resolves to the same variable. That is a schema migration, not a
+  credential edit, and calling it one is alarming and wrong.
+
+Read this from the body field (`text`, `condition.comparatorValue`,
+`generator.pattern`, `url`), never from the description — a real diff carried a
+step whose description named `app.defaults.username` while its own `text.name`
+said `web.defaults.credentials.username`.
 
 ### Moved is not removed — and an id match is not the whole story
 
