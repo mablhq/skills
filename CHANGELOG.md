@@ -10,11 +10,10 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"
   and stops there. It reports the difference as a classification split by whether
   behaviour actually changed: steps added, removed, changed and moved; assertion
-  counts per type; weakening (a strict assertion swapped for a looser one, a value
-  emptied, a step disabled); data-binding changes; date literals. The verdict is
-  left to whoever holds the intent — when a test was authored or healed in the
-  same session, `mabl-test-authoring`'s validation step still owns that call and
-  this skill feeds it.
+  counts per type; strictness moving (an exact match becoming a substring, a value
+  emptied, a step disabled); data-binding changes; date literals; description
+  rewrites. It requires no other skill and is built to be called by them: the
+  verdict is left to whoever holds the intent behind the edit.
 - **Two normalization gates run before anything is counted**, because both change
   what the counts mean. `description` and `annotation` are server-rendered and
   drift from the step body, so a version can report many changed steps that
@@ -61,6 +60,11 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   `AssertStartsWith` ↔ `AssertContains` is **lateral**; a changed target is
   **rescoped**. Anything else is reported with its field and both values and no
   invented rank.
+- A description-only change is reclassified, not suppressed: it is reported with
+  its step numbers and both texts, and the report says the diff carries no signal
+  for whether a person wrote it or the platform regenerated it.
+- Captured diffs and the written report go to scratch paths, not into the user's
+  repository, unless the user names somewhere.
 - The report gains an **Unclassified** section for real changes that fit no
   class, so nothing is dropped or force-fit — the caller is owed every change,
   not only the ones this skill has a name for.
@@ -74,10 +78,8 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   lane the extraction check is corroborated rather than closed: `mabl flows
   export --mabl-branch` does read a flow on a branch, but the export carries no
   step ids, so it shows the flow is non-empty without proving which steps are in
-  it.
-  The CLI cannot date a version, list a flow's versions, or read a flow on a
-  branch, so the extraction check is closed there and unresolved removals are
-  reported as unresolved rather than as deletions.
+  it. The CLI also cannot date a version or list a flow's versions, so unresolved
+  removals are reported as unresolved rather than as deletions.
 
 ## [1.6.0] - 2026-08-19
 ### Changed
