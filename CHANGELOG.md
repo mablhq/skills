@@ -5,6 +5,25 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.10.0] - 2026-08-26
+### Added
+- `mabl-verify-change` — the step after a fix. There are two ways to turn a red
+  test green, fix the behaviour or stop checking it, and a passing run cannot
+  tell them apart. This skill can: it diffs the test against the version before
+  the change first, and a removed or weakened assertion, or a date literal,
+  fails the verification whatever the run said.
+- Runs are isolated by branch and identified by the ids the trigger returns
+  rather than by picking the most recent run in the workspace, which eventually
+  attributes someone else's execution to your change.
+- One clean run settles a consistently failing test; an intermittent one needs
+  three, because a single pass is exactly what changing nothing would produce.
+- Three outcomes, and the middle one is the point: verified, not verified, and
+  verified-but-not-green — a change that demonstrably works but whose run still
+  dies somewhere it never touched. Collapsing that into failure is how a working
+  fix gets thrown away, and collapsing it into success is worse.
+- It never edits and never merges. It reports the state and the evidence; a
+  person reads the diff and decides.
+
 ## [1.6.0] - 2026-08-19
 ### Changed
 - `mabl-test-coverage-design` now schedules the fan-out itself instead of
