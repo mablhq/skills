@@ -5,69 +5,45 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.7.0] - 2026-08-25
+## [1.7.0] - 2026-08-26
 ### Added
-- `mabl-compare-versions` — a new skill that answers "what changed in this
-  test" and stops there. It reads `mabl tests compare --output json` and reports
-  the difference as a classification: steps added, removed, changed and moved;
-  assertion counts per type on both sides; and the weakenings that a count alone
-  misses, where the test keeps its shape but proves less — an `AssertEquals`
-  swapped for an `AssertPresent`, an expected value emptied, a step disabled, an
-  assertion turned into a wait, a date literal baked in. It never edits,
-  restores, or runs anything.
-- The skill separates a **moved** step from a deleted one. `compare` renders a
-  relocated step as a removal plus an addition, so a check that reads removals
-  alone reports every moved assertion as lost coverage; pairing the two by step
-  id fixes that before anyone reasons about the number.
-- It reports what the diff cannot see rather than implying it looked: whether the
-  test as a whole is enabled, which steps fell inside an added `If`, and versions
-  created on another branch (both references resolve against the default branch).
-- Two lanes, and the skill says which it used. The mabl MCP server's
-  `list_mabl_test_versions` carries each version's creation time and change
-  description and its compare tool takes a `branch`, so "what changed since
-  Tuesday" and "diff the version on that feature branch" are answerable there;
-  the CLI's `mabl tests versions` carries neither, and `mabl tests compare`
-  resolves both references against the default branch. Same diff engine either
-  way, so the classification doesn't change — only what can be asked does.
-- Reusable flows get the same treatment via `compare_mabl_flow_versions`, with
-  the caveat that flow version numbers are discoverable only on the MCP lane.
-- Field-tested against 621 real tests before shipping, which corrected three
-  wrong claims and added the two classes that matter most in practice. A bare
-  `<id>` resolves to the **global latest** version, which may live on a branch —
-  not "latest on master" — and a `<id>:<N>` reference is branch-independent on
-  both lanes, so the CLI diffs a branch-born version perfectly well. The skill
-  now tells you to name both versions explicitly.
-- `description` and `annotation` are server-rendered commentary that drifts from
-  the step body: a real diff carried 17 of 22 "changed" steps differing only in
-  quoting style, and elsewhere a step's description named a different variable
-  than its own body used. The skill strips both before counting, reports renderer
-  churn separately, and says to classify from the body and never quote a
-  description as evidence.
-- Move detection got the other half of its rule. An id match proves a step moved;
-  an id **mismatch proves nothing** — a regenerated id and a platform migration
-  that assigns ids to flow invocations both render as remove-plus-add, and on
-  real data produced 15 false deletions against 3 true moves. Pairing now falls
-  through to a body comparison and, for `EvaluateFlow`, to `flow.invariant_id`.
-- Adds a **data binding** class, which the counts never show and which cuts both
-  ways: a hardcoded literal replaced by a `{{@…}}` token is usually a fix, the
-  reverse pins a test to one input, and a binding that only changed shape — a
-  `{name, tokens}` object becoming an inline token string that resolves to the
-  same variable — is a schema migration rather than a credential edit. Read from
-  the body field, never the description.
-- States plainly that **MCP alone is sufficient** for every comparison the skill
-  makes, since not every agent has the CLI. Attribution is marked as an adjunct
-  to the diff rather than part of it, with the MCP lane's partial answer spelled
-  out (creator is not last editor) instead of routing an MCP-only agent to a CLI
-  command it can't run.
-- Adds what the tools actually support: attribution comes from the CLI's
-  `last_updated_by_user` (versions carry no author on either lane), agent-vs-human
-  from `list_authoring_sessions` by **branch** id rather than test id, and the
-  honest caveats — a metadata-only edit creates no version at all, and API-key
-  identities are silently dropped by the user resolver.
-- Deliberately verdict-free. A diff is a fact and the verdict needs the intent, so
-  when a test was authored or healed in the same session, `mabl-test-authoring`'s
-  validation step still owns the decision — this skill hands it the classification
-  as input.
+- `mabl-compare-versions` — answers "what changed in this test or reusable flow"
+  and stops there. It reports the difference as a classification split by whether
+  behaviour actually changed: steps added, removed, changed and moved; assertion
+  counts per type; weakening (a strict assertion swapped for a looser one, a value
+  emptied, a step disabled); data-binding changes; date literals. The verdict is
+  left to whoever holds the intent — when a test was authored or healed in the
+  same session, `mabl-test-authoring`'s validation step still owns that call and
+  this skill feeds it.
+- **Two normalization gates run before anything is counted**, because both change
+  what the counts mean. `description` and `annotation` are server-rendered and
+  drift from the step body — one real version reported 22 changed steps of which
+  17 were byte-identical once commentary was stripped. And a step that left its
+  position has four possible causes, only one of which is deletion.
+- **A removed step is never assumed deleted.** It may have moved (matching step
+  id), had its id regenerated, been part of a flow-invocation id migration, or
+  been extracted into a reusable flow. Measured on real diffs, 3 removals were
+  moves and 15 were platform churn presented as deletions.
+- **Extraction into a reusable flow gets its own resolution path**, because it is
+  the most destructive-looking change that removes nothing and it produces no
+  added step to pair against: the existing step group *becomes* the flow
+  reference, keeping its id, so a seven-assertion refactor reports as seven
+  removals and one change. Step identity survives extraction, so matching the
+  removed ids inside the flow resolves it exactly — provided the flow is read on
+  the branch it was created on. Read on the default branch it comes back empty,
+  which looks like a confirmed catastrophe rather than a wrong lookup.
+- Separates nonfunctional classes the counts hide: regrouping (one added group
+  header, children untouched), marker steps, and binding changes that only alter
+  representation. Notes the asymmetries — a removed `Echo` is evidence where an
+  added one is noise, and a group header embeds its own step count so any change
+  inside it churns the header too.
+- States what the diff cannot see rather than implying otherwise: who changed it
+  (no version carries an author), whether the test is enabled, what a nested flow
+  did, and run results. A metadata-only edit creates no version at all.
+- Works over the mabl MCP server or the CLI — the diff is byte-identical on both.
+  The CLI cannot date a version, list a flow's versions, or read a flow on a
+  branch, so the extraction check is closed there and unresolved removals are
+  reported as unresolved rather than as deletions.
 
 ## [1.6.0] - 2026-08-19
 ### Changed

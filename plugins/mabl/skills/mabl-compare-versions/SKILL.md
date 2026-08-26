@@ -1,21 +1,21 @@
 ---
 name: mabl-compare-versions
 description: |
-  Report what changed between two versions of a mabl test or reusable flow —
-  or between two of them — as a structured classification with NO verdict
-  attached: steps added / removed / changed / moved, assertion counts by type,
-  weakening (a strict assertion swapped for a looser one, a value emptied, a
-  step disabled), and date literals introduced. It classifies; the caller
-  decides. Read-only — never edits, restores, or runs anything.
-  Fire when someone asks "what changed in this test", "diff these two
-  versions", "compare these two tests", "what changed in this flow", "did that
-  edit weaken the test", or "what did the heal attempt actually do", with a
-  test id (`*-j`) or flow id (`*-f`).
+  Report what changed between two versions of a mabl test or reusable flow — or
+  between two of them — separating changes that alter behaviour from ones that
+  only reorganize: steps added / removed / changed / moved, assertion counts by
+  type, weakening (a strict assertion swapped for a looser one, a value emptied,
+  a step disabled), data-binding changes, and date literals introduced. It
+  classifies; the caller decides. Read-only — never edits, restores, or runs.
+  Fire when someone asks "what changed in this test", "diff these two versions",
+  "compare these two tests", "what changed in this flow", "did that edit weaken
+  the test", or "what did the heal attempt actually do", with a test id (`*-j`)
+  or flow id (`*-f`). Takes the entity as given; it does not search for it.
   If a test was authored or healed THIS session, mabl-test-authoring's
-  validation step owns the verdict — give it the classification, don't rule
-  in its place. To CHANGE a test use mabl-test-edit; for a FAILING run use
+  validation step owns the verdict — give it the classification, don't rule in
+  its place. To CHANGE a test use mabl-test-edit; for a FAILING run use
   mabl-debug.
-allowed-tools: Bash, Read, mcp__mabl__list_mabl_test_versions, mcp__mabl__compare_mabl_test_versions, mcp__mabl__list_mabl_flow_versions, mcp__mabl__compare_mabl_flow_versions, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_tests, mcp__mabl__list_mabl_branches, mcp__mabl__list_mabl_users, mcp__mabl__list_authoring_sessions
+allowed-tools: Bash, Read, mcp__mabl__list_mabl_test_versions, mcp__mabl__compare_mabl_test_versions, mcp__mabl__list_mabl_flow_versions, mcp__mabl__compare_mabl_flow_versions, mcp__mabl__get_mabl_flow_steps, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_tests
 ---
 
 # mabl compare versions
@@ -24,43 +24,41 @@ Two versions of a test — or of a reusable flow — differ. This skill says **h
 they differ, in terms someone can act on. It does not say whether the difference
 is good.
 
-That split is the point. A diff is a fact; the verdict needs the intent, and
-the intent lives with whoever asked for the change. So the output here is a
-classification and a set of counts — never an approval, a rejection, or a
-score.
+That split is the point. A diff is a fact; the verdict needs the intent, and the
+intent lives with whoever asked for the change. So the output is a classification
+and a set of counts — never an approval, a rejection, or a score.
 
-The grants here are read-only on purpose. Nothing in this skill edits, restores,
-re-runs, or merges.
+**The input is a test id or a flow id.** This skill takes the entity as given and
+resolves what it needs from it. It does not search for the entity, and it cannot
+tell you who made a change — no version carries an author. If someone needs an
+entity found first, that is a different question.
 
-## Two lanes, and which question each answers
+Every grant here is read-only. Nothing edits, restores, re-runs, or merges.
+
+## Two lanes
 
 | | mabl MCP server | mabl CLI |
 |---|---|---|
-| Diff | `compare_mabl_test_versions` | `mabl tests compare --output json` |
-| Version list | `list_mabl_test_versions` — **carries `created_time`** | `mabl tests versions` — version and branch only, no timestamp |
-| Diff a version born on a branch | yes | **yes** — a `<id>:<N>` reference is branch-independent |
-| Flow versions | `list_mabl_flow_versions` | no such command |
-| Who edited it | nothing | `mabl tests list -o json` → `last_updated_by_user` |
+| Diff a test | `compare_mabl_test_versions` | `mabl tests compare --output json` |
+| Diff a flow | `compare_mabl_flow_versions` | `mabl flows compare --output json` |
+| Test version list | `list_mabl_test_versions` — **carries `created_time`** | `mabl tests versions` — version and branch only |
+| Flow version list | `list_mabl_flow_versions` | **no such command** |
+| Read a flow's steps on a branch | `get_mabl_flow_steps` | — |
 
-**The comparison itself is identical on both lanes.** They call the same diff
-engine and the JSON comes back byte-for-byte the same, so no lane produces a
-better classification and everything in step 3 applies either way. Judge
+**The diff itself is identical on both lanes** — same engine, byte-for-byte the
+same JSON — so no lane classifies better and step 4 applies either way. Judge
 availability by what you can see: **the MCP lane is open when
 `compare_mabl_test_versions` is in your tool list.**
 
-The lanes differ only in what they let you *ask*, and the MCP lane is the more
-complete one for this skill:
+They differ only in what you can *ask*:
 
-- **MCP alone is enough for everything here.** Test diffs, flow diffs, dated
-  questions, branch-scoped history.
-- **The CLI alone covers test and flow diffs** but cannot date a version and
-  cannot list a flow's versions — there is no `mabl flows versions` command. With
-  the CLI only, say that flow version numbers weren't discoverable rather than
-  guessing an integer.
-- **Attribution is adjunct, not the comparison.** Nobody's version list carries
-  an author. If someone asks *who* changed a test, that is a separate lookup with
-  its own limits — see [Attribution](#attribution-who-changed-it) — and it is the
-  one place the CLI reaches something the MCP lane doesn't.
+- **MCP alone is enough for everything here**, including the flow reads that
+  step 3's relocation gate depends on.
+- **The CLI alone diffs tests and flows** but cannot date a version, cannot list
+  a flow's versions, and cannot read a flow's steps on a branch — which means
+  **the extraction check in step 3 is closed on the CLI-only lane.** Say that
+  outright: a removal you could not disprove is reported as unresolved, never as
+  a deletion.
 
 Say which lane you used.
 
@@ -76,36 +74,31 @@ mabl auth login --auto   # one-time OAuth in browser — required before any com
 mabl auth info           # verify you're logged in and the token hasn't expired
 ```
 
-**Probe for the command, don't trust the version.** These shipped together, so
-a version check can pass on a build that predates them:
+**Probe for the command, don't trust the version.** These shipped together, so a
+version check can pass on a build that predates them:
 
 ```bash
 mabl tests compare --help 2>&1 | grep -qw -- --output \
   || echo "This mabl CLI cannot produce a structured diff — 'mabl tests compare --output json' is missing. Upgrade: npm install -g @mablhq/mabl-cli@latest"
 ```
 
-If the probe fails and the MCP lane is closed too, say so and stop. There is no
-third way to get this diff.
+If the probe fails and the MCP lane is closed too, say so and stop.
 
-Everything here is a **read**. The one nearby write is a restore —
-`restore_mabl_test` on the MCP server, `mabl tests restore` on the CLI — and
-neither is granted to this skill. If a rollback is what the user wants, say the
-version number they'd restore and let them run it themselves.
+The one nearby write is a restore — `restore_mabl_test`, `mabl tests restore` —
+and neither is granted here. If a rollback is what the user wants, name the
+version they'd restore and let them run it.
 
 ## 1. Pick the two references
 
-A reference is `<id>` or `<id>:<N>`, and the difference between them is the
-single easiest thing to get wrong here.
+A reference is `<id>` or `<id>:<N>`, and the difference is the easiest thing here
+to get wrong.
 
 **`<id>:<N>` is a specific version, and it is branch-independent.** Version
-numbers are global per test, so a version created on a feature branch resolves
-from either lane with no branch parameter. Passing `branch` changes nothing for
-a versioned reference.
+numbers are global per entity, so a version created on a feature branch resolves
+from either lane with no branch parameter.
 
-**A bare `<id>` is the *global latest* version — which may live on a branch.**
-It is *not* "the latest on master". A test whose newest version was created on
-`some-fix-branch` resolves a bare id to that branch's version. So the obvious
-pair for "what did the last edit do" is a trap:
+**A bare `<id>` is the *global latest* version — which may live on a branch.** It
+is *not* "latest on master".
 
 | Want | Use | Not |
 |---|---|---|
@@ -113,324 +106,245 @@ pair for "what did the last edit do" is a trap:
 | What changed since it last passed? | `<id>:<last-good>` → `<id>:<N>` | |
 | How does our copy differ from theirs? | `<id-a>` → `<id-b>` | |
 
-**Name both versions explicitly.** Read the version list, take the two integers,
-and pass both. It costs one extra call and removes the whole class of error.
+**Name both versions explicitly.** One extra call removes the whole class of
+error. Two edges:
 
-Two more edges worth knowing:
+- `compare` rejects **literally identical** argument strings, but not `<id>` vs
+  `<id>:<N>` resolving to the same version — that returns an all-`unchanged`
+  diff, indistinguishable from "nothing changed".
+- `mabl tests versions` **rejects `--output json`** (prints help, exits
+  non-zero). Text is the only form.
 
-- `compare` rejects **literally identical** argument strings. It does **not**
-  reject `<id>` vs `<id>:<N>` when they happen to resolve to the same version —
-  that returns an all-`unchanged` diff, which is indistinguishable from "nothing
-  changed between these two things". Another reason to name both versions.
-- `mabl tests versions` **rejects `--output json`** (it prints yargs help and
-  exits non-zero). Text is the only form; parse the lines.
-
-### Listing the versions
-
-**MCP lane** — the only lane that can date a version:
+### Listing versions
 
 ```
 list_mabl_test_versions({ testId: "<*-j>" })                    // full history
-list_mabl_test_versions({ testId: "<*-j>", branch: "<name>" })  // just that branch
+list_mabl_test_versions({ testId: "<*-j>", branch: "<name>" })  // one branch
 ```
 
 Newest first: `version`, `is_latest`, `created_on_branch`, `created_time`
 (**Unix epoch milliseconds**), `change_description`.
 
-**`change_description` is almost always absent.** Don't build the report around
-it. Where it is populated it tends to be system-generated ("Merged master
-into …", "Restored version 8") and it never names a person. `created_time` is
-the field that answers a dated question; treat `change_description` as a bonus
-and say nothing about it when it's empty.
+Two fields to read carefully. **`created_on_branch` is needed later** — step 3's
+extraction check reads a flow on the branch it was created on. And
+**`change_description` is almost always absent**; where populated it is
+system-generated ("Merged master into …", "Restored version 8") and never names a
+person. `created_time` answers dated questions; treat the description as a bonus.
 
-**CLI lane** — plain text, newest first:
+The CLI's list gives `v<N>`, a `(latest)` marker, and the branch — no timestamps,
+so date a version from other dated evidence and say you did it indirectly.
 
-```
-Versions for test <test-id>:
-  v75 (latest) [rca-fix/view-insights-20260826]
-  v74 [master]
-  v73 [master]
-```
-
-`v<N>`, a `(latest)` marker, and the branch the version was **created on**.
-Note what that first line demonstrates: the latest version is on a branch, so a
-bare id here would resolve to the branch version. No timestamps on this lane, so
-a dated question has to be bracketed from something else that is dated (a failing
-run's start time, a deployment) — and say you dated it indirectly.
-
-## Attribution — who changed it
-
-This is an **adjunct to the comparison, not part of it** — the skill's job is the
-diff. Reach for it only when someone actually asks who changed something, and
-skip it otherwise.
-
-**No version list carries an author, on either lane.** The best available lookup
-is on the CLI:
-
-```bash
-mabl tests list -w <workspace-id> -o json --limit 2000
-```
-
-Each test carries `created_by_user` and `last_updated_by_user` as
-`{id, name, email}` — already resolved, no second call. `--limit` defaults to
-**10**, so pass it explicitly or you'll silently see a handful of tests; and pass
-`-w` unless you know the CLI's configured workspace is the one you mean.
-
-**With the MCP lane only, attribution is partial, and say so.**
-`list_mabl_tests` returns an `authorId`, but that is the test's *creator*, not
-its last editor. `list_mabl_authored_tests` does carry an enriched
-`lastUpdatedBy`, but it orders by creation time and caps well below a full
-workspace, so it answers "who created these recent tests", not "who last edited
-this one". Report what you could establish and what you couldn't — don't
-substitute creator for editor without flagging it.
-
-Three limits to state rather than paper over:
-
-- **`last_updated_by_user` is the test record's last editor, not the author of
-  any particular version.** The last person to touch a test is frequently not
-  who wrote its latest version. Don't present it as version authorship.
-- **A metadata-only edit creates no version.** Renaming, relabelling, or
-  disabling a test updates `last_updated_time` and leaves the version history
-  untouched — so a test can be "edited today" with its newest version months
-  old, and `compare` has nothing to show. Say that rather than reporting an
-  empty diff as if nothing happened. On a real corpus this was the single most
-  common shape of "edit".
-- **Branch creators may be API keys.** `list_mabl_branches` gives each branch a
-  `created_by`, but an id ending `-k` is an API key (CI, automation), and
-  `list_mabl_users` **silently omits ids it can't resolve** — an absent name is
-  not an absent branch. Report the raw id and call it automation.
-
-For **agent vs human**, an authoring session is the evidence:
+## 2. Get the diff
 
 ```
-list_authoring_sessions({ workspaceId, branchId: "<*-br>" })
+compare_mabl_test_versions({ source_test_id: "<*-j>:4", target_test_id: "<*-j>:5" })
 ```
-
-Query it **by `branchId`**, not by `testId`. The `testId` filter returns no
-sessions for tests that demonstrably have versions on agent branches, so a
-`testId` query coming back empty is not evidence that no agent touched it. Agent
-edits land on branches named `Agent edit: <name> (<hash>)` or
-`Agent edit session <hash>`, which is the cheaper first signal. Note that an
-agent-edit branch's creator is the **human who started the session**, so "edited
-by an agent" and "edited by a human" are not exclusive.
-
-## 2. Get the structured diff
-
-**MCP lane:**
-
-```
-compare_mabl_test_versions({ source_test_id: "<*-j>:74", target_test_id: "<*-j>:75" })
-```
-
-**CLI lane** — same JSON:
 
 ```bash
 mkdir -p .mabl/compare
-mabl tests compare <source> <target> --output json > .mabl/compare/<test-id>-<source>-<target>.json
+mabl tests compare <source> <target> --output json > .mabl/compare/<id>-<a>-<b>.json
 ```
 
-`--output json` is the only structured form; `-a` / `--show-all-properties`
-affects the human-readable view, not the JSON.
-
-A real diff is large — tens of kilobytes for a 40-step test, because every
-`unchanged` step carries its full descriptor. On the MCP lane the response
-routinely overflows the token limit and gets written to a file instead, which is
-good news: **the `jq` recipes in `references/reading-the-diff.md` apply to either
-lane**, since both end up as a file on disk.
-
-The shape:
+`--output json` is the only structured form; `-a` affects the human view, not the
+JSON. Diffs are large — every `unchanged` step carries its full descriptor — so
+on the MCP lane the response often overflows and is written to a file. That is
+convenient: **the `jq` recipes in `references/reading-the-diff.md` work on either
+lane**, since both end as a file.
 
 ```json
-{ "source": "…:74", "target": "…:75",
-  "summary": { "added": 0, "removed": 0, "changed": 4, "unchanged": 37 },
-  "steps": [ { "operation": "changed", "stepNumber": 37,
-               "from": { "AssertEquals": {…} }, "to": { "AssertEquals": {…} } } ] }
+{ "source": "…:4", "target": "…:5",
+  "summary": { "added": 0, "removed": 7, "changed": 1, "unchanged": 2 },
+  "steps": [ { "operation": "changed", "stepNumber": 3,
+               "from": { "StepGroup": {…} }, "to": { "EvaluateFlow": {…} } } ] }
 ```
 
-Each `from` / `to` is a **single-key object keyed by the step type** — the same
-shape `mabl tests export --format json` produces — carrying the step's `id` when
-it has one. `references/reading-the-diff.md` has the field-by-field reading, the
-jq recipes for every class below, and the no-jq fallback.
+Each side is a **single-key object keyed by step type**, carrying the step's `id`
+when it has one. **If either reference fails to resolve, report the comparison as
+*not run*** — never substitute a single-version export and call it a diff.
 
-**If either reference fails to resolve, report the comparison as *not run*.**
-Don't substitute a single-version export and describe it as a diff.
+## 3. Normalize before you count
 
-## 3. Classify
+Two gates run **before** any classification, because both change what the counts
+mean. Skipping them produces confident, wrong numbers.
 
-### First: is this an authored edit at all?
+### Gate A — strip commentary, then re-compare
 
-Run this before counting anything, because on a real corpus it is the most common
-finding and the counts lie without it.
+**`description` and `annotation` are server-rendered and drift from the step
+body.** They are regenerated by the platform, so a version can change dozens of
+descriptions while changing no behaviour.
 
-**`description` and `annotation` are server-rendered commentary, not the step.**
-They are regenerated by the platform, and a version can change dozens of
-descriptions while changing no behaviour — one real test showed 17 of 22
-"changed" steps differing only in quoting style ("Assert that innerText … starts
-with Auto-heal" → `Assert "innerText" … starts with "Auto-heal"`). Reporting "22
-steps changed" there is technically true and completely misleading.
+For every `changed` step: **drop `description` and `annotation` from both sides
+and re-compare.** Identical remainder ⇒ renderer churn, not an edit. Count churn
+separately and never fold it into "steps changed".
 
-So for every `changed` step: **drop `description` and `annotation` from both
-sides and re-compare.** If the remainder is identical, it is renderer churn, not
-an edit. Count it separately and say so.
+Two consequences worth stating in the report:
 
-The same applies to whole diffs. An all-zeros summary (`added 0, removed 0,
-changed 0`) is a real and frequent result: **a new version exists and it changed
-no steps.** Report that as its own finding — it usually means a branch operation
-or a metadata save — rather than leaving the reader to infer something happened.
+- **Never quote a description as evidence.** A description can disagree with its
+  own step's body, and this is generated fresh, not legacy drift.
+- **An all-zeros summary is a finding.** "A version was created and it changed no
+  steps" is real and common — usually a branch operation or a metadata save.
 
-### Second: never quote a description as evidence
+### Gate B — a removed step is not a deleted step
 
-The corollary, and the sharpest trap in this skill. A step's `description` can
-disagree with the step's own body, because the description was rendered at a
-different time:
+`removed` at test level means *left this position*, which has four causes. Work
+them in order and stop at the first that matches:
 
-- a `VisitUrl` whose `url` is `{{@web.defaults.url}}` on **both** sides, while its
-  description changes to name `app.url`
-- an `EnterText` whose description says `app.defaults.username` while its own
-  `text.name` says `web.defaults.credentials.username`
-- a `CreateVariable` whose `generator.pattern` is identical on both sides while
-  its description gains a namespace
+| Check | Verdict |
+|---|---|
+| 1. The removed step's `id` appears on an `added` step | **moved** |
+| 2. Bodies match with `id`, `description`, `annotation` excluded | **id regenerated** — platform churn |
+| 3. Removed and added `EvaluateFlow` share a `flow.invariant_id` | **flow re-id** — a migration, not a change |
+| 4. A step on the target side is an `EvaluateFlow` and the removed step is inside that flow | **extracted into a reusable flow** — see below |
+| Nothing matched | **deleted** |
 
-Each of those reads as a real change and is not one. **Classify from the body** —
-`condition`, `extract`, `target`, `url`, `text`, `generator` — and quote the body
-in the report. When you mention a description at all, say it's the rendered label.
+Only after all four is a removal a deletion. **Name the method you used** — a
+body or `flow.invariant_id` match is weaker than an id match, since it can't
+distinguish a move from a delete-plus-identical-add.
 
-### The classes
+### The extraction case, and the trap in it
 
-| Class | What it is | How you see it |
-|---|---|---|
-| **Structure** | steps added, removed, changed | `summary`, after the churn filter above |
-| **Moved** | a step that relocated, not a deletion | see below — this needs real care |
-| **Assertion delta** | count per assertion type, source vs target | tally the step-type key across `from` / `to` |
-| **Weakening** | same check, less proved | the table below |
-| **Conditional** | `If` / `ElseIf` / `Loop` added — later checks may now be skippable | an added control-flow step |
-| **Date literals** | a fixed date baked into a step | a month name, `YYYY-MM-DD`, or today's date in `to` and not `from` |
-| **Data binding** | a value became variable-driven, or stopped being | a `{{@…}}` token appearing or disappearing in a body field |
+Extracting steps into a reusable flow is the most destructive-looking change that
+removes nothing, and it does **not** produce an added step. The existing
+`StepGroup` *becomes* the `EvaluateFlow`, keeping its id:
 
-A data-binding change is worth its own line because it cuts both ways and the
-counts never show it. A hardcoded literal replaced by `{{@user.some.var}}` is
-usually a fix; the reverse pins a test to one input. Two cases to distinguish and
-report differently:
+```
+changed  step 3   id 2bfa8e61-…
+  from   StepGroup     "Step Group: \"Verify landing page\" (7 steps)"
+  to     EvaluateFlow   flow.invariant_id: iUtWHnDNNo4Y9rh8TuZqhA-f
+```
 
-- **The bound value changed** — a different variable, or a literal where a
-  variable was. A real change.
-- **Only the binding's representation changed** — e.g. a structured
-  `{name, tokens}` object becoming an inline `"{{@web.defaults.credentials.username}}"`
-  string that resolves to the same variable. That is a schema migration, not a
-  credential edit, and calling it one is alarming and wrong.
+So the signature is **`removed: N`, `added: 0`, and one `changed` step whose type
+became `EvaluateFlow`.** With nothing on the added side, checks 1–3 all fail and
+every removed step falls through to "deleted" unless you look inside the flow.
 
-Read this from the body field (`text`, `condition.comparatorValue`,
-`generator.pattern`, `url`), never from the description — a real diff carried a
-step whose description named `app.defaults.username` while its own `text.name`
-said `web.defaults.credentials.username`.
+To resolve it:
 
-### Moved is not removed — and an id match is not the whole story
+1. Take `flow.invariant_id` from any target-side `EvaluateFlow` — whether it was
+   `added` or `changed` into one.
+2. Get that flow's branch: `list_mabl_flow_versions({ flowId })` →
+   `created_on_branch`.
+3. Read it **on that branch**: `get_mabl_flow_steps({ flow_id, branch })`.
+4. Removed ids present in the flow were **extracted, not deleted**. Step
+   identity survives extraction, so this match is exact.
 
-`compare` renders a step that moved as a **`removed` entry plus an `added`
-entry**, the way the web app's Compare tab does. A rule that reads `removed`
-alone reports every relocated assertion as deleted coverage. This is real: a
-live diff showed an `AssertEquals` with id `LDy7Znjkdq9hbo2Vkz-0Hw` leaving step
-7 and arriving at step 24 — one move, zero deletions, and a naive read calls it
-a deleted assertion.
+**Read the flow on the wrong branch and it comes back empty.** A flow created by
+an agent edit lives on that session's branch, `get_mabl_flow_steps` takes only a
+bare invariant id, and it defaults to master — so the read returns
+`step_count: 0`. That does not fail open: it looks like the assertions really
+were deleted *and* the replacement flow is empty, which reads as a confirmed
+catastrophe. Always pass the branch from step 2.
 
-So pair before you report. But **an id match is sufficient to prove a move; an id
-mismatch proves nothing**, and that second half is where the real errors live:
+If you cannot complete this check — no flow-read lane available — report those
+removals as **unresolved**, not as deletions.
 
-1. **Ids match across a `removed` / `added` pair → it moved.** Report it as a
-   move and take it out of the removal count.
-2. **Ids differ, or are missing → compare the bodies with `id` excluded.**
-   Identical bodies mean the step's identity was regenerated by the platform, not
-   that a step was deleted and a different one added. On one flow's history this
-   happened seven times; every instance would otherwise be reported as a deleted
-   assertion.
-3. **`EvaluateFlow` steps need their own pairing.** A platform migration that
-   assigns step ids renders every flow invocation as remove + add: the removed
-   side has `id: null`, the added side has a fresh id, **and the descriptions
-   differ too** (`"App - Login"` → `"Start flow \"App - Login\""`), so a
-   descriptor comparison also fails. Pair these on `flow.invariant_id` plus
-   `stepNumber`. One real diff produced eight false deletions this way, including
-   the login flow — which reads as someone ripping authentication out of a test.
-4. **Only after all three** is a `removed` step a deletion.
+## 4. Classify
 
-State the method you used. Pairing by body or by `flow.invariant_id` is weaker
-than pairing by id — it can't distinguish a move from a delete-plus-identical-add
-— and that belongs in the report, not in a footnote.
+Report the primary split first, then the detail. Two tiers.
+
+### Nonfunctional — the step array changed, behaviour didn't
+
+| Class | How you see it |
+|---|---|
+| Commentary rewrite | Gate A: only `description` / `annotation` differ |
+| Identity churn | Gate B check 2 or 3 |
+| Reordering | Gate B check 1 |
+| Extraction / inlining | Gate B check 4 |
+| Regrouping | an added or removed `StepGroup` (`actionCode: "step_group"`) with its leaves unchanged — costs exactly one step |
+| Marker step | an `Echo` added or changed — it logs, it asserts nothing |
+| Binding representation | a binding whose resolved variable is the same on both sides (e.g. a `{name, tokens}` object becoming an inline `{{@…}}` token string) |
+
+Two asymmetries not to flatten:
+
+- **An added `Echo` is noise; removed `Echo`s are evidence.** Echo proves nothing
+  itself, but it is used as a section marker, so a drop in Echo count can mean
+  whole sections went. Report the direction.
+- **A group header embeds its step count** — `"Step Group: \"…\" (7 steps)"` — so
+  any change to a group's contents also churns its header. Expect one extra
+  churned step per affected group and don't report it as a second finding.
+
+### Functional — behaviour changed
+
+| Class | How you see it |
+|---|---|
+| Coverage added | new `Assert*` / `AccessibilityCheck` steps |
+| Coverage deleted | Gate B exhausted with no match |
+| Weakening | the table below |
+| Retargeting | same check, different selector — a `findTarget` swapped for a `locator`, a class chain for a `role=` |
+| Data binding | a `{{@…}}` token appearing or disappearing in a body field |
+| Date literal | a month name, `YYYY-MM-DD`, or today's date in `to` and not `from` |
+| Conditional added | an `If` / `ElseIf` / `Loop` — later checks may now be skippable |
+
+A data-binding change cuts both ways and the counts never show it: a hardcoded
+literal replaced by `{{@user.some.var}}` is usually a fix, the reverse pins the
+test to one input. Read it from the body field (`text`,
+`condition.comparatorValue`, `generator.pattern`, `url`), never the description.
 
 ### The weakening table
 
-Same step count, less proved. This is what a count-based check misses entirely.
+Same step count, less proved.
 
 | Weakening | Source | Target |
 |---|---|---|
-| Assertion loosened | `AssertEquals` / regex assertion | `AssertContains`, then `AssertPresent` |
-| Expected value emptied | a non-empty expected value | empty, absent, or a wildcard-only pattern |
+| Assertion loosened | `AssertEquals` / a regex assertion | `AssertContains`, then `AssertPresent` |
+| Expected value emptied | a non-empty expected value | empty, absent, or wildcard-only |
 | Pattern widened | a specific regex | one that also matches the old failure |
 | Check disabled | no `disabled` key | `"disabled": true` |
-| Check made conditional | assertion runs unconditionally | an `If` / `ElseIf` added above it |
+| Check made conditional | runs unconditionally | an `If` / `ElseIf` added above it |
 | Assertion → wait | `Assert*` | `WaitUntil` (waits, proves nothing) |
 
-Three rules that keep this honest:
+Three rules keep this honest:
 
-- **The strictness ladder is: exact match → substring → existence.**
-  `AssertEquals` → `AssertContains` → `AssertPresent` is a descent; a
-  `disabled: true` on any check is the bottom of it.
-- **The ladder does not cover every step type, and that's fine.**
-  `AssertStartsWith` / `AssertEndsWith` flipping to or from `AssertContains`,
-  an assertion becoming an `AssertAIPrompt`, `AssertNotPresent`, the numeric
-  comparators — describe what it was and what it is, and let the reader rank it.
-  Inventing a ranking is worse than declining to give one.
-- **`WaitUntil`, `If`, and `ElseIf` are not assertions**, even though they carry
-  the same condition shape. Count assertions by the step-type key starting with
-  `Assert`, plus `AccessibilityCheck`. Counting "has a condition" over-counts
-  every wait in the test.
+- **The ladder is exact match → substring → existence.** `disabled: true` on any
+  check is the bottom of it.
+- **The ladder does not cover every type, and that's fine.** `AssertStartsWith` /
+  `AssertEndsWith` flipping to or from `AssertContains` is **lateral, not
+  weaker** — say so. For anything else off the ladder (`AssertAIPrompt`,
+  `AssertNotPresent`, numeric comparators), describe what it was and what it is
+  and let the reader rank it. Inventing a ranking is worse than declining.
+- **`WaitUntil`, `If`, and `ElseIf` are not assertions** despite the shared
+  condition shape. Count by the type key starting with `Assert`, plus
+  `AccessibilityCheck`; counting "has a condition" over-counts every wait.
 
 ### What this diff cannot see
 
-Say these out loud rather than implying the diff covered them:
+Say these rather than implying they were covered:
 
-- **Whether the *test* is enabled.** `compare` diffs steps; a test disabled
-  wholesale looks identical here. Read the `enabled` field from
-  `list_mabl_tests` / `mabl tests list -o json`. This matters more than it
-  sounds: disabling is one of the most common "edits" a test receives, and it
-  never shows up in a diff.
-- **What a nested flow's steps did.** A flow invocation appears as an
-  `EvaluateFlow` step carrying only `{actionCode, description, flow.invariant_id}`
-  — never the flow's contents. A change *inside* a reusable flow is invisible in
-  the test diff and needs its own comparison.
-- **Which steps fell inside an added `If`.** Step groups are flattened, so an
-  added `If` tells you the branch exists, not what it wraps. Report it as needing
-  a look at the test, not as a determination.
-- **Run results.** This is a definition diff. It says a step changed, never that
-  the change is what broke the run.
+- **Who changed it.** No version carries an author, on either lane.
+- **Whether the test is enabled.** `compare` diffs steps; a test disabled
+  wholesale looks identical. Read `enabled` from `list_mabl_tests`. This matters
+  — a metadata-only edit creates no version at all, so a test can be "edited
+  today" with its newest version months old and nothing for `compare` to show.
+- **What a nested flow's steps did.** An `EvaluateFlow` carries only
+  `{actionCode, description, flow.invariant_id}`. A change *inside* a reusable
+  flow is invisible in the test diff and needs its own comparison.
+- **Which steps fell inside an added `If`.** Groups are flattened, so an added
+  conditional tells you the branch exists, not what it wraps.
+- **Run results.** This is a definition diff. A step changed; it never says the
+  change is what broke the run.
 
-## 4. Report
+## 5. Report
 
-Write to `.mabl/compare/<test-id>-<source>-<target>.md`:
+Write to `.mabl/compare/<id>-<source>-<target>.md`:
 
-- **Compared** — the two references as version integers, which lane, and why
-  those two.
-- **Authored change, or churn** — the structural counts *after* the
-  description/annotation filter, with the churn counted separately. If nothing
-  survived the filter, say the version changed no behaviour.
-- **Structure** — added / removed / changed / moved, with moves excluded from
-  removals and the pairing method named.
-- **Assertions** — per-type count, source → target, and the net.
-- **Weakening** — one row per instance: step number, what it was, what it is.
-  Empty is a real and common result — say "none found", not silence.
-- **Conditional / date literals** — each occurrence, with its step number.
-- **Not covered** — every item from the list above that applies here.
+- **Compared** — the two versions as integers, which lane, and why those two.
+- **Behavioural verdict first** — *N functional changes, M nonfunctional*. If
+  nothing survived the gates, say the version changed no behaviour.
+- **Nonfunctional** — one line per class that fired, with counts.
+- **Functional** — structure (added / deleted, with the Gate B method named),
+  assertions per type source → target with the net, weakening one row per
+  instance, then bindings, dates, conditionals.
+- **Unresolved** — removals you could not disprove, and what was missing.
+- **Not covered** — every applicable item from the list above.
 
-End with the classification and stop. **No verdict, no score, no recommendation
-to restore or re-edit** — hand it to whoever holds the intent. "Three assertions
-removed, two of them moves" is this skill's answer; "this fix is bad" is the
-caller's.
+**No verdict, no score, no recommendation to restore or re-edit.** "Seven steps
+left the test; all seven are in the extracted flow" is this skill's answer.
+"This fix is bad" is the caller's.
 
-## Comparing shared flows
+## Comparing flows
 
-When the change is in a reusable flow, the flow has its own version history and
-its own diff — same reference forms, same JSON shape, same classification.
-`get_mabl_test_steps` tags each of a test's flows `structural`, `reusable`, or
-`legacy_unsupported`, which is how you find the reusable ones.
+A reusable flow has its own history and its own diff — same reference forms, same
+JSON, same classification. `get_mabl_test_steps` tags a test's flows
+`structural`, `reusable`, or `legacy_unsupported`, which is how you find them.
 
 ```
 list_mabl_flow_versions({ flowId: "<*-f>" })
@@ -438,42 +352,40 @@ compare_mabl_flow_versions({ source_flow_id: "<*-f>:57", target_flow_id: "<*-f>:
 ```
 
 ```bash
-mabl flows compare <source> <target> --output json      # CLI
+mabl flows compare <source> <target> --output json
 ```
 
-Three flow-specific facts:
-
-- **There is no `mabl flows versions`.** Flow version numbers are discoverable
-  only on the MCP lane. Without it, compare two flow ids rather than guessing an
-  integer, and say the version numbers weren't available.
-- **`mabl flows list` has no `--output` option at all**, so there is no CLI route
-  to flow metadata either.
+- **There is no `mabl flows versions`**, and `mabl flows list` has no `--output`
+  at all. Flow version numbers are discoverable only on the MCP lane; without it,
+  compare two flow ids and say the versions weren't available.
 - **A shared flow's blast radius is not the test you started from.** Say which
   flow changed and note the reach; `list_mabl_tests_using_flow` enumerates
-  callers, and this skill doesn't call it for you.
+  callers and this skill doesn't call it for you.
+- **A flow read defaults to master.** Pass the branch from
+  `created_on_branch` — the same trap as step 3.
 
 ## Boundaries
 
-Two things this skill deliberately never does. It doesn't change a test — not a
-step, not a label, not the enabled flag, and never a restore. And it doesn't open
-a failing run: it diffs definitions, so it can say a step changed but never that
-the change is what broke the run. When one of those is what's needed, say so and
-stop rather than approximating it here.
+Two things this skill never does. It doesn't change a test — not a step, a label,
+the enabled flag, or a restore. And it doesn't open a failing run: it diffs
+definitions, so it can say a step changed but never that the change broke a run.
+When one of those is what's needed, say so and stop.
 
 One hand-off. When a test was authored or healed **in the current session**, the
-verdict on its diff belongs to the skill that holds the authoring intent and the
-rule against converging by deleting coverage — give it this classification as
-input rather than ruling in its place.
+verdict belongs to the skill holding the authoring intent and the rule against
+converging by deleting coverage — give it this classification as input.
 
 **Requires `mabl-test-authoring`.** If that skill isn't there, say which skill is
 missing and hand the classification to the user instead — don't take over its
 validation decision, and don't guess how to install it, because that depends on
 how this skill was installed. This applies only to that hand-off: a standalone
-"what changed in this test" has no authoring intent to defer to, and needs
-nothing beyond this skill.
+"what changed in this test" needs nothing beyond this skill.
 
 ## Additional resources
 
 - `references/reading-the-diff.md` — the JSON field by field, jq recipes for
-  every class, the no-jq fallback, and the edge cases that make a naive count
+  every gate and class, the no-jq fallback, and the traps that make a naive count
   wrong.
+- `references/measured-behaviour.md` — what these classes look like in real
+  diffs, measured rather than assumed, including the extraction signature and the
+  empty-flow trap.

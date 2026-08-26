@@ -161,11 +161,12 @@ jq '[.steps[] | select(.operation == "changed")
 A step whose `differing` list is exactly `["description"]`, or
 `["description","annotation"]`, is churn.
 
-### Pairing a removed step: move, regenerated id, or real deletion
+### Gate B — pairing a removed step
 
-The three-way version of the recipe above. An id match proves a move; an id
-mismatch proves nothing, so fall through to a body comparison with `id` removed,
-and give `EvaluateFlow` its own pairing on `flow.invariant_id`.
+An id match proves a move; an id mismatch proves nothing, so fall through to a
+body comparison with `id` removed, and give `EvaluateFlow` its own pairing on
+`flow.invariant_id`. This recipe covers three of the four checks — **extraction
+needs a second call and is below.**
 
 ```bash
 jq '
@@ -196,6 +197,58 @@ true, so every removal reports as a move.
 
 Report the counts per verdict, and name the method — a body or `flow.invariant_id`
 match cannot distinguish a move from a delete-plus-identical-add.
+
+Anything still `deleted` after this needs the extraction check before you believe
+it.
+
+### Gate B check 4 — was it extracted into a reusable flow?
+
+First, does this diff even have an extraction to resolve? Any target-side
+`EvaluateFlow` — `added`, or `changed` into one — is a candidate:
+
+```bash
+jq -c '[.steps[]
+        | select(.operation == "added" or .operation == "changed")
+        | select((.to | to_entries[0].key) == "EvaluateFlow")
+        | { step: .stepNumber, op: .operation,
+            was: (.from | if . == null then null else to_entries[0].key end),
+            flow: (.to | to_entries[0].value.flow.invariant_id) }]' "$DIFF"
+```
+
+A hit with `op: "changed"` and `was: "StepGroup"` is the classic extraction
+signature — and note that shape has **no added steps at all**, so the recipe
+above will have classified every removal as `deleted`.
+
+Then, for each flow id it returns, two calls — the branch first:
+
+```
+list_mabl_flow_versions({ flowId: "<*-f>" })        # take created_on_branch
+get_mabl_flow_steps({ flow_id: "<*-f>", branch: "<that branch>" })
+```
+
+**Pass the branch.** `get_mabl_flow_steps` accepts only a bare invariant id and
+defaults to master, so a flow created on an agent-edit branch reads back as
+`step_count: 0` — which looks exactly like the assertions having been deleted
+into an empty flow. See `measured-behaviour.md`.
+
+Finally, match the removed ids against the flow's step ids:
+
+```bash
+# $FLOW = the get_mabl_flow_steps response saved to a file
+jq -n --slurpfile d "$DIFF" --slurpfile f "$FLOW" '
+  [ $f[0].steps[].id ] as $inflow
+  | [ $d[0].steps[] | select(.operation == "removed")
+      | { step: .stepNumber,
+          type: (.from | to_entries[0].key),
+          id:   (.from | to_entries[0].value.id) } ]
+  | map(. as $r | $r + { verdict:
+        (if ($r.id != null) and ($inflow | index($r.id)) != null
+         then "extracted (in flow)" else "still unresolved" end) })'
+```
+
+Ids survive extraction unchanged, so this match is exact. Anything left
+`still unresolved` is either a genuine deletion or a step with no id — say which,
+and never report an unresolved removal as a deletion.
 
 ### Type changes on a changed step
 
