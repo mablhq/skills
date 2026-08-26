@@ -33,21 +33,74 @@ test('a RUN of blank lines inside a plain scalar is still one value', () => {
   assert.equal(values.description, 'para one\n\npara two');
 });
 
-test('a `|` block resolves to one string and does not count source indentation', () => {
+test('a `|` block keeps its line breaks and does not count source indentation', () => {
   const { values } = parseFrontmatter(wrap('name: a\ndescription: |\n  line one\n  line two'));
-  assert.equal(values.description, 'line one\nline two');
+  assert.equal(values.description, 'line one\nline two\n');
 });
 
-test('a `>` block folds to a single measurable string', () => {
+test('a `>` block folds line breaks to SPACES, unlike `|`', () => {
+  // The parser joined with \n for both indicators while its own comment claimed
+  // otherwise. Length-neutral for a single break, so the budget check never
+  // caught it — and the old test asserted the wrong string as correct.
   const { values } = parseFrontmatter(wrap('name: a\ndescription: >\n  line one\n  line two'));
-  assert.equal(values.description, 'line one\nline two');
+  assert.equal(values.description, 'line one line two\n');
+});
+
+test('a `>` block turns a blank line into a newline, not a space', () => {
+  const { values } = parseFrontmatter(wrap('name: a\ndescription: >\n  one\n\n  two'));
+  assert.equal(values.description, 'one\ntwo\n');
 });
 
 test('a block scalar spends budget on its blank lines', () => {
   // filter(Boolean) used to drop these, undercounting a multi-paragraph
   // description by one character per break.
   const { values } = parseFrontmatter(wrap('name: a\ndescription: |\n  one\n\n  two'));
-  assert.equal(values.description, 'one\n\ntwo');
+  assert.equal(values.description, 'one\n\ntwo\n');
+});
+
+test('clip chomping keeps exactly one trailing newline', () => {
+  // The default for `|` and `>`. Stripping it measured every block-scalar
+  // description one character short of what a loader resolves.
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: |\n  one\n')).values.description, 'one\n');
+});
+
+test('the `-` and `+` chomping indicators override clip', () => {
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: |-\n  one')).values.description, 'one');
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: |+\n  one\n\n')).values.description, 'one\n\n');
+});
+
+test('quotes are stripped only as a matching pair', () => {
+  // Stripping each end independently ate the closing quote off any description
+  // ending in a quoted word — shortening the string the budget is measured on.
+  const { values } = parseFrontmatter(wrap('name: a\ndescription: fire when the user says "hello"'));
+  assert.equal(values.description, 'fire when the user says "hello"');
+  assert.equal(parseFrontmatter(wrap("name: a\ndescription: it belongs to the users'")).values.description,
+    "it belongs to the users'");
+});
+
+test('an inline # comment is not part of the value', () => {
+  // check 1 compares `name` to the folder byte-for-byte, so a contributor
+  // writing an ordinary YAML comment used to fail CI on valid YAML.
+  assert.equal(parseFrontmatter(wrap('name: mabl-debug  # a comment')).values.name, 'mabl-debug');
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: fix issue #123')).values.description, 'fix issue');
+});
+
+test('a # inside quotes or a block scalar stays literal', () => {
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: "keeps # this"')).values.description, 'keeps # this');
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: |\n  a # literal hash')).values.description,
+    'a # literal hash\n');
+});
+
+test('a comment after a closing quote is dropped', () => {
+  assert.equal(parseFrontmatter(wrap('name: a\ndescription: "quoted"  # real comment')).values.description,
+    'quoted');
+});
+
+test('a flush-left --- ends the block scalar, matching a real loader', () => {
+  // Not a truncation bug: block content must be indented past its key, so a
+  // pasted flush-left horizontal rule is outside the scalar for PyYAML too.
+  const { values } = parseFrontmatter('---\nname: a\ndescription: |\n  intro\n---\n  more\n---\nbody\n');
+  assert.equal(values.description, 'intro\n');
 });
 
 test('a quoted scalar loses its quotes', () => {

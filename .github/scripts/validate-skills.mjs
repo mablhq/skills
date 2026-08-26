@@ -94,9 +94,13 @@ const validSkillNames = skillNames.filter((folder) => {
   return false;
 });
 
-// One pattern per sibling, compiled once from a name already proven clean.
+// One pattern per sibling, compiled once from a name already proven clean. `/`
+// is excluded on both sides so a path — `plugins/mabl/skills/mabl-test-edit/`,
+// `references/mabl-test-edit.md` — isn't read as a routing hand-off and doesn't
+// demand a declaration for a link that routes nobody anywhere. A trailing `.`
+// stays a boundary, because "use mabl-test-edit." is a real mention.
 const mentionPatterns = new Map(
-  validSkillNames.map((name) => [name, new RegExp(`(?<![a-z0-9-])${escapeForRegExp(name)}(?![a-z0-9-])`)]),
+  validSkillNames.map((name) => [name, new RegExp(`(?<![a-z0-9-/])${escapeForRegExp(name)}(?![a-z0-9-/])`)]),
 );
 
 for (const folder of validSkillNames) {
@@ -139,7 +143,7 @@ for (const folder of validSkillNames) {
   // fails to load in Copilot, so this can't be left to review.
   if (!values.name) {
     errors.push(`${rel}: "name" is required`);
-  } else if (!/^[a-z0-9-]+$/.test(values.name)) {
+  } else if (!SKILL_NAME.test(values.name)) {
     errors.push(
       `${rel}: "name" must be lowercase letters, numbers and hyphens only, got "${values.name}" — a path or colon prefix ("mabl/debug", "mabl:debug") silently fails to load in Copilot`,
     );
