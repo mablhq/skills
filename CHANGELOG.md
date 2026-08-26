@@ -31,6 +31,28 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   way, so the classification doesn't change — only what can be asked does.
 - Reusable flows get the same treatment via `compare_mabl_flow_versions`, with
   the caveat that flow version numbers are discoverable only on the MCP lane.
+- Field-tested against 621 real tests before shipping, which corrected three
+  wrong claims and added the two classes that matter most in practice. A bare
+  `<id>` resolves to the **global latest** version, which may live on a branch —
+  not "latest on master" — and a `<id>:<N>` reference is branch-independent on
+  both lanes, so the CLI diffs a branch-born version perfectly well. The skill
+  now tells you to name both versions explicitly.
+- `description` and `annotation` are server-rendered commentary that drifts from
+  the step body: a real diff carried 17 of 22 "changed" steps differing only in
+  quoting style, and elsewhere a step's description named a different variable
+  than its own body used. The skill strips both before counting, reports renderer
+  churn separately, and says to classify from the body and never quote a
+  description as evidence.
+- Move detection got the other half of its rule. An id match proves a step moved;
+  an id **mismatch proves nothing** — a regenerated id and a platform migration
+  that assigns ids to flow invocations both render as remove-plus-add, and on
+  real data produced 15 false deletions against 3 true moves. Pairing now falls
+  through to a body comparison and, for `EvaluateFlow`, to `flow.invariant_id`.
+- Adds what the tools actually support: attribution comes from the CLI's
+  `last_updated_by_user` (versions carry no author on either lane), agent-vs-human
+  from `list_authoring_sessions` by **branch** id rather than test id, and the
+  honest caveats — a metadata-only edit creates no version at all, and API-key
+  identities are silently dropped by the user resolver.
 - Deliberately verdict-free. A diff is a fact and the verdict needs the intent, so
   when a test was authored or healed in the same session, `mabl-test-authoring`'s
   validation step still owns the decision — this skill hands it the classification
