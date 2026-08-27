@@ -1,23 +1,22 @@
 ---
 name: mabl-onboarding
 description: |
-  Onboard a NEW or EMPTY mabl workspace. Interview the human about what they
-  ship and what they need verified, then build out the parts of that workspace
-  an agent can actually build — environments, deployment URL rows, in-product
-  agent instructions, mabl branches, CI deployment triggers — and record
-  everything else as team policy, drafting every write and applying it only on
-  an explicit yes. Test data, tests and plans are NOT built here: they are
-  decisions this skill hands off, each behind its own question.
-  Fire when the mabl side doesn't exist yet, for example "onboard my mabl
-  workspace", "I just signed up for mabl", "my mabl workspace is empty",
-  "we're new to mabl", "roll mabl out to my team", or "/mabl-onboarding".
-  A human creates the workspace itself in the mabl UI; this skill never
-  provisions one. The application it needs is created either by you over the
-  hosted mabl MCP server or by the human in the web app — §"standing rule".
+  Onboard a NEW or EMPTY mabl WORKSPACE. Interview the human about what they
+  ship and what needs verifying, then build the parts of that workspace an agent
+  can — environments, deployment URL rows, in-product agent instructions, mabl
+  branches, CI deploy triggers — every write drafted and applied only on an
+  explicit yes. Tests, DataTables and plans are NOT built here.
+  Fire when the mabl side doesn't exist yet: "onboard my mabl workspace", "I
+  just signed up for mabl", "my mabl workspace is empty", "we're new to mabl",
+  "roll mabl out to my team", or "/mabl-onboarding". Fire mid-workflow too when
+  another skill finds the workspace missing an application, environment or
+  credential: it fills only the gap and hands the ids back.
   If the workspace already HAS its applications and environments and the job is
-  telling THIS project's agent which IDs to use, that's mabl-init. This skill
-  calls mabl-init for that step rather than writing memory files itself.
-allowed-tools: Bash, Read, Write, Edit, Skill, mcp__mabl__*
+  telling THIS PROJECT's agent which ids to use, that's mabl-init — this skill
+  calls it rather than writing memory files itself.
+  A human creates the workspace itself in the mabl UI; this skill never
+  provisions one.
+allowed-tools: Bash, Read, Write, Edit, Skill, mcp__mabl__create_mabl_application, mcp__mabl__authenticate, mcp__mabl__complete_authentication
 ---
 
 # mabl onboarding
@@ -43,6 +42,72 @@ get their own gate: a committed-file or machine write never inherits the
 workspace gate by implication. `references/write-gates.md` is the contract for
 all of them, including the write log every applied write appends the moment it
 returns.
+
+## Two ways in, and they run different steps
+
+**Full onboarding** is the cold start: nothing exists on the mabl side, the
+person in the session is the operator, and the run is the whole ordered procedure
+below, ending in the closing report.
+
+**Gap-fill** is the mid-workflow entry: another skill was doing something else,
+found this workspace missing an application, an environment or a credential, and
+called here for that one thing. It is not a shorter onboarding, it is a narrower
+job — and getting it wrong in either direction is expensive. Running the
+fifteen-row depth sheet against someone who wanted one environment spends a
+session they did not offer; running the interview's write gates without them
+spends an approval nobody gave.
+
+Take the gap-fill lane when **the caller names the workspace and the entities it
+needs**. Everything else is full onboarding — including a human who says "my
+workspace is empty", who has no caller and no return address.
+
+| | Full onboarding | Gap-fill |
+|---|---|---|
+| Steps run | 0 through 10 | 0, a shortened C1, C3, then the return block |
+| Workspace | gate C1 resolves it | the caller supplied it: confirm id **and** name against `workspaces list`, never re-pick |
+| Repo discovery (C2) | always | only where the caller could not name the app URL |
+| Depth sheet (5), policy file (7), persistence (8), hand-offs (9) | yes | **no** — the caller owns the workflow those belong to |
+| Closing report (10) | yes | **no** — the return block replaces it; the caller owns the ending |
+| Write gates | every write | every write, unchanged |
+
+The gates do not relax on the narrow lane. A gap-fill run creates the same
+entities under the same draft-show-approve rule, with the same write log and the
+same irreversibility disclosures. **A calling skill's request is not the
+operator's yes** — the human in the session still approves every write, and a
+caller that asked for an application still gets asked.
+
+### What gap-fill hands back
+
+End with this block and nothing else. Every id is **copied verbatim** from the
+response that created or listed it — never derived from another id, never
+reformatted, never a suffix added or removed. A recomputed id round-trips
+perfectly and then authenticates as a *different* workspace, which surfaces as a
+403 that says nothing about ids.
+
+```
+RETURN -> <calling skill>
+
+workspace      <name> / <workspace-id>
+application    <name> / <application-id>   created by <me, over
+                                           create_mabl_application | you, in
+                                           the web app>
+environment    <name> / <environment-id>
+url row        <environment-id> -> <application-id> @ <url>
+credentials    <name> / <credential-id>    names and ids only; no value read
+still missing  none | <entity, who owns creating it, and the one command or UI
+                       path that creates it>
+```
+
+`still missing` is a required field, not something omitted when the run went
+well: write `none`, or name the entity. **Credentials are the one thing gap-fill
+will not create** — creating one over the MCP server would put a live password in
+this transcript — so a run called for a credential ends with that row in `still
+missing`, pointing at the web app, and says why. That is the honest ending, not a
+failure.
+
+If the caller wanted an entity this run could not produce, say so in `still
+missing` and stop. Never substitute a different entity, and never invent an id to
+fill a row.
 
 ## Prerequisites
 
@@ -115,8 +180,10 @@ never overstate one.
 
 ## Two rules that outrank convenience
 
-**Irreversibility.** `mabl tests` and `mabl datatables` have **no delete
-subcommand**; creation there is permanent. Probe the real surface in step 0 rather
+**Irreversibility.** `mabl tests`, `mabl datatables` and `mabl applications` have
+**no delete subcommand**; creation in those families is permanent — including the
+application you may create over the MCP server, and the URL row that comes with
+it. Probe the real surface in step 0 rather
 than trusting that sentence, never create anything as a probe in a no-delete
 family, and never re-issue a create on a status that is not proven terminal —
 `RATE_LIMITED` means *wait and re-poll*, not *failed*. Recovering a duplicate
@@ -219,7 +286,14 @@ Must not: write on an inferred yes, write to an unresolved path, silently swap o
 mode for another, or let a skipped write leave the policy with no durable home
 unsaid. → `references/write-gates.md`.
 
-**8. Gate C5 — hand persistence to `mabl-init`.** Check its preconditions, then
+**8. Gate C5 — hand persistence to `mabl-init`.**
+
+**Requires `mabl-init`.** If that skill isn't there, say which skill is missing,
+then take branch C — write the minimum `## mabl testing` section yourself through
+step 7's gate, marker comment included. Don't attempt its job as written, and
+don't guess how to install it: that depends on how this skill was installed.
+
+Check its preconditions, then
 take the branch the MCP state and tooling select. Invoke it **by name** as a
 skill, never by a file path inside its folder. Must not: hand off blind,
 hard-fail, or skip persistence silently on any branch, including D. →
@@ -233,6 +307,10 @@ four branches, and the fallback section with the marker comment that lets a late
 - **App exploration.** If the human wants coverage designed from the real app
   rather than from the repo, hand off to **`mabl-test-coverage-design`**, which
   explores a feature black-box in a real browser. **Do not build a crawler.**
+
+  **Requires `mabl-test-coverage-design`.** If it isn't there, say which skill is
+  missing and stop — don't explore their app yourself, and don't guess how to
+  install it, because that depends on how this skill was installed.
   Say plainly that this run read the repo and asked questions, and did not crawl
   their app.
 
@@ -248,6 +326,10 @@ four branches, and the fallback section with the marker comment that lets a late
   **`mabl-test-authoring`** (one test) or `mabl-test-coverage-design` (a suite).
   This is stricter than a per-batch kickoff confirmation: that one gates *when* an
   approved test is built, this one gates *what the tests are at all*.
+
+  **Requires `mabl-test-authoring`.** If it isn't there, say which skill is
+  missing and leave the approved list with the operator — don't author the test
+  yourself, and don't guess how to install it.
 
 - **Plans — only after tests exist, and only after asking how to group.** Two hard
   preconditions: a plan needs at least one test id, so a day-one workspace cannot

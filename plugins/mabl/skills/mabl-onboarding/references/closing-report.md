@@ -4,7 +4,7 @@ The two-tier report spec: the tier-1 card with its closed list and binding budge
 
 ## 10. The closing report
 
-One report, at the end, after `mabl-init` returns.
+One report, at the end, after the §8 persistence handoff returns.
 
 **Written to the operator, shaped for their lead.** Both readers were named in
 SKILL.md's opening paragraph, "**Two readers, and the whole skill is shaped by the
@@ -78,7 +78,7 @@ anything:
    | # | What goes | Where it lands |
    |---|---|---|
    | 1 | anything not in the closed list | it was never allowed; put it in the tier-2 section that owns the subject |
-   | 2 | the `Tooling` line's third clause (`mabl-init <state>`) | **section F**, which already records the handoff or its absence — F states the `mabl-init` state in words in its opening line |
+   | 2 | the `Tooling` line's third clause (the §8 persistence skill and its state) | **section F**, which already records the handoff or its absence — F states that skill's state in words in its opening line |
    | 3 | the detail inside `Exists in mabl now`, which becomes bare counts | the names go to **section C** |
    | 4 | the *rationale* attached to `Your next action`, the action itself staying | **section A**, item 1 |
 
@@ -110,9 +110,9 @@ real values everywhere; a bracket that survives into the report is a defect.
 **Repo** <path> (<shape>, branch <branch>)
 **App in scope** <name> · `<id>` — **you created this, not me** (or **created by me over the hosted mabl MCP server, `create_mabl_application`**) (branch D1: **NOT YET CREATED**; branch D2: **present; no <the missing piece> yet**)
 **You** <email> — resolved as **<role> of this workspace**
-**Tooling** mabl CLI <version> · hosted `mabl` MCP server <reachable | configured, needs sign-in | not configured — one of §0's three states, by name> · `mabl-init` <state>
+**Tooling** mabl CLI <version> · hosted `mabl` MCP server <reachable | configured, needs sign-in | not configured — one of §0's three states, by name> · <the §8 persistence skill, named> <state>
 **Writes** <n> in mabl <(<m> since deleted) — this parenthetical is required whenever any applied mabl write was removed in-run, e.g. `5 in mabl (1 since deleted)`> · <n> to committed files · <n> to untracked files · <n> machine- or session-level · <n> drafted and left in your hands · <the approval line — see below>
-**Exists in mabl now** <counts by entity type, including the zeros that matter: applications, environments, URL rows, agent instructions, branches, DataTables, tests, runs>
+**Exists in mabl now** <counts by entity type, including the zeros that matter: applications, environments, URL rows, agent instructions, branches, DataTables, tests, runs — DataTables, tests and plans are always zero-from-this-run, and are reported as deferred decisions, not as gaps>
 
 **State** <a human answered every gate | unattended — every gate answered on self-issued approval>. <N> items need you; the full ordered list is section A below.
 **Your next action** <one item — item 1 of section A — and where they do it. One sentence.>
@@ -222,7 +222,7 @@ a section with nothing in it says so in one line rather than being omitted.
 | **C** | What I built in mabl, and how I verified it | the entity table, the inline read-backs, the unverified-by-design items, the "no test authored, nothing has run" statement |
 | **D** | Footguns now written into `<file>` | at least three silent-wrong-result footguns with their consequence, plus the irreversibility record |
 | **E** | What got recorded as policy, and where | 3a real entities, 3b the per-row markers, the open questions, the secrets statement |
-| **F** | Persistence — handed off to `mabl-init`, or not | **opens by naming `mabl-init`'s state in words** (present and used / present and not usable, with the branch / not installed) — which is also where the `Tooling` line's third clause lands if the card's budget evicts it — then probe, offer, gate, handoff block, independent verify, or branch D's ending. **Anything blocking is cited as "A item `<n>`" and not re-told**; F carries only mechanics A does not (see below) |
+| **F** | Persistence — handed off to the §8 skill, or not | **opens by naming that skill and its state in words** (present and used / present and not usable, with the branch / not installed) — which is also where the `Tooling` line's third clause lands if the card's budget evicts it — then probe, offer, gate, handoff block, independent verify, or branch D's ending. **Anything blocking is cited as "A item `<n>`" and not re-told**; F carries only mechanics A does not (see below) |
 | **G** | How we got here | the gates, the correction ledger verbatim, the depth sheet, one full write gate |
 
 **A–G replace the old numbered report sections, so the references made elsewhere
@@ -312,12 +312,12 @@ a must-hold in tier 2 is not a weaker requirement, only a lower-placed one.
 
 | Must-hold | Tier | Where |
 |---|---|---|
-| One report, at the end, after `mabl-init` returns | — | whole section |
+| One report, at the end, after the §8 persistence handoff returns | — | whole section |
 | Written to the operator, shaped for the lead; structure follows the lead, voice follows the operator | — | whole report |
 | Title says complete-or-blocked, and never "complete" on an incomplete app/env/URL chain | **1** | title line |
 | Blocking **count** visible in the first 10 lines | **1** | title, continued by `State` — which carries the attendance fact and the count, never a second copy of the blocker phrase |
 | Workspace name and id; repo path, shape and branch; operator email and resolved role; CLI version and MCP state | **1** | header block |
-| `mabl-init` state named in words | **1**, evictable to **2** | `Tooling`'s third clause; on eviction it lands in **section F**'s opening line, which is its named home — never dropped |
+| The §8 persistence skill named, with its state in words | **1**, evictable to **2** | `Tooling`'s third clause; on eviction it lands in **section F**'s opening line, which is its named home — never dropped |
 | The MCP clause names **one of §0's three states in words** — `reachable` / `configured, needs sign-in` (or `configured, you declined the sign-in`) / `not configured`. State 2 never rendered as absent | **1** | `Tooling` |
 | `App in scope` carries the **entity**: attributed — human, or me over the named MCP tool — or, on branch D, the gap itself (D1 `NOT YET CREATED`; D2 present-with-the-missing-piece). **No second "this is the blocker" clause** — the title already said it | **1** | `App in scope` |
 | Write tally reports the real numbers including zeros, derived by counting §6's `WRITE LOG` lines — which were appended at each write, not assembled here | **1** | `Writes` |
@@ -339,7 +339,7 @@ a must-hold in tier 2 is not a weaker requirement, only a lower-placed one.
 | Capability statement before the first detail table | **2** | B before C |
 | Workspace creation routed three ways on role; a workspace owner cannot create one; no claim to know the account admins | **2** | B |
 | Every artifact listed with name, identifier and **which tool made it**; human-created ones attributed to the human | **2** | C |
-| At least one write verified by a read-back shown inline, with the reason the read-back is necessary; a DataTable verified by `datatables scenarios`, not by a nav path | **2** | C |
+| At least one write verified by a read-back shown inline, with the reason the read-back is necessary; a URL row verified by `environments urls list`, not by a nav path | **2** | C |
 | `--variables` reported as unverified by design, with `--decrypt` named and refused — and **as unverified in existence and count, not merely in value**, because `describe` returns no variables field at all. No sentence states a verified variable count | **2** | C |
 | Every list carries an explicit `--limit`; the 10-result cap stated once; the **four** no-`--output` commands never shown carrying it; and the two prose-on-stdout commands (`credentials list`, `branches create`) shown **with** their required `sed` | **2** | C |
 | `agent-instructions create`'s `test_types: ["browser"]` reported as a response field with **no flag behind it** — not as a scope this run chose, and mobile named as out of reach on the CLI path | **2** | C |
@@ -355,7 +355,7 @@ a must-hold in tier 2 is not a weaker requirement, only a lower-placed one.
 | Instruction-text limit reported as **2000**, never the stale 1000 | **2** | E |
 | The array-flag punctuation rule recorded **scoped to `[array]` flags**; `--instruction-text` named as `[string]` where commas are fine. The instruction text this run wrote reads as ordinary prose, punctuated normally — comma-avoidant instruction prose is itself the defect | **2** | E |
 | Secrets nowhere; credentials by name only; `--decrypt` never run; withheld `.env` values reported as withheld; **no other user's** name or email in any file — the operator's own email and role in the card is required and is not an exception to this | **2** | E |
-| The `mabl-init` handoff shown by name with its pre-supplied facts enumerated | **2** | F |
+| The §8 persistence handoff shown by name with its pre-supplied facts enumerated | **2** | F |
 | MCP-not-reachable branch shows probe (by state), the offer, the gate as shown, and the literal fallback content with its `## mabl testing` heading and marker comment. The **recovery step itself is an item in A** — restoring the MCP server as well as the skill, the `/plugin` lines labelled operator-run and gated, a skills-only route labelled as installing no MCP server — and **F cites it as "A item `<n>`" rather than reprinting it** | **2** | F (the step in A) |
 | The branch-C marker comment claimed **only** by quoting the `grep -n 'written by mabl-onboarding without the mabl MCP server' <path>` hit with its line number. No grep hit, no claim — and `grep -c '^## mabl testing'` returning ≥2 reported as a cleanup task in D | **2** | F (cleanup in D) |
 | The committed-file gate's mode named as **CREATE / APPEND / REPLACE**, with the path annotation that mode requires; a CREATE'd file counted as untracked in `Writes` until the operator commits it | **2** | F (+ count in 1) |

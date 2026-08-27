@@ -7,65 +7,57 @@ The whole gate contract: the gate template, the write log, per-write caveats, re
 **Read paths verify freely. Write paths earn trust one at a time.** Never batch
 approvals. Show the exact command before running it.
 
-**Three writes here cannot be undone, and each one's caveat belongs in the gate
-where the operator says yes — not only in the prose below.** State each up front,
-then repeat it verbatim in that gate's `caveats` block:
+**Two of the writes this skill makes cannot be undone, and each one's caveat
+belongs in the gate where the operator says yes — not only in the prose below.**
+State each up front, then repeat it verbatim in that gate's `caveats` block:
 
 | Write | The disclosure that must appear in its gate |
 |---|---|
-| `datatables create` | there is **no `datatables delete` at all**; removal is a manual web-app job |
-| `datatables update` | it **deletes every row absent from the file** (and `create` is the one with no client-side validation, so a ragged file creates fine and hard-fails on the first converge) |
 | `environments urls add` | **no upsert, no edit, no delete** from the CLI; a re-run adds a second row and a wrong row is a permanent human cleanup task |
+| `create_mabl_application` (MCP) | an application cannot be deleted by the CLI *or* by the MCP server, and the call also creates a URL row carrying the disclosure above |
 
-On the DataTable specifically: `mabl datatables` is `create` / `describe` /
-`export` / `list` / `scenarios` / `update` — verify with `mabl datatables --help`,
-**there is no `delete`**. This is not hypothetical: a validation run of this skill
-created one and could not remove it.
-
-**And on a day-one workspace, mind the order of irreversibility.** With 0
-applications the available writes are an Agent Instruction, an environment, a
-branch — all three have a `delete` — and a DataTable, which does not. So the one
-permanent artifact is the one you'd otherwise create first. **Default to deferring
-the DataTable until an application exists**, so its rows can be scoped to
-something real. If the operator
-wants it now, say the trade out loud in the gate and in the report: *"this is the
-one permanent artifact on the whole surface and we're creating it before there's
-an application to point it at — fine if the personas are settled, worth deferring
-if they aren't."*
+**The two irreversible writes this skill does *not* make are DataTables.**
+`mabl datatables` is `create` / `describe` / `export` / `list` / `scenarios` /
+`update` — verify with `mabl datatables --help`, **there is no `delete`** —
+and `datatables update` deletes every row absent from the file. Neither is in
+scope: §6 defers test data to authoring, so an onboarding run creates no
+DataTable at all. They are named here because the §0 probe covers them, because
+"never create one diagnostically" below is a rule rather than an omission, and
+because the report inherits both footguns for whoever authors the first test.
+This is not hypothetical: a validation run of this skill created one and could
+not remove it, which is where the scope cut came from.
 
 Present every write in this shape:
 
 ```
-WRITE 3 of 10   DataTable "Portal personas"                        not applied
+WRITE 3 of 9    URL row: `staging` -> `Acme Portal`                 not applied
+                @ https://staging.acme.example
 
-command   mabl datatables create ./.mabl/portal-personas.csv \
-            --name "Portal personas" \
-            --workspace-id <WORKSPACE_ID>
+command   mabl environments urls add <ENVIRONMENT_ID> \
+            --application-id <APPLICATION_ID> \
+            --app-url https://staging.acme.example
 
-artifact  Scenario ID,Scenario name,login_email,persona_role,tenant_slug
-          ,Approver,approver.qa@example.com,APPROVER,acme-qa
-          ,Submitter,submitter.qa@example.com,SUBMITTER,acme-qa
+caveats   - ⚠ THIS ONE CANNOT BE UNDONE BY ME OR BY YOU FROM THE CLI.
+            `mabl environments urls` is `add` and `list` — no upsert, no
+            edit, no delete. A wrong row stays, and a re-run adds a SECOND
+            row rather than correcting the first. Removing one is a manual
+            job in the web app. Approving this is approving something
+            permanent from my side.
+          - It exits 0 even when every URL association silently failed —
+            the error is caught, logged and resolved. So this gate is not
+            closed by the exit code; it is closed by the read-back below.
+          - If it does fail, the retry line the CLI prints is wrong on both
+            halves: `environments add-url` is not a subcommand and the flag
+            is `--application-id`, not `--applicationId`. The real retry is
+            this same command.
+          - `--application-id` is required, so this row cannot exist before
+            the application does. That is why build-out is
+            application-first (§3), not a preference.
 
-caveats   - ⚠ THIS ONE CANNOT BE UNDONE BY ME OR BY YOU FROM THE CLI. There
-            is no `mabl datatables delete` subcommand at all. If this table is
-            wrong, deleting it is a manual job in the web app (Settings →
-            DataTables — nav as of this writing; if it has moved, it's the
-            workspace's DataTables list you want). Approving this is
-            approving something permanent from my side.
-          - `Scenario ID` and `Scenario name` are exact, case-sensitive
-            literals; any other spelling silently becomes an ordinary variable.
-          - I renamed your `user` column to `login_email`: `user`, `web`,
-            `mail` and `api` are reserved DataTable variable names, and the
-            error message does not list all four.
-          - No passwords here. Those live in the mabl credential.
-          - `create` does no client-side validation; `update` does. A ragged
-            file would create fine and hard-fail on the first converge.
-          - When we later converge this from the file with `datatables
-            update`, that DELETES any row that isn't in the file — including
-            scenarios a teammate adds in the UI. Converge from the file or
-            edit in the UI, not both.
-          - Your workspace has 0 applications, so these rows aren't scoped to
-            anything yet. I can hold this write until the application exists.
+verify    mabl environments urls list <ENVIRONMENT_ID> --output json --limit 100
+          Expect exactly one row for <APPLICATION_ID> at that URL. Two rows
+          means the re-run hazard above already fired; report the extra as a
+          human cleanup task with both ids.
 
           approve / edit / skip / why?
 ```
@@ -136,9 +128,11 @@ discipline:
    *outside* the numbered gate sequence, disclosed it in prose, and reported 4 mabl
    creates when 5 had happened. The log line is what makes that count right, and it
    is owed at the create, not at the report.
-3. **Never create a DataTable diagnostically.** It is the one entity with no delete
-   anywhere on the surface (§"Nothing here can be undone"), so a probe leaves a
-   permanent artifact and a human cleanup task.
+3. **Never create a DataTable diagnostically** — or an application, or a URL row.
+   Those three have no delete anywhere on the surface (§"Nothing here can be
+   undone"), so a probe leaves a permanent artifact and a human cleanup task. The
+   DataTable is doubly out: §6 puts test data out of scope, so there is no gated
+   route to one either.
 4. **If you removed it again inside the run**, the line stays, `result` says
    `, then removed in-run`, and §10 counts it as applied and annotates it inline.
 
@@ -160,12 +154,6 @@ retry is the real form: `mabl environments urls add <env> --application-id <app>
 mabl environments urls list <ENVIRONMENT_ID> --output json --limit 100
 mabl environments describe <ENVIRONMENT_ID> --output json
 
-# DataTables — a full read-back exists. USE IT.
-mabl datatables describe <DATATABLE_ID> --output json          # name, id, shape
-mabl datatables scenarios <DATATABLE_ID> --output json --limit 100  # THE ROWS
-mabl datatables export <DATATABLE_ID> --format csv             # round-trip the file
-mabl datatables list -w <WORKSPACE_ID> --output json --limit 100
-
 # agent instructions, branches, plans
 mabl agent-instructions list -w <WORKSPACE_ID> --output json --limit 100
 mabl agent-instructions describe <INSTRUCTION_ID> --output json
@@ -173,14 +161,15 @@ mabl branches list -w <WORKSPACE_ID> --status open --output json --limit 100
 mabl plans list -w <WORKSPACE_ID> --output json --limit 100
 ```
 
-**`datatables scenarios` is the read-back that proves the rows landed** — it
-returns per-row variables exactly as supplied, so it verifies content, not just
-existence. Since the DataTable gate above is the write this skill shows in full,
-this is the read-back the report shows inline. Do **not** fall back to citing
-*Settings → DataTables* in the web app and calling the evidence thinner: a real
-verification exists and reporting weaker evidence than you can obtain is its own
-failure. (`describe` and `list` confirm existence; `export --format csv` lets you
-diff the round-trip against the file you uploaded.)
+**`environments urls list` is the read-back that proves the row landed** — it
+returns the application id and URL of every row on that environment, so it
+verifies content, not just that the command exited. Since the `urls add` gate
+above is the write this skill shows in full, this is the read-back the report
+shows inline. Do **not** fall back to citing *Settings → Environments* in the web
+app and calling the evidence thinner: a real verification exists, and reporting
+weaker evidence than you can obtain is its own failure. It is also the only way
+to catch the exit-0-and-silently-failed case, and the only way to see a duplicate
+row before the operator does.
 
 Two limits on environment read-backs, and they pull against each other — resolve
 them the honest way, not by weakening the secrets rule:
@@ -234,29 +223,25 @@ exists is just as wrong.
 **There is no unwind command anywhere in this skill's surface.** Named, so an
 approver knows what they're approving:
 
-- **A DataTable cannot be deleted at all.** `mabl datatables` is
-  `create` / `describe` / `export` / `list` / `scenarios` / `update` — **there is
-  no `delete`**. Every DataTable an onboarding run creates is permanent from the
-  agent side, forever; removing one is a manual job in the web app (Settings →
-  DataTables — nav as of this writing). This must appear in the DataTable write
-  gate's caveats too, and be said **before** you show that gate, not
-  just here, because that gate is where someone says yes.
 - **URL rows cannot be deleted or edited from the CLI.** `urls add` has no
-  upsert; a wrong row stays. **Required caveat in that gate**, and in the MCP
-  `create_mabl_application` gate, which creates a URL binding of its own.
-- **A `datatables update` deletion is gone** — rows absent from the file are
-  removed server-side. **Required caveat in the `datatables update` gate**, and
-  named in the `create` gate.
-- **An application cannot be deleted** by the CLI or by the MCP server. If you
-  create one over `create_mabl_application`, that is permanent from the agent side
-  too — say so in that gate.
+  upsert; a wrong row stays, and a re-run adds a second one. **Required caveat in
+  that gate**, and in the MCP `create_mabl_application` gate, which creates a URL
+  binding of its own.
+- **An application cannot be deleted** by the CLI or by the MCP server —
+  `mabl applications --help` is `list` / `describe` only. If you create one over
+  `create_mabl_application`, that is permanent from the agent side too — say so in
+  that gate.
+- **A DataTable cannot be deleted at all**, and `datatables update` deletes every
+  row absent from the file. **This skill creates neither**, so neither is a gate
+  it owns; both are carried into the report as inherited footguns for whoever
+  authors the first test.
 
 `environments delete` and `agent-instructions delete` do exist, so those two are
 the only writes here you can walk back.
 
 Say this in the report, and list any wrong write that survived as a **human
 cleanup task** — with the entity name, its id, and where they delete it — rather
-than smoothing over it. If a run leaves an unwanted DataTable behind, that is a
+than smoothing over it. If a run leaves a wrong URL row behind, that is a
 named residue item with no CLI remedy, not a footnote. This is exactly why every
 write is gated.
 
@@ -295,7 +280,7 @@ scrollback and the report itself are not durable; the file is.
 That file is in version control and every teammate and every agent on the project
 reads it. It is **not** covered by the workspace-write gate in §6, so it gets its
 own — same four-way choice, and **resolve the path before you show it**, matching
-what `mabl-init` does ("Confirm the format and the resolved path with the user
+what the §8 persistence skill does ("Confirm the format and the resolved path with the user
 before writing"):
 
 #### Resolve the path first, then pick one of THREE modes
@@ -360,7 +345,8 @@ caveats   - This creates a new file in your repo root. It is not a section in
             and to CI — until you `git add` it.
           - No secrets, no credential values, and nothing from
             `mabl users list` — no other user's name or email address.
-          - A later `mabl-init` run replaces this section in place, by heading.
+          - A later run of the §8 persistence skill replaces this section
+            in place, by heading.
 
           approve / edit / skip / why?
 ```
@@ -393,7 +379,7 @@ Render it so it cannot be mistaken for configuration:
 - give every row the **enforcement marker §5 assigned it** — `nothing — text
   only`, or `partly — <the entity that does exist, with its id>`. Copy §5's
   classification; do not re-derive it here. D7 and D5 are `partly` whenever
-  §6 actually created the corresponding DataTable, environment variables or
+  §6 actually created the corresponding environment variables or
   deployment command — writing `nothing — text only` next to a row
   whose entity is listed in **report section C** is the contradiction this marker exists to
   prevent
@@ -425,9 +411,9 @@ the report header, and there is no reason to put it in this file at all.
 
 ## Irreversibility preflight (§0)
 
-`mabl tests` and `mabl datatables` have **no delete subcommand** — anything created
-is permanent from the CLI. `applications`, `environments`, `branches` and
-`agent-instructions` delete cleanly. Do not carry that table from memory; the
+`mabl tests`, `mabl datatables` and `mabl applications` have **no delete
+subcommand** — anything created is permanent from the CLI. `environments`,
+`branches` and `agent-instructions` delete cleanly. Do not carry that table from memory; the
 surface moves between versions. Probe it in step 0 and record the result in the
 write log, so every later gate can state the true irreversibility:
 

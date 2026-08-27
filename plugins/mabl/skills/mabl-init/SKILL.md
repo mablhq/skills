@@ -9,9 +9,10 @@ description: |
   Fire when the user says "set up mabl", "mabl init", "initialize mabl",
   "configure mabl for this project", "save my mabl workspace / application /
   environment / credentials", "add mabl to my CLAUDE.md", or "/mabl-init".
-  Run this once per project, before authoring or running tests. For creating a
-  single test use mabl-test-authoring; for a whole suite use
-  mabl-test-coverage-design.
+  Run this once per project, before authoring or running tests. If the WORKSPACE
+  itself is new or empty — no applications or environments to discover — that's
+  mabl-onboarding, which builds them first. For creating a single test use
+  mabl-test-authoring; for a whole suite use mabl-test-coverage-design.
 allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__mabl__list_mabl_test_run_summaries
 ---
 
@@ -68,9 +69,17 @@ so only fetch another page if the workspace genuinely has more than 100 of
 something.
 
 If no applications or environments come back, this workspace isn't set up for
-testing yet. Don't write an empty table — tell the user to add an application
-and a deployment in mabl first (or that tests can still target an ad-hoc URL via
-`urlOverride`), and check they picked the workspace they meant in step 1. Same
+testing yet, and there is nothing here to record. Don't write an empty table.
+Check first that they picked the workspace they meant in step 1; if they did,
+building it out is a different job.
+
+**Requires `mabl-onboarding`.** If that skill isn't there, say which skill is
+missing and stop with the state named — tell the user to add an application and a
+deployment in mabl first (or that tests can still target an ad-hoc URL via
+`urlOverride`). Don't build the workspace out yourself, and don't guess how to
+install the skill, because that depends on how this one was installed.
+
+Same
 if apps and environments exist but none has a deployment `url`: there's no
 deployment for `run_mabl_test_cloud` to resolve, so tell the user to add one, or
 record that runs must pass `urlOverride`.

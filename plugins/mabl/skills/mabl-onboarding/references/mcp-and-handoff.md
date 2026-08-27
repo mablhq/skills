@@ -8,8 +8,8 @@ answer:
 
 1. It is the **only** agent path to `create_mabl_application` — the entity every
    other write waits on (§3 route 1).
-2. It is **strictly required** by `mabl-init`, whose entire **mabl data** surface is
-   `mcp__mabl__*` — its `allowed-tools` also carries `Bash`, `Read`, `Write` and
+2. It is **strictly required** by `mabl-init`, whose entire **mabl data** surface
+   is this server — its `allowed-tools` also carries `Bash`, `Read`, `Write` and
    `Edit` for the file it writes, but **no CLI fallback for reading mabl** — and to
    which you hand off in step 8 on one of **four** named branches (§8).
 
@@ -21,7 +21,7 @@ it, and the most likely real-world state is the one a two-state model gets wrong
 | State | What you see | The remedy — and it is not interchangeable |
 |---|---|---|
 | **1. absent** | no `mabl` server configured at all | **add** the entry — §0's **state-1 add gate**, which carries the command |
-| **2. configured, not authenticated** | a `mabl` entry exists, `Needs authentication`, and the only `mcp__mabl__*` tools in the session are `authenticate` / `complete_authentication` | **authenticate it.** Adding it again is the *wrong* remedy — it is already added |
+| **2. configured, not authenticated** | a `mabl` entry exists, `Needs authentication`, and the only `mabl`-server tools in the session are `authenticate` / `complete_authentication` | **authenticate it.** Adding it again is the *wrong* remedy — it is already added |
 | **3. reachable** | connected **and** `create_mabl_application` is in the tool list you can actually see | none; take §3 route 1 |
 
 State 2 is the state a fresh install lands in, and it is **one operator step from
@@ -74,12 +74,12 @@ offered is a run blocked for no reason.
 **The primary signal is your own tool list, because it is harness-independent and
 it is what actually decides whether you can write.** Read it first:
 
-- `mcp__mabl__create_mabl_application` visible → **state 3, reachable.**
-- the only `mcp__mabl__*` tools are `authenticate` and `complete_authentication`
+- `create_mabl_application` visible → **state 3, reachable.**
+- the only `mabl`-server tools are `authenticate` and `complete_authentication`
   → **state 2, configured but not authenticated.** That two-tool surface *is* the
   fingerprint of an unauthenticated hosted mabl server; don't read it as "the
   server has no create tools".
-- no `mcp__mabl__*` tools at all → **state 1 or a failed connect.** The tool list
+- no `mabl`-server tools at all → **state 1 or a failed connect.** The tool list
   alone can't tell those apart, so corroborate with the commands below.
 
 Then corroborate with the harness, which is the only thing that can distinguish
@@ -162,7 +162,7 @@ caveats   - This is your sign-in, not mine: I can't complete a browser consent.
           approve / edit / skip / why?
 ```
 
-`mcp__mabl__authenticate` is also present in state 2 and returns a URL for the
+`authenticate` is also present in state 2 and returns a URL for the
 operator to open — same consent, initiated from in-session. Either route, **then
 re-probe**. If the tool list still shows only the two auth tools after they sign
 in, say exactly that and treat the run as state 2 — tools may only appear to a
@@ -190,7 +190,7 @@ as a gated write with a command, not as a JSON fragment to paste:
 WRITE n of m   add the hosted `mabl` MCP server (tooling config)       not applied
 
 state     `claude mcp get mabl` → exit 1. No `mabl` entry exists, and the
-          session has no `mcp__mabl__*` tools at all.
+          session has no `mabl`-server tools at all.
 
 command   claude mcp add --transport http mabl https://mcp.mabl.com/mcp
 
@@ -343,6 +343,11 @@ stall: apply the writes that don't need an application, then take **§8 branch D
 
 ## 8. Gate C5 — hand persistence to `mabl-init`
 
+**Requires `mabl-init`.** If that skill isn't there, say which skill is missing
+and take **branch C** below — write the minimum yourself, through §7's gate.
+Don't attempt its job as written, and don't guess how to install it, because that
+depends on how this skill was installed.
+
 The project-local agentic setup is **not yours**. `mabl-init` owns which
 application and environment ids get written where, the persistence format and
 path, and the file write itself. How to invoke it — by name, never by a path
@@ -416,8 +421,9 @@ the §3 route-1 (or 1A) MCP offer has actually been made and answered — a
 precondition you could still satisfy is not a blocker.
 
 **Map §0's three states onto these branches before you pick one.** `mabl-init`'s
-entire **mabl data** surface is `mcp__mabl__*` — every mabl fact it discovers comes
-from a `mcp__mabl__list_*` / `get_current_user` call and it has **no CLI fallback**,
+entire **mabl data** surface is the hosted `mabl` server — every mabl fact it
+discovers comes from a `list_mabl_*` / `get_current_user` call and it has **no CLI
+fallback**,
 even though its `allowed-tools` carries `Bash`, `Read`, `Write` and `Edit` for the
 file it writes — so what matters to it is **tool reachability**, not whether an entry
 exists in a config file:
@@ -457,7 +463,7 @@ depends on which state you probed, and the two are not interchangeable:
   mabl agent install claude --scope project   # or cursor | copilot | vscode | agents-md
   ```
 
-  That writes the `mabl` and `chrome-for-mabl` MCP entries (and the mabl-debug
+  That writes the `mabl` and `chrome-for-mabl` MCP entries (plus a bundled mabl
   skill; `--skip-mcp` inverts it, `--force` replaces existing entries). It leaves the
   server in **state 2**, so the sign-in above is the step after it, not an optional
   extra. (§0's state-1 add gate is the narrower route to the same `mabl` entry, if
@@ -540,7 +546,7 @@ which one is canonical).
 #### Recovering `mabl-init` — the skill AND its MCP server, together
 
 `mabl-init` is not a CLI-driven skill. **Its entire mabl data surface is
-`mcp__mabl__*`** — its `allowed-tools` holds `Bash`, `Read`, `Write` and `Edit` for
+the hosted `mabl` server** — its `allowed-tools` holds `Bash`, `Read`, `Write` and `Edit` for
 the file it writes, but **not one mabl read that isn't an MCP call**, and its own
 prerequisites say it uses the hosted mabl MCP server, *not* the mabl CLI. That is
 what makes a tool-less server fatal to it: there is nothing to fall back to. So
@@ -678,16 +684,15 @@ What you do instead, in order, all of it:
    substituted — *"…not because the interview failed, but because it's blocked on
    `<the specific missing thing>`."*
 2. **Apply every write that does not depend on an application.** These are real
-   and worth having: Agent Instructions (D12), mabl branches, an environment with
-   `--variables` and no URL rows, and — if the personas are settled — a DataTable
-   (D7). Gate each as normal, and emit each one's `WRITE LOG` line as it returns
-   (§6) — a blocked run's counts are exactly as checkable as a complete run's. An
-   application-blocked run is not an empty run.
-   **Say the irreversibility inversion out loud on this path:** the two writes that
-   work with no application are the deletable one (Agent Instruction) and the
-   single permanent one on the whole surface (DataTable). Default to holding the
-   DataTable until there is an application to scope it against, and if the operator
-   wants it now, name that trade in the gate and in the report.
+   and worth having: Agent Instructions (D12), mabl branches, and an environment
+   with `--variables` and no URL rows. Gate each as normal, and emit each one's
+   `WRITE LOG` line as it returns (§6) — a blocked run's counts are exactly as
+   checkable as a complete run's. An application-blocked run is not an empty run.
+   **Every write available on this path is one that deletes cleanly**
+   (`environments delete`, `agent-instructions delete`, `branches` close), so
+   nothing permanent is created while the run is blocked. Test data is not on this
+   list: §6 defers DataTables to authoring, and a blocked run is the worst moment
+   to make the one artifact with no delete anywhere on the surface.
 3. **Persist anyway, through §7's gate**, with a `## mabl testing` section that
    records the interview, the policy, the open questions, and an explicit
    `Application: NOT YET CREATED — blocked` (D1) or

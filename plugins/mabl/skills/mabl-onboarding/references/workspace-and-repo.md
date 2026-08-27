@@ -17,7 +17,7 @@ workspace role.
 > **`mabl users list` returns *other people's* real names and email addresses.**
 > Use those in-session only, to route the human-only items. **Never write any
 > other user's name or address to any file** — not the committed file in §7, not
-> the file `mabl-init` writes, not the report.
+> the file the §8 persistence handoff writes, not the report.
 >
 > **Scoped deliberately to *other* users, because the operator's own identity is a
 > required output.** §10's card names the caller's email and resolved role, and the

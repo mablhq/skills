@@ -31,6 +31,12 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   the workspace missing an application, environment or credential — it fills
   only the gap and hands the ids back.
 
+### Changed
+- `mabl-init` now routes to `mabl-onboarding` when the workspace it discovers has
+  no applications or environments, instead of ending on "this workspace isn't set
+  up for testing yet". Its description says the same, so the two skills no longer
+  compete for "set up mabl" on an empty workspace.
+
 ## [1.6.1] - 2026-08-25
 ### Changed
 - `mabl-test-edit`'s description now fits the 1024-character budget every skill
