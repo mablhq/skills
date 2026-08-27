@@ -137,8 +137,8 @@ be compared.
 ```bash
 mabl tests list    -w <workspaceId> -o json -l 100000
 mabl plans list    -w <workspaceId> -o json -l 100000
-mabl users list    -w <workspaceId> -o json -l 1000
-mabl branches list -w <workspaceId> -o json -l 1000 -s open
+mabl users list    -w <workspaceId> -o json -l 200
+mabl branches list -w <workspaceId> -o json -l 100000 -s open
 mabl flows list    -w <workspaceId> -l 100000
 ```
 
@@ -147,16 +147,23 @@ returns ten rows and every finding computed from it is wrong. Pass a limit
 larger than the workspace could hold, then check the returned count against what
 the user expects the workspace to contain, and say the number in the report.
 
-For `mabl plans list`, `--limit` is the number of plans fetched *before* label
-filtering, so never combine a `--labels` filter with a small limit.
+Two exceptions to "pass a huge limit", both measured:
+
+- **`mabl users list` rejects a large limit outright.** `-l 500` returns
+  `Bad Request`; `-l 200` works. Use 200, and if the returned count equals it,
+  say the user list was truncated rather than reporting departures from it.
+- **`mabl plans list --limit` counts plans fetched *before* label filtering**, so
+  never combine a `--labels` filter with a small limit.
 
 Field notes, because the gaps drive later steps:
 
 - **Tests** carry `id`, `name`, `enabled`, `created_time`, `last_updated_time`,
   `created_by_user`, `last_updated_by_user`. Not labels, type, application, or
   description.
-- **Branches** carry `status`, `created_time`, `created_by_id`, and `entities[]`
-  — the tests and flows stranded on the branch.
+- **Branches** carry `status`, `created_time`, `created_by_id`, and sometimes
+  `entities[]` — the tests and flows stranded on the branch. The key is often
+  **absent entirely**, and absent is not empty: report "no entities reported",
+  never "nothing stranded", and say how many records carried the key at all.
 - **Flows** have **no `--output` flag**: the command prints a table and nothing
   else. Strip ANSI codes and read the `-f` ids out of it. If that parse yields
   no ids, or fewer than the row count, report the flow inventory as unavailable
@@ -183,20 +190,51 @@ stop; do not pad a report to look thorough.
 
 ### 3. Build the activity index (MCP)
 
-Page `list_mabl_test_run_summaries` across the whole window and collect, per
-`testId`, the newest run start and the run durations.
+You need, per test, the newest run in the window and the run durations. There are
+two lanes and **the workspace's run volume decides which one works**, so measure
+before choosing.
 
-- `workspaceId`, `startTimeMs` = window start, `endTimeMs` = now.
-- `limit: 100`, then pass the returned `cursor` back unchanged.
-- **`excludeDefaultTests: false`.** It defaults to `true`, and with the default
-  the runs of mabl's own default tests never appear — so those tests look
-  dormant when they are not. Include their *runs* here; exclude the tests
-  themselves from pass-rate and naming findings, where they are noise.
+**Probe first.** Call `list_mabl_test_run_summaries` once with the window and
+`limit: 1`, then again asking for a page deep in the result set, and compare the
+run timestamps you get back. A workspace whose ten-thousandth row is still
+inside the last few days has hundreds of thousands of runs in the window. Say the
+number you measured and which lane it put you in.
+
+**Lane A — page the whole window.** Correct only when the window's total run
+count is small enough to actually finish.
+
+- `workspaceId`, `startTimeMs` = window start, `endTimeMs` = now, `limit: 100`,
+  then pass the returned `cursor` back unchanged.
 - Treat `cursor` as opaque. It can come back looking like a small integer; it is
   not a page number or a remaining count.
-- **Bound the paging at 200 pages.** If the cursor is still live at that point,
-  stop, report how many runs were indexed and what period they actually span,
-  and mark every dormancy finding partial. Do not keep paging silently.
+- **Bound the paging at 200 pages.** If the cursor is still live there, this
+  workspace is Lane B — switch, and say so. Do not keep paging, and do not
+  report dormancy from a truncated sweep.
+
+**Lane B — one call per test.** Correct on any busy workspace, and the default
+whenever the probe says the window holds more runs than Lane A's bound can
+reach. One `list_mabl_test_run_summaries` per test id, filtered by `testId` to
+the same window. It costs one call per test — quote that number before starting.
+
+Lane B is not a reduction. It establishes the newest run for **every** test in
+the inventory, where a truncated Lane A establishes it for none of them. A
+200-page sweep of a workspace with half a million runs in the window covers the
+most recent day or two and marks nearly everything dormant — which reads as a
+finding rather than as the failure it is.
+
+Whichever lane ran, on every call:
+
+- **`excludeDefaultTests: false`.** It defaults to `true`, and with the default
+  the runs of mabl's own default tests never appear — so those tests look
+  dormant when they are not. Include their *runs*; exclude the tests themselves
+  from pass-rate and naming findings, where they are noise.
+- Pace the calls and retry a rejection once. This server is rate-limited per
+  identity, and a Lane B sweep is exactly the shape that trips it.
+
+**Durations differ by lane, and the report has to say which.** Lane A gives many
+runs per test, so a per-test distribution. Lane B filtered to the newest run
+gives **one sample per test** — the ranking of outliers survives that, an
+individual test's exact seconds does not.
 
 This index is the only honest source for "did it run". Do not compute activity
 from the quality report — that report counts *plan* runs only, so a test run on
@@ -363,6 +401,11 @@ Say these three things and stop:
   a finding.
 - **`last_updated_time` is not usage.** It moves on a rename or a label change,
   and an auto-heal moves it without anyone deciding anything.
+- **A truncated run sweep looks exactly like a dormant workspace.** Both produce
+  "no run found". Only the page count tells them apart, which is why step 3
+  probes the volume before it trusts the answer.
+- **An absent field is not an empty one.** A branch with no `entities` key has
+  not been shown to strand nothing.
 - **An empty used-by page is per branch.** It means unused *on the branch you
   indexed*, which defaults to `master`.
 - **A default limit is a silent truncation.** `10` on the CLI lists, `200` on

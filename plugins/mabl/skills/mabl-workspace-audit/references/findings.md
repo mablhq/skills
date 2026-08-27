@@ -137,10 +137,18 @@ Not evidence a test is unwanted — evidence nobody is going to speak for it. It
 use is routing: these need an owner assigned before any decision about them can
 be made.
 
-Blind spots, both of which make this an inference and never a verdict: `mabl
+Blind spots, all of which make this an inference and never a verdict: `mabl
 users list` defaults to a limit of 10, so an unraised limit invents departures
-wholesale; and a user may have moved workspaces rather than left. Confirm before
-the word "former" appears anywhere in the report.
+wholesale; it also rejects a limit that is too large, so an unhandled error
+leaves you with no user list at all; and the list returns workspace *members*,
+which is not everyone who can author in it — someone with account-level or
+support access authors tests without appearing. Confirm before the word "former"
+appears anywhere in the report.
+
+The cheapest check that this finding is sound: **look for your own account in
+it.** If the identity running the audit shows up as an unknown owner, the list
+is measuring membership, not employment, and the finding is routing information
+only.
 
 ### Naming drift
 
@@ -184,7 +192,15 @@ an incomplete inventory is indistinguishable from "not looked at".
 `BRANCHES` with `status == "open"` and `created_time` older than the user's
 staleness bar (default 4 months).
 
-Report each with its `entities[]`: the tests and flows stranded on it. That is
+Report each with its `entities[]` where the API returned one, and count how many
+branch records carried the key at all — it is frequently absent, and an absent
+key means nothing was reported, not that nothing is stranded.
+
+Before listing branches individually, group them by `created_by_id`. A single
+API-key identity holding most of them is CI churn and one pipeline question, not
+a per-branch decision list — say that instead of printing the list.
+
+Where entities are reported, they are the part that matters: That is
 the part that matters — a stale branch on its own is tidy-up, a stale branch
 holding the only copy of somebody's work is a conversation.
 

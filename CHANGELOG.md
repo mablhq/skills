@@ -30,6 +30,15 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   measured with — with anything it could not establish kept in its own
   unverified section rather than folded in.
 
+  Field-tested against a 621-test workspace before shipping, which changed how
+  it measures activity: paging the whole run history does not survive contact
+  with a busy workspace (that one holds roughly half a million runs in a 90-day
+  window, about 25x what any sane page bound reaches), and a truncated sweep is
+  indistinguishable from a genuinely idle workspace. So the skill now measures
+  the run volume first and picks its lane from the answer, one call per test
+  where paging cannot finish, and says which lane ran and what that costs the
+  duration numbers.
+
   It never deletes, and it never runs or creates a test either. There is no
   delete for a test on any surface an agent can reach, and no undelete, so the
   cleanup it performs is the reversible half — a dated quarantine label plus
