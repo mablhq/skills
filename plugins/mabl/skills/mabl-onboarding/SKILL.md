@@ -149,8 +149,12 @@ These four are what stop the skill lying. State them scoped; never soften one an
 never overstate one.
 
 - **No agent can create a workspace, and no agent can create a Link agent.** Not
-  the CLI, not the MCP server, not this skill. Route the human instead, and never
-  write a sentence claiming to have created either.
+  the CLI, not the MCP server, not this skill. `mabl link-agents` is `list` /
+  `delete` / `terminate` — probe it rather than quoting that. Route the human
+  instead, and never write a sentence claiming to have created either. **Do not
+  assert *where* a Link agent is created**: a workspace is created in the web app,
+  but a Link agent is a deployed agent rather than a web-app entity, and naming
+  the wrong place is worse than saying it is outside every surface you have.
 - **The mabl CLI creates no application, no credential and no plan — the hosted
   MCP server creates all three.** So never say "no agent can create X" about
   them: say **"the CLI can't"**, and name what did create it. Credentials are the

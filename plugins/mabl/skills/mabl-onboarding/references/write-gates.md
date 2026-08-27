@@ -136,6 +136,33 @@ discipline:
 4. **If you removed it again inside the run**, the line stays, `result` says
    `, then removed in-run`, and §10 counts it as applied and annotates it inline.
 
+### Verify what you drafted, before the gate that writes it
+
+A read-back proves the write landed. It cannot prove the *content* was ever true.
+Where a gate's content was assembled from reading the repo — selectors, ids,
+storage keys, file paths, env var names — **re-derive every token from the source
+immediately before showing the gate**, one lookup per token, and show the check.
+
+This is not hypothetical. A validation run drafted an agent instruction listing
+nine `data-*` selectors as read from the repo. Eight existed. The ninth was
+pattern-completed from a filename after a `head`-truncated grep, and the sentence
+under it claimed the whole set was read. It was caught one gate before it became
+the entity every future authoring session reads.
+
+Two rules fall out of it, and the second is the one that generalizes:
+
+- **Never truncate the listing you are about to draw conclusions from.** A `head`
+  or a default limit turns "everything" into "the part I saw", silently.
+- **Scope the claim to what you checked.** "20 of 20 tokens below were grepped
+  individually and each returned a hit" is a claim you can defend. "Everything
+  here is read from your repo" is one you cannot, the moment a single token came
+  from anywhere else. The overclaim and the fabrication are the same error:
+  describing inference as reading.
+
+Where a token cannot be found, drop it. Never approximate it into something that
+looks right — a plausible selector that does not exist is worse than an omission,
+because it sends the next agent hunting for something that was never there.
+
 ### Verify writes with a read-back, because exit codes lie
 
 `mabl environments create` and `mabl environments urls add` **exit 0 even when
@@ -160,6 +187,15 @@ mabl agent-instructions describe <INSTRUCTION_ID> --output json
 mabl branches list -w <WORKSPACE_ID> --status open --output json --limit 100
 mabl plans list -w <WORKSPACE_ID> --output json --limit 100
 ```
+
+**Where the absence is the point, verify the absence.** A write gate that
+deliberately creates *less* than the default — an environment with no URL row, an
+instruction left unscoped — has an intended shape that a presence check cannot
+confirm. Read back the thing that should be empty and say the empty result is the
+pass condition: `environments urls list <id>` returning `[]` is what proves the
+URL row you chose not to create was not created by something else on your behalf.
+State it that way in the gate, so an empty result is not mistaken for a failed
+read.
 
 **`environments urls list` is the read-back that proves the row landed** — it
 returns the application id and URL of every row on that environment, so it

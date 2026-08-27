@@ -32,6 +32,11 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   only the gap and hands the ids back.
 
 ### Changed
+- `mabl-onboarding` now re-derives drafted content from the source before the gate
+  that writes it, scopes "I read this" claims to what was actually checked, and
+  verifies an intended absence rather than only a presence. A live run drafted an
+  agent instruction listing nine repo selectors as read; eight existed, and the
+  ninth was pattern-completed after a truncated grep.
 - `mabl-init` now routes to `mabl-onboarding` when the workspace it discovers has
   no applications or environments, instead of ending on "this workspace isn't set
   up for testing yet". Its description says the same, so the two skills no longer
