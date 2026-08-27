@@ -91,8 +91,8 @@ changes the activity data it is measuring, and bills the workspace for it. Read,
 report, and — when asked — label and disable tests. Nothing else.
 
 **It does not edit plans.** Disabling a plan is a change with no label on it, so
-it cannot be read back and it cannot be listed for undo the way a test can. The
-report says which plans want attention; the person decides them in the app.
+it cannot be read back or listed for undo the way a test can. The report says
+which plans want attention; the person decides them in the app.
 
 It also cannot see a workspace's activity log. Who deleted what, and when, is
 not readable from any surface here — if the audit is wrong about a test, the
@@ -398,16 +398,13 @@ default is a label unique to the run that wrote it:
 The disposition says what was decided, the date says which pass decided it. That
 pairing is what makes the label undoable months later by someone who was not
 there: it selects exactly one audit's set and nothing else. A bare `quarantine`
-does not — it accumulates every pass anyone ever ran, and once two sets share a
-label there is no query that separates them again.
+accumulates every pass anyone ever ran, and once two sets share a label no query
+separates them again — which is the whole cost of a bad label name. It is never
+the writing; it is that the set it named can no longer be recovered.
 
-If the user names something else, use theirs. Say the uniqueness argument once,
-apply their answer either way, and record the label in the report so the undo
-instruction in step 9 names the right thing.
-
-A label is cheap to add and cheap to remove, which is exactly why the naming has
-to be disciplined: the cost of a bad one is never the writing, it is that the
-set it named can no longer be recovered.
+If the user names something else, use theirs. Make the uniqueness argument once,
+apply their answer either way, and record the label in the report so step 9's
+undo instruction names the right thing.
 
 **Re-check the label is unused** with `list_mabl_tests` and
 `labels: ["<the label>"]`, even though step 1 already did — time has passed and
