@@ -12,7 +12,7 @@ cannot see, and how it is ranked.
 | `USERS` | `mabl users list -o json` | user id |
 | `BRANCHES` | `mabl branches list -o json -s open` | branch id (`-br`) |
 | `FLOWS` | `mabl flows list`, ids parsed from the table | flow id (`-f`) |
-| `RAN` | paged `list_mabl_test_run_summaries` | test id → newest start, durations |
+| `RAN` | `list_mabl_test_run_summaries`, Lane A or Lane B | test id → newest start, durations |
 | `QUALITY` | paged `get_test_quality_report` | test id → rates |
 
 `PLAN_MEMBERS` is the union of every plan's `test_invariant_ids`. It is only
@@ -111,9 +111,14 @@ convention marks work-in-progress — a WIP test failing is not a finding.
 
 ### Long-running tests
 
-Durations from `RAN`. Report the distribution and the outliers against it — the
-slowest few relative to this workspace's own median, not an absolute threshold,
-because a five-minute test is normal in one suite and pathological in another.
+Durations from `RAN`. Report the outliers relative to this workspace's own
+median, not against an absolute threshold — a five-minute test is normal in one
+suite and pathological in another.
+
+**What you can report depends on the lane.** Lane A carries many runs per test,
+so a real distribution. Lane B carries one sample per test, so the ranking of
+outliers holds but a given test's exact seconds does not — say which lane
+produced the numbers, beside them.
 
 Long tests matter for a reason worth stating in the report: they set the floor
 on how fast a plan can gate a deploy, and they are the ones that time out first
@@ -121,15 +126,15 @@ under load.
 
 ### Missing description
 
-`get_mabl_test` on the flagged subset only (step 5). One call per test, so never
-swept across the catalog.
+`get_mabl_test` on the High-ranked subset only, after the ranking (step 6). One
+call per test, so never swept across the catalog.
 
 A missing description is not a defect. It is a cost paid by the next person who
 has to decide whether the test still matters — which is exactly the decision
 this audit is asking them to make. That is why the check is scoped to the tests
 the report already flagged and to nothing else.
 
-### Owner no longer in the workspace
+### Owner no longer a workspace member
 
 `TESTS` where `created_by_user.id` is not a key of `USERS`.
 
@@ -155,8 +160,8 @@ only.
 `TESTS` names against the pattern the user gave in step 1.
 
 **With no agreed pattern there is no finding.** Do not import a convention from
-another workspace and do not invent one. What you can do without a pattern is
-describe: group the names by their observable shape (a bracketed prefix, a
+another workspace and do not invent one. Without a pattern, describe instead:
+group the names by their observable shape (a bracketed prefix, a
 separator character, a team token) and report the families and their sizes. A
 team looking at "412 names use `:` and 58 use `|`" can decide whether that
 matters; a team told they have "58 violations" of a rule they never set cannot.
@@ -189,8 +194,9 @@ an incomplete inventory is indistinguishable from "not looked at".
 
 ### Stale open branch
 
-`BRANCHES` with `status == "open"` and `created_time` older than the user's
-staleness bar (default 4 months).
+`BRANCHES` with `status == "open"` and `created_time` older than the staleness
+bar agreed in step 1 (default 4 months). Report which it was — an unagreed
+default is a default, not a rule the team set.
 
 Report each with its `entities[]` where the API returned one, and count how many
 branch records carried the key at all — it is frequently absent, and an absent
@@ -200,8 +206,7 @@ Before listing branches individually, group them by `created_by_id`. A single
 API-key identity holding most of them is CI churn and one pipeline question, not
 a per-branch decision list — say that instead of printing the list.
 
-Where entities are reported, they are the part that matters: That is
-the part that matters — a stale branch on its own is tidy-up, a stale branch
+Where entities are reported, they are the part that matters — a stale branch on its own is tidy-up, a stale branch
 holding the only copy of somebody's work is a conversation.
 
 ## Label hygiene
@@ -265,7 +270,7 @@ These are not extra findings. They are conditions that change what the report
 | Any test under 60% pass rate still in a triggered plan | Recommend triage before any cleanup — the suite is currently lying about the product |
 | More than half of flows unused | Stop listing flows individually; the finding is the flow architecture, not the flows |
 | A plan carrying no labels at all | Recommend label governance before bulk plan work, since bulk selection is label-driven |
-| More stale branches than the user expected to exist | Recommend a branch policy conversation rather than a per-branch decision list |
+| More stale branches than the size the user expected in step 1 | Recommend a branch policy conversation rather than a per-branch decision list |
 
 ## The quarantine label
 
