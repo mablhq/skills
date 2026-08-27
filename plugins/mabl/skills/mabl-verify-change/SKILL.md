@@ -52,9 +52,52 @@ every run.** A test that got smaller passes faster and proves less.
 which skill is missing — don't hand-roll the diff, and don't guess how to
 install it, because that depends on how this skill was installed.
 
-Give it the version before the change and the version after, and read the
-classification it returns. Three results stop the verification outright,
-whatever any run says:
+### Which two versions
+
+Getting this wrong is the quiet failure here: the diff comes back clean because
+it compared the wrong pair, and the gate passes on nothing.
+
+**Version numbers are global to the test, not to the branch.** `N-1` is the
+previous *number*, which is very often a version somebody else created on an
+unrelated branch. Read the branch, don't do arithmetic:
+
+```
+list_mabl_test_versions({ testId: "<*-j>" })   // newest first; carries created_on_branch
+```
+
+- **After** — the newest version whose `created_on_branch` is the change's
+  branch. Name it explicitly as `<id>:<N>`; a bare `<id>` means the global latest
+  and may be someone else's.
+- **Before** — the newest version created on the branch this would merge *into*,
+  usually master. Not `N-1`. That is the state a merge would replace, and it is
+  the only baseline the verdict is about.
+
+Say which two you picked, and why, in the report.
+
+### One diff, or the whole walk
+
+The endpoint diff — before to after — is what the verdict rests on. It is what a
+merge actually lands, and it is never optional.
+
+Walking the branch's own versions in sequence answers a different question: not
+what the change is, but how it got there. Worth the extra calls when
+
+- the branch carries several versions and this skill is running **once, at the
+  end** — an assertion dropped in one version and restored in a later one nets
+  out to nothing at the endpoints, and it still says something about how the edit
+  was made; or
+- the endpoint diff is clean and the runs disagree with it.
+
+Skip it when this skill runs **per edit**, one new version at a time. There the
+endpoint diff already is the walk, and re-diffing every pair spends calls to
+learn nothing.
+
+Either way the verdict comes from the endpoints. The walk is context, never the
+gate.
+
+### Reading the result
+
+Three results stop the verification outright, whatever any run says:
 
 | In the diff | Verdict |
 |---|---|
@@ -68,6 +111,32 @@ to come from the intent, never from the change's own convenience.
 
 State the gate's result before any run result. A reader who sees "passed"
 first will stop reading.
+
+## Dry run
+
+A real mode, not a courtesy. Ask for it whenever the runs are the expensive or
+irreversible half: an unattended session, someone else's workspace, a first look
+at what this would cost.
+
+Everything in step 1 is read-only and still happens. So does reading the run
+history in step 3. **What stops is step 2.**
+
+Report, then stop:
+
+- the two versions picked and the content gate's verdict — a dry run that fails
+  the gate is a complete answer, not a partial one;
+- what the run history says the test was doing, and therefore how many clean runs
+  step 3 would require;
+- the exact `run_mabl_test_cloud` call that would be made, every parameter filled
+  in;
+- the cost: runs times browsers, each one minutes of real cloud execution.
+
+Never estimate a result. A dry run says what would be run and what the read-only
+half already found. The moment it says anything about whether the test would
+pass, it has stopped being a dry run.
+
+**Having the tool is not permission to use it.** If `run_mabl_test_cloud` is in
+the tool list and a dry run was asked for, it stays uncalled.
 
 ## 2. Run it isolated
 
@@ -101,7 +170,8 @@ get_mabl_test_run({ testRunId: "<*-jr>", workspaceId })
 - Only once `terminal` is true are `success` and `failureSummary` trustworthy.
 
 Each run is real cloud execution — minutes of wall clock, one run per browser.
-Say that before starting a multi-run gate.
+Say that before starting a multi-run gate. If a dry run was asked for, this step
+is the one that does not happen.
 
 ## 3. How many clean runs are enough
 
