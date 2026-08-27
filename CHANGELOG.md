@@ -10,19 +10,31 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - `mabl-workspace-audit` — audit a whole mabl workspace and stage a reversible
   cleanup. It builds a complete inventory from the CLI (the only surface that
   enumerates every test and reports who created it), indexes real run activity
-  over a window you set, and reports what the workspace has stopped using: tests
-  with no run in the window, tests in no plan, plans that are enabled but have
-  no trigger, disabled tests still sitting inside live plans, consistently
-  failing and flaky tests, and tests whose owner is no longer in the workspace.
+  over a window you set, and reports what the workspace has stopped using or
+  never governed: tests with no run in the window, tests in no plan, plans that
+  are enabled but have no trigger, disabled tests still sitting inside live
+  plans, consistently failing and flaky tests reported as the two separate
+  problems they are, unused reusable flows, stale open branches and what is
+  stranded on them, naming and label drift, and tests whose owner is no longer
+  in the workspace.
+
+  It audits against your conventions, not someone else's. Naming patterns, label
+  taxonomy, plan label minimums and pass-rate floors are asked for up front and
+  saved for next time — and where you have no convention, that is recorded too,
+  because a rule nobody agreed is not a finding. Re-run it later and it diffs
+  against the previous report, comparing only the metrics that were measured the
+  same way and naming the specific items that were actually fixed.
+
   Findings are ranked by what the clutter costs, not by how many rows a category
   has, and every count is reported against the limits and windows it was
-  measured with.
+  measured with — with anything it could not establish kept in its own
+  unverified section rather than folded in.
 
-  It never deletes. There is no delete for a test on any surface an agent can
-  reach, and no undelete either, so the cleanup it performs is the reversible
-  half — a dated quarantine label plus disable, read back to confirm it landed —
-  and the removal stays a human action in the mabl app after the observation
-  window.
+  It never deletes, and it never runs or creates a test either. There is no
+  delete for a test on any surface an agent can reach, and no undelete, so the
+  cleanup it performs is the reversible half — a dated quarantine label plus
+  disable, read back to confirm it landed — and the removal stays a human action
+  in the mabl app after the observation window.
 
 ## [1.6.1] - 2026-08-25
 ### Changed
