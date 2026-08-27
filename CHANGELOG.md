@@ -39,6 +39,13 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   where paging cannot finish, and says which lane ran and what that costs the
   duration numbers.
 
+  What it may do at the end is settled at the start, not sprung at the end: it
+  asks up front whether this audit is report-only or may also stage a cleanup,
+  and whether the workspace already has a retirement convention — which it then
+  never adopts unless told to. Every label it writes is unique to the run that
+  wrote it (`quarantine-audit-2026-08-27`), so one query returns exactly one
+  audit's set and an undo months later selects nothing it shouldn't.
+
   It never deletes, and it never runs or creates a test either. There is no
   delete for a test on any surface an agent can reach, and no undelete, so the
   cleanup it performs is the reversible half — a dated quarantine label plus

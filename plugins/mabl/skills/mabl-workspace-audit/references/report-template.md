@@ -9,7 +9,8 @@ a comparison run.
 .mabl/audit/<workspace-name>-<YYYY-MM-DD>/
   report.md          the narrative and the ranked findings
   findings.csv       one row per finding: rank, category, entity, id, evidence, disposition, effort
-  quarantined.csv    written by step 8 only, after the read-back confirms
+  quarantined.csv    written by step 8 only — the intended set BEFORE the first edit,
+                     each row then resolved to confirmed / unconfirmed
 ```
 
 CSV because a spreadsheet is where this gets triaged — sorted by rank, filtered

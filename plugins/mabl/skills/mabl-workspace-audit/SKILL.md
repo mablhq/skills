@@ -121,6 +121,20 @@ agreed is not a finding:
 | Minimum labels a plan should carry | plan label coverage |
 | Pass-rate floor, and any flake threshold they already use | severity banding |
 | Anything already known to be exempt | every finding |
+| **Whether a retirement convention already exists** — a label, a name prefix, a disabled-and-kept habit | the disposition in step 8 |
+| **What this audit is allowed to do at the end** — report only, or also stage a quarantine | whether step 8 happens at all |
+
+The last two are the ones not to skip. **Ask them at the start, not at step 8.**
+A user who learns only at the end that the skill wanted to disable a hundred
+tests has been asked at the worst possible moment — after the work that would
+have to be redone if the answer is no.
+
+**Never adopt an existing convention unless told to.** Most workspaces that have
+been audited before carry the traces — a `quarantine` label, an `(old) ` name
+prefix, a disabled-but-kept cohort. Report what you find and ask. Reusing a
+label somebody else's process owns silently merges two sets that get undone on
+different days, by different people, for different reasons, and neither owner
+can tell afterwards which entity belonged to which pass.
 
 Save the answers to `.mabl/audit/conventions.md` and read that file first on the
 next run, confirming it with the user rather than re-asking. Where the user has
@@ -334,22 +348,53 @@ though it were established.
 
 ### 8. Quarantine, only when asked
 
-Stop after step 7 and let the user read it. If they want a cleanup staged,
-quarantine is the reversible half: **label, then disable.**
+Stop after step 7 and let the user read it. If step 1 established that a
+cleanup may be staged, quarantine is the reversible half: **label, then
+disable.**
 
 Confirm the exact set first. Show the count and the list, name the label, and
-get an explicit yes. Nothing here runs off the back of the report alone.
+get an explicit yes. Nothing here runs off the back of the report alone, and
+nothing here runs off an instruction given before the report existed either —
+the set is only nameable once the findings are.
+
+**Every label this skill writes is unique to the run that wrote it.**
+
+    <disposition>-audit-<YYYY-MM-DD>        e.g. quarantine-audit-2026-08-27
+
+The disposition says what was decided, the date says which pass decided it. That
+pairing is what makes the label undoable months later by someone who was not
+there: it selects exactly one audit's set and nothing else. A bare `quarantine`
+does not — it accumulates every pass anyone ever ran, and once two sets share a
+label there is no query that separates them again.
+
+Labels are editable from the agent surfaces now, which is precisely why the
+naming has to be disciplined. A label is cheap to add and cheap to remove, so
+the cost of a bad one is not the writing — it is that the set it names can never
+be recovered.
+
+**Check the label is unused before applying it**, with `list_mabl_tests` and
+`labels: ["<the label>"]`. Any result at all means stop and ask. Do not merge
+into it, and do not silently pick the next date.
 
 Per test, one `edit_mabl_test_metadata` call carrying both operations, so they
 save atomically:
 
-- add label `audit-quarantine-<YYYY-MM>`
+- add label `<disposition>-audit-<YYYY-MM-DD>`
 - set enabled `false`
 
 Per plan, `edit_mabl_plan` with a disable operation. Removing a test from a plan
 is also available there, but prefer disabling the test over editing plans:
 emptying a plan's last stage is rejected outright, and a plan edit is harder for
 the user to read back later than a label.
+
+**Write the ledger before the first edit, not after.** Put the whole intended
+set in
+`.mabl/audit/<workspace-name>-<YYYY-MM-DD>/quarantined.csv` with a status column
+reading `intended`, then update each row to `confirmed` or `unconfirmed` as the
+read-back resolves it. A run interrupted halfway has then left a complete list
+of what it attempted — which is the only thing that makes step 9's undo possible
+from the outside. A ledger written at the end exists exactly when it is no
+longer needed.
 
 Pace the calls. This is a per-identity rate-limited server; run them in small
 batches with a pause between batches. Stop on the first repeated rejection
@@ -358,14 +403,16 @@ rather than retrying a loop.
 Read the result back before reporting success. A quarantine that reports done
 without the label having landed is the failure this step exists to avoid:
 
-- `list_mabl_tests` with `labels: ["audit-quarantine-<YYYY-MM>"]` returns the
-  members. Compare that set against the set you intended.
+- `list_mabl_tests` with `labels: ["<the label>"]` returns the members. Compare
+  that set against the set you intended.
+- **That read-back caps at 200 with no cursor**, exactly like every other
+  `list_mabl_tests` call. If it returns 200, it is saturated and has confirmed
+  nothing about the rest — do not report the remainder as failed. Confirm the
+  unconfirmed tail with `get_mabl_test` per test, one call each, and say what
+  that costs. Better still, keep a quarantine set under 200 so one query settles
+  it; a larger set is usually two decisions wearing one label.
 - Report the difference explicitly. Every id you meant to quarantine and did
   not, listed by id, is part of the outcome — not a retry to bury.
-
-Write the confirmed set to
-`.mabl/audit/<workspace-name>-<YYYY-MM-DD>/quarantined.csv`. That file is what
-makes the next two steps possible.
 
 Flows and branches have no quarantine. There is no disable for either, so both
 stay report-only and their disposition is entirely the user's.
@@ -380,7 +427,9 @@ Say these three things and stop:
    from the cycle they describe.
 2. **Undoing is one call per test**, using `quarantined.csv`: the same
    `edit_mabl_test_metadata` with enabled `true` and the label removed. Anything
-   someone missed comes straight back.
+   someone missed comes straight back. Give them the label verbatim — dated to
+   this run, it selects this audit's set and no other, which is what lets
+   somebody who wasn't here undo it cleanly months from now.
 3. **Deleting is theirs, in the mabl app.** Name the file that lists what to
    delete. Do not offer to do it, and do not describe a route that would let an
    agent do it.

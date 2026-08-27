@@ -269,10 +269,27 @@ These are not extra findings. They are conditions that change what the report
 
 ## The quarantine label
 
-`audit-quarantine-<YYYY-MM>` — dated, so a second audit does not collide with an
-un-reviewed set from the first, and so the label records when the window opened.
+    <disposition>-audit-<YYYY-MM-DD>        e.g. quarantine-audit-2026-08-27
 
-Check the label is unused before applying it: `list_mabl_tests` with
-`labels: ["audit-quarantine-<YYYY-MM>"]`. A non-empty result means an earlier
-audit already used this month's label — resolve that with the user rather than
-merging two sets under one name, because the two are undone on different dates.
+Two parts, each doing work. The **disposition** records what was decided, so a
+later reader knows whether they are looking at a set someone meant to retire or
+one someone meant to re-examine. The **date** makes the label unique to one
+audit pass, which is the property the whole undo story rests on: months later,
+one label query returns exactly the set one audit staged, and nothing else.
+
+Date to the day, not the month. Two passes in one month is normal — a first
+audit and a follow-up after triage — and a month-granular label merges them.
+
+**Never reuse a label this skill did not write, and never write one twice.**
+Check with `list_mabl_tests` and `labels: ["<the label>"]` before applying it.
+Any result means stop and ask the user, whether it came from an earlier run of
+this skill or from a convention the team already had. Do not merge, and do not
+quietly roll to the next date — a label that already has members belongs to
+whoever put them there, and merging two sets under one name is not reversible by
+any query afterwards.
+
+The same rule covers the conventions a workspace already carries: a `quarantine`
+label, an `(old) ` name prefix, a cohort that is disabled but deliberately kept.
+Step 1 asks about these. Report what you find, and adopt none of it unless the
+user says to — an audit that quietly joins an existing retirement convention has
+made its work indistinguishable from somebody else's.
