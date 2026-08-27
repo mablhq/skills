@@ -423,6 +423,7 @@ eyeballed.
 | A moved step read as a deletion | rendered as `removed` + `added`; pair by id first |
 | A moved step counted on the add/remove axis | same `removed` + `added` pair; exclude moved pairs before counting or the added total reads one too high |
 | Check 5 run without the `disc` guard | `Hover`/`Click` strip to `{actionCode}` and every presence wait strips alike, so any same-type pair reports `retargeted` |
+| A flat type count read as "something replaced it" | a `changed` step can morph *into* that type, so the count holds with nothing added. Check 6 asks whether anything of the type was **added**, not only whether the count dropped |
 | `unchanged` entries missing `to` | the step is identical, carried once in `from`; `.to // .from` handles it |
 | `stepNumber` compared across sides | numbered per version; a step at 7 in the source is not the step at 7 in the target |
 | `disabled: false` looked for | the key exists only when true |
