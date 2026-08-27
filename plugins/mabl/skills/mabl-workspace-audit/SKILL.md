@@ -465,8 +465,6 @@ Say these three things and stop:
    filter. Do not offer to do it, and do not describe a route that would let an
    agent do it.
 
----
-
 ## Signals that lie
 
 - **"Never ran" is not observable.** The activity index is windowed. Every
