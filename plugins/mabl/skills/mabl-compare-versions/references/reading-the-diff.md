@@ -102,6 +102,32 @@ jq '[.steps[]
 Report both columns and the net. A net of zero with a changed type breakdown
 is the interesting case, and a bare total hides it.
 
+### Reconciling the add/remove axis against the counts
+
+Exclude moved pairs before counting — a move is one relocation, not a deletion
+plus an addition — then the per-type arithmetic has to close.
+
+```bash
+jq '
+  [ .steps[] | select(.operation == "added")   | (.to   | to_entries[0].value.id) ] as $a
+  | [ .steps[] | select(.operation == "removed") | (.from | to_entries[0].value.id) ] as $r
+  | ($a - ($a - $r)) as $moved
+  | { moved: ($moved | length),
+      added_excl_moved:   ([ $a[] | . as $x | select(($moved | index($x)) == null) ] | length),
+      removed_excl_moved: ([ $r[] | . as $x | select(($moved | index($x)) == null) ] | length) }
+' "$DIFF"
+```
+
+Bind `$x` before the lookup. `$moved | index(.)` rebinds `.` to `$moved`, the
+filter drops everything, and both totals come back `0` — the same scoping trap as
+`select(.id == .id)` below.
+
+Then per type: **`added == (target count − source count) + removed`.** A mismatch
+is a reporting bug, not a number to publish. On a fixture with 24 source
+assertions, 4 deleted and 3 added, the axis closes at 23; counting the moved step
+as an addition gives 4 added and breaks it, which is exactly how a report ends up
+claiming one more added assertion than it has.
+
 ### Moves, separated from deletions
 
 A step that moved is rendered as a `removed` entry **plus** an `added` entry —
@@ -163,33 +189,82 @@ A step whose `differing` list is exactly `["description"]`, or
 
 ### Gate B — pairing a removed step
 
-An id match proves a move; an id mismatch proves nothing, so fall through to a
-body comparison with `id` removed, and give `EvaluateFlow` its own pairing on
-`flow.invariant_id`. This recipe covers three of the four checks — **extraction
-needs a second call and is below.**
+An id match proves a move; an id mismatch proves nothing. Fall through to a body
+comparison with commentary removed, give `EvaluateFlow` its own pairing on
+`flow.invariant_id`, then try a **residue** match for retargeting, and only then
+let the per-type counts decide between deleted and unmatched. This covers checks
+1, 2, 3, 5, 6 and 7 — **extraction (check 4) needs a second call and is below.**
 
 ```bash
 jq '
-  [ .steps[] | select(.operation == "added")
+def residue: del(.id, .description, .annotation, .target, .find);
+def discriminating:
+  ([ .condition.comparatorValue, .condition.userPrompt, .value, .name,
+     .generator.pattern, .extract.attributeName ]
+   | map(select(. != null)) | length > 0)
+  or ((.condition.conditionType // "presence") != "presence");
+
+( [ .steps[] | select(.operation != "added")   | (.from | to_entries[0].key) ]
+  | group_by(.) | map({ (.[0]): length }) | add ) as $src
+| ( [ .steps[] | select(.operation != "removed") | ((.to // .from) | to_entries[0].key) ]
+    | group_by(.) | map({ (.[0]): length }) | add ) as $tgt
+| [ .steps[] | select(.operation == "added")
     | (.to | to_entries[0]) as $e
-    | { id: $e.value.id, flow: $e.value.flow.invariant_id,
-        body: ($e.value | del(.id, .description, .annotation)) } ] as $added
-  | [ .steps[] | select(.operation == "removed")
-      | (.from | to_entries[0]) as $e
-      | { step: .stepNumber, type: $e.key, id: $e.value.id,
-          flow: $e.value.flow.invariant_id,
-          body: ($e.value | del(.id, .description, .annotation)) } ]
-  | map(. as $r | $r + { verdict:
-        (if   ($r.id   != null) and ([$added[] | select(.id   == $r.id)]   | length) > 0
-         then "moved (id match)"
-         elif ($r.flow != null) and ([$added[] | select(.flow == $r.flow)] | length) > 0
-         then "flow re-id (invariant match)"
-         elif ([$added[] | select(.body == $r.body)] | length) > 0
-         then "regenerated id (body match)"
-         else "deleted" end) })
-  | map({step, type, verdict})
+    | { step: .stepNumber, type: $e.key, id: $e.value.id,
+        flow: $e.value.flow.invariant_id,
+        body: ($e.value | del(.id, .description, .annotation)),
+        res:  ($e.value | residue) } ] as $added
+| [ .steps[] | select(.operation == "removed")
+    | (.from | to_entries[0]) as $e
+    | { step: .stepNumber, type: $e.key, id: $e.value.id,
+        flow: $e.value.flow.invariant_id,
+        body: ($e.value | del(.id, .description, .annotation)),
+        res:  ($e.value | residue),
+        disc: ($e.value | discriminating) } ]
+| map(. as $r
+      | ($added | map(select(.type == $r.type))) as $same
+      | $r + { verdict:
+      (if   ($r.id != null) and ([$added[] | select(.id == $r.id)] | length) > 0
+       then "moved (id match)"
+       elif ($r.flow != null) and ([$added[] | select(.flow == $r.flow)] | length) > 0
+       then "flow re-id (invariant match)"
+       elif ([$added[] | select(.body == $r.body)] | length) > 0
+       then "regenerated id (body match)"
+       elif $r.disc and ([$same[] | select(.res == $r.res)] | length) > 0
+       then "retargeted (requirement match; selector differs)"
+       elif (($same | length) == 0) or (($src[$r.type] // 0) > ($tgt[$r.type] // 0))
+       then "deleted (type count dropped or no same-type addition)"
+       else "unmatched removal (candidates: "
+            + ([$same[].step | tostring] | join(", ")) + ")"
+       end) })
+| map({step, type, disc, verdict})
 ' "$DIFF"
 ```
+
+Verified against a real diff: on a six-removal fixture this returns `moved` for
+the reordered step, `deleted` for four assertions whose type counts dropped, and
+`unmatched removal (candidates: 39)` for a retargeted presence wait — never
+`deleted` for that wait, and never `retargeted` on a residue that cannot carry
+the claim.
+
+**`discriminating` is the guard, and it is not optional.** `residue` strips
+`target` and `find`, so a step whose whole meaning is its target strips to
+`{actionCode}` alone: every `Hover` matches every other `Hover`, every `Click`
+every other `Click`. A presence wait strips to `{actionCode, condition:
+{presence, present}, onFailure}` and matches every other presence wait in the
+test. Without the `disc` gate, check 5 calls those `retargeted`, which is a
+functional claim about a step surviving that the data cannot support.
+
+**Do not add `condition` or `extract` to the strip list.** They are siblings of
+`target`, not children, which is the only reason they survive and the only reason
+check 5 discriminates at all — the real deletions above differ on
+`condition.comparatorValue` and `extract.attributeName`. Folding either into the
+strip, on the reasonable-sounding grounds that extraction is part of locating a
+value, makes check 5 vacuous for every assertion at once.
+
+**Order is load-bearing.** The reordered step satisfies check 5 as well as
+check 1; only check 1's precedence keeps it out of the retargeting class. Reorder
+the ladder for readability and a move silently becomes a retarget.
 
 Bind the removed entry to `$r` before comparing. A bare `select(.id == .id)`
 inside the `$added` filter compares each added step's id to itself — always
@@ -346,6 +421,8 @@ eyeballed.
 | Trap | What actually happens |
 |---|---|
 | A moved step read as a deletion | rendered as `removed` + `added`; pair by id first |
+| A moved step counted on the add/remove axis | same `removed` + `added` pair; exclude moved pairs before counting or the added total reads one too high |
+| Check 5 run without the `disc` guard | `Hover`/`Click` strip to `{actionCode}` and every presence wait strips alike, so any same-type pair reports `retargeted` |
 | `unchanged` entries missing `to` | the step is identical, carried once in `from`; `.to // .from` handles it |
 | `stepNumber` compared across sides | numbered per version; a step at 7 in the source is not the step at 7 in the target |
 | `disabled: false` looked for | the key exists only when true |

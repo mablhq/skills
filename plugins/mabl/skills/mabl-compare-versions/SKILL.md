@@ -215,8 +215,6 @@ never fold it into "steps changed".
 step numbers and both texts. Callers ask about wording, and hiding it behind a
 gate makes the skill look like it missed an edit it deliberately reclassified.
 
-Three consequences worth stating in the report:
-
 - **Never quote a description as evidence.** A description can disagree with its
   own step's body, and this is generated fresh, not legacy drift.
 - **You cannot tell an authored description edit from renderer churn.** Both
@@ -227,8 +225,8 @@ Three consequences worth stating in the report:
 
 ### Gate B — a removed step is not a deleted step
 
-`removed` at test level means *left this position*, which has four causes. Work
-them in order and stop at the first that matches:
+`removed` at test level means *left this position*, which has six causes besides
+deletion. Work them in order and stop at the first that matches:
 
 | Check | Verdict |
 |---|---|
@@ -236,47 +234,47 @@ them in order and stop at the first that matches:
 | 2. Bodies match with `id`, `description`, `annotation` excluded | **id regenerated** — platform churn |
 | 3. Removed and added `EvaluateFlow` share a `flow.invariant_id` | **flow re-id** — a migration, not a change |
 | 4. A step on the target side is an `EvaluateFlow` and the removed step is inside that flow | **extracted into a reusable flow** — see below |
-| Nothing matched | **deleted** |
+| 5. Residue matches (commentary **and** find/target stripped) **and** that residue carries an author-supplied value | **retargeted** — same requirement, new selector |
+| 6. The type's source → target count dropped, or nothing of that type was added | **deleted** |
+| Nothing matched, count flat, a same-type step was added | **unmatched removal** — name the candidate |
 
-Only after all four is a removal a deletion. **Name the method you used** — a
-body or `flow.invariant_id` match is weaker than an id match, since it can't
-distinguish a move from a delete-plus-identical-add.
+**Name the method you used** — a body or `flow.invariant_id` match is weaker than
+an id match, since it can't distinguish a move from a delete-plus-identical-add.
+**Order is load-bearing**: a moved step also satisfies check 5, and only check 1's
+precedence keeps it out of the retargeting class.
+
+**Check 5 needs a discriminating residue.** Stripping the find/target subtree
+leaves `condition` and `extract`. Claim **retargeted** only if that residue holds
+an author-supplied value — `comparatorValue`, `userPrompt`, `value`, `name`,
+`generator.pattern`, `extract.attributeName`, or a `conditionType` other than
+`presence`. Without one it matches every step of its type (`Hover` and `Click`
+strip to `actionCode` alone): fall to check 7. Report a real match under
+Retargeting in §4 with the selector before and after.
+
+**Checks 6 and 7 — "deleted" has to be earned.** Count the type on both sides
+first. A removed `WaitUntil` against `WaitUntil 2 → 2` means something replaced
+it, not that a wait was dropped. Unchanged count plus a same-type addition is an
+**unmatched removal**: name the candidate and say Gate B could not join them.
 
 ### The extraction case, and the trap in it
 
-Extracting steps into a reusable flow is the most destructive-looking change that
-removes nothing, and it does **not** produce an added step. The existing
-`StepGroup` *becomes* the `EvaluateFlow`, keeping its id:
+Extraction is the most destructive-looking change that removes nothing, and it
+produces **no added step**: the existing `StepGroup` *becomes* the
+`EvaluateFlow`, keeping its id. Signature: **`removed: N`, `added: 0`, one
+`changed` step whose type became `EvaluateFlow`** — so checks 1–3 and 5 all fail,
+and every removal falls through unless you read inside the flow.
 
-```
-changed  step 3   id 2bfa8e61-…
-  from   StepGroup     "Step Group: \"Verify landing page\" (7 steps)"
-  to     EvaluateFlow   flow.invariant_id: iUtWHnDNNo4Y9rh8TuZqhA-f
-```
+Take `flow.invariant_id` from any target-side `EvaluateFlow`, get its branch from
+`list_mabl_flow_versions`, then read it **on that branch**. Ids survive
+extraction, so the match is exact. Recipes: `references/reading-the-diff.md`,
+"Gate B check 4".
 
-So the signature is **`removed: N`, `added: 0`, and one `changed` step whose type
-became `EvaluateFlow`.** With nothing on the added side, checks 1–3 all fail and
-every removed step falls through to "deleted" unless you look inside the flow.
+**Pass the branch.** `get_mabl_flow_steps` takes a bare invariant id and defaults
+to master, so a flow created on an agent-edit branch reads back `step_count: 0` —
+indistinguishable from the steps having been deleted into an empty flow. The one
+check here that does not fail safe.
 
-To resolve it:
-
-1. Take `flow.invariant_id` from any target-side `EvaluateFlow` — whether it was
-   `added` or `changed` into one.
-2. Get that flow's branch: `list_mabl_flow_versions({ flowId })` →
-   `created_on_branch`.
-3. Read it **on that branch**: `get_mabl_flow_steps({ flow_id, branch })`.
-4. Removed ids present in the flow were **extracted, not deleted**. Step
-   identity survives extraction, so this match is exact.
-
-**Read the flow on the wrong branch and it comes back empty.** A flow created by
-an agent edit lives on that session's branch, `get_mabl_flow_steps` takes only a
-bare invariant id, and it defaults to master — so the read returns
-`step_count: 0`. That does not fail open: it looks like the assertions really
-were deleted *and* the replacement flow is empty, which reads as a confirmed
-catastrophe. Always pass the branch from step 2.
-
-If you cannot complete this check — no flow-read lane available — report those
-removals as **unresolved**, not as deletions.
+No flow-read lane? Report those removals **unresolved**, never deleted.
 
 ## 4. Classify
 
@@ -419,17 +417,30 @@ Write to `.mabl/compare/<id>-<source>-<target>.md` — the same ignored cache as
 the captured diff, so a read-only comparison leaves nothing in `git status`.
 
 - **Compared** — the two versions as integers, which lane, and why those two.
-- **Behavioural summary first** — *N functional changes, M nonfunctional*. If
-  nothing survived the gates, say the version changed no behaviour.
+- **Behavioural summary first** — *N functional, M nonfunctional*, carrying
+  explicit zeros for unclassified and unresolved so a section omitted for being
+  empty still reads as looked-at. If nothing survived the gates, say so.
 - **Nonfunctional** — one line per class that fired, with counts. Commentary
   rewrites get their step numbers and their before/after text, not just a count.
 - **Functional** — structure (added / deleted, with the Gate B method named),
   assertions per type source → target with the net, then one row per changed
   binding field with its direction, then data bindings, dates, conditionals.
 - **Unclassified** — every real change that fits no class above, with its field,
-  old value and new value. Empty is a strong claim; make it earn that.
+  old value and new value.
 - **Unresolved** — removals you could not disprove, and what was missing.
 - **Not covered** — every applicable item from the list above.
+
+**Omit empty sections**, in the file and the reply alike. No "Unresolved: none",
+no zero rows, no heading with nothing under it.
+
+**Reconcile before printing.** Exclude check-1 (moved) pairs from added and
+removed counts — a move is one relocation, not a delete plus an add — then assert
+per type that `added == net + removed`. A mismatch is a reporting bug: find it.
+
+**The reply is a lossy view of the report; the loss must not land on the
+caveats.** Name the Gate B method behind every verdict, list every added step
+including non-assertions, quote counts from the type table and not the prose, and
+leave an adjacency observation an observation.
 
 **No verdict, no score, no recommendation to restore or re-edit** — and no
 valence in the vocabulary either. "Step 28's match went from exact to substring"
