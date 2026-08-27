@@ -217,6 +217,12 @@ collapsing it is how an unproven fix reaches a merge.
   merge, that's a partial result, not a pass.
 - **One trigger can produce more than one run** — a browser each, for instance.
   All of them have to pass. One green sibling is not a green result.
+- **A `terminated` run is not a failed run.** It is terminal with
+  `success: false`, so it reads as a failure and isn't one — the run was stopped,
+  not beaten by the test. It proves nothing either way: don't count it toward the
+  clean runs, and don't report it as evidence the change didn't work. Re-run to
+  replace it, and say how many runs were terminated rather than folding them into
+  a pass rate.
 
 ## What this skill does not do
 
