@@ -13,7 +13,12 @@ description: |
   There is no importer for Cypress, Cucumber, or a spreadsheet of test cases;
   to build tests from written cases use mabl-test-authoring, and to design NEW
   coverage by exploring a running app use mabl-test-coverage-design.
-allowed-tools: Bash, Read, Write, Glob, Grep, mcp__mabl__*
+allowed-tools: Bash, Read, Write, Glob, Grep, mcp__mabl__get_current_user,
+  mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications,
+  mcp__mabl__list_mabl_environments, mcp__mabl__create_mabl_environment,
+  mcp__mabl__create_mabl_application, mcp__mabl__mabl_authoring_initiate,
+  mcp__mabl__mabl_authoring_status, mcp__mabl__mabl_authoring_answer,
+  mcp__mabl__get_mabl_test_steps, mcp__mabl__run_mabl_test_cloud
 ---
 
 # mabl test import

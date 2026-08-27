@@ -43,6 +43,20 @@ Three rules make the result trustworthy:
   exists. An action the source performs only in order to reach an assertion is
   not the test.
 
+**Re-derive the intent against the source before submitting it.** Submitting is
+the write, and a description assembled a few steps ago is the thing most likely
+to have drifted from the file. Walk the finished `test_case` line by line back
+against the source, and check three things:
+
+- every line has a source line, naming the file it came from when the step came
+  out of a page object or a helper rather than the spec;
+- nothing is in the intent that has no source line — an invented step or a
+  plausible-sounding assertion is the failure this catches, and it will not look
+  wrong on its own;
+- the read was complete. If an import was not followed, or a listing was
+  truncated, say which and leave those steps out rather than describing what
+  they probably do. "I read the test" has to mean the parts actually opened.
+
 Pass `credentials_id` when the source test logs in, and `labels` so the
 imported tests stay filterable. For a family of near-identical tests, author
 one, then pass its id as `source_test_id` on the rest and describe only what
