@@ -24,6 +24,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud — and checks each one against what you asked for, so you get told which tests are verified and which only look finished. |
 | [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change a test that already exists. Routes each edit to the cheapest lane that works: metadata (rename, labels, enable/disable), structured step edits (replace/insert/delete/move — no browser), or a live cloud authoring agent when the change needs to look at the running app. Reviews shared-flow blast radius and confirms before writing to the default branch. |
 | [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
+| [`mabl-workspace-audit`](plugins/mabl/skills/mabl-workspace-audit/SKILL.md) | Audit a whole workspace and stage a reversible cleanup. Builds a complete inventory, then reports what the workspace has stopped using — tests with no run in the window, tests in no plan, plans that are on but have no trigger, consistently failing and flaky tests, tests whose owner has left — ranked by what the clutter costs. On request it quarantines the agreed set by labelling and disabling it, so nothing breaks silently. It never deletes; the removal stays yours, in the mabl app. |
 
 ### MCP servers
 
@@ -101,6 +102,7 @@ gh skill install mablhq/skills mabl-test-authoring
 gh skill install mablhq/skills mabl-test-coverage-design
 gh skill install mablhq/skills mabl-test-edit
 gh skill install mablhq/skills mabl-debug
+gh skill install mablhq/skills mabl-workspace-audit
 ```
 
 `gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging and coverage-design skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
