@@ -51,8 +51,8 @@ A version number is not proof a command exists. Before relying on a flag, grep
 the command's own help for it as a whole word:
 
 ```bash
-mabl tests list --help  | grep -qw -- --output || echo "no --output on tests list; stop and say so"
-mabl flows list --help  | grep -qw -- --output && echo "flows list has --output; use it instead of the table parse"
+mabl tests list --help | grep -qw -- --output || echo "no --output on tests list; stop and say so"
+mabl flows list --help | grep -qw -- --output && echo "flows list has --output; use it, not the table parse"
 ```
 
 **The two surfaces fail in two different ways, and they need different
@@ -73,36 +73,32 @@ reported, not retried.
 
 ## Rate limiting
 
-Every MCP loop in this skill runs against a server that is rate-limited **per
-identity**. One number governs all of them: **run at most 10 calls, then pause
-10 seconds before the next batch.** Steps 2, 3, 5, 6 and 8 all fan out; each one
-uses this pacing, and none of them is exempt because it is read-only.
+Every MCP loop here runs against a server rate-limited **per identity**, and one
+number governs all of them: **at most 10 calls, then pause 10 seconds.** Steps
+2, 3, 5, 6 and 8 all fan out and none is exempt for being read-only.
 
 ## What this skill will not do
 
 **It never deletes anything, and it never asks to.**
 
-That is not caution for its own sake. There is no delete for a test, plan, flow,
-or DataTable on either the CLI or the MCP server, and there is no undelete on
-either. `restore_mabl_test` restores a *version* of a test that still exists; it
-does not bring back a deleted one. So an agent that deleted something could not
-put it back, and neither could this skill.
+There is no delete for a test, plan, flow, or DataTable on either the CLI or the
+MCP server, and no undelete either. `restore_mabl_test` restores a *version* of
+a test that still exists; it does not bring back a deleted one. An agent that
+deleted something could not put it back, and neither could this skill.
 
 **It never runs a test and never creates one.** An audit that starts cloud runs
-changes the very activity data it is measuring, and bills the workspace for the
-privilege. Read, report, and — when asked — label and disable tests. Nothing
-else.
+changes the activity data it is measuring, and bills the workspace for it. Read,
+report, and — when asked — label and disable tests. Nothing else.
 
 **It does not edit plans.** Disabling a plan is a change with no label on it, so
 it cannot be read back and it cannot be listed for undo the way a test can. The
 report says which plans want attention; the person decides them in the app.
 
 It also cannot see a workspace's activity log. Who deleted what, and when, is
-not readable from any surface here. If the audit is wrong about a test, the
-record that would settle it is in the mabl app, not in anything this skill read.
-
-The removal step therefore belongs to a person, in the mabl app, after the
-quarantine window has passed. Report that as the hand-off. Never simulate it.
+not readable from any surface here — if the audit is wrong about a test, the
+record that would settle it is in the app. So the removal belongs to a person,
+in the app, after the quarantine window. Report that as the hand-off, and never
+simulate it.
 
 ## Workflow
 
@@ -114,10 +110,10 @@ against their own workspace rather than a vague "a few minutes":
 
     plans + tests + flows + (flagged tests)  API calls
 
-One call per plan (step 2), one per test if step 3 takes Lane B, one per flow
-(step 5), one per flagged test for descriptions (step 6). At the pacing above
-that is roughly **one second per call** — so a thousand-entity workspace is tens
-of minutes, not seconds. All of it is read-only.
+One per plan (step 2), one per test if step 3 takes Lane B, one per flow (step
+5), one per flagged test (step 6). At the pacing above that is roughly **one
+second per call**, so a thousand-entity workspace is tens of minutes. All of it
+is read-only.
 
 ### 1. Fix the scope and the conventions
 
@@ -148,13 +144,12 @@ finding below is read against them:
 
 Every number here is stated in the report, not implied. A test that last ran 100
 days ago is dormant at a 90-day window and healthy at a 180-day one, and the
-reader cannot check the finding without the number. The same goes for the
-staleness bar: 4 months is a default, not something the user agreed, and the
-report says which it was.
+reader cannot check the finding without the number — same for the staleness bar,
+where the report says whether 4 months was agreed or defaulted.
 
-Accept "we don't have one" for any of the conventions — a convention nobody
-agreed is not a finding. Where the user has no rule, record *that*; "no naming
-pattern agreed" is what stops the next run inventing one.
+Accept "we don't have one" for any convention — one nobody agreed is not a
+finding. Record *that*; "no naming pattern agreed" is what stops the next run
+inventing one.
 
 **Ask the last three at the start, not at step 8.** A user who learns only at the
 end that the skill wanted to disable a hundred tests has been asked at the worst
@@ -235,6 +230,14 @@ plan-derived finding as partial. A partial plan sweep makes "in no plan" unsafe
 Keep from each plan: `enabled`, `triggers`, `test_invariant_ids`, `labels`,
 `application_id`, `last_updated_time`.
 
+**Two plan fields are omitted rather than falsey, and they behave oppositely
+(verified 2026-08-27).** `enabled` is absent from `plans list` and present in
+`plans describe` — read the list's silence as `false` and every plan reports as
+disabled, so take it from the describe. `triggers` is absent from the describe
+when a plan has none, so there **absent is the finding**, not a gap to file
+unverified. Settle any absent field this way: find one entity that has the thing
+and confirm the key appears for it.
+
 **An empty or near-empty workspace is itself the finding.** Report it as one and
 stop; do not pad a report to look thorough.
 
@@ -260,11 +263,11 @@ set, because the cursor is opaque and cannot be treated as an offset.
 in the window and nothing else. It costs one call per test; quote that number
 before starting.
 
-Lane B is not a reduction. It establishes the newest run for **every** test in
-the inventory, where a truncated Lane A establishes it for none of them. A
-200-page sweep of a workspace with half a million runs in the window covers the
-most recent day or two and marks nearly everything dormant — which reads as a
-finding rather than as the failure it is.
+Lane B is not a reduction — it establishes the newest run for **every** test,
+where a truncated Lane A establishes it for none. A 200-page sweep of a
+workspace holding half a million runs covers the most recent day or two and
+marks nearly everything dormant, which reads as a finding rather than the
+failure it is.
 
 Whichever lane ran, on every call:
 
@@ -484,8 +487,10 @@ Say these three things and stop:
   a finding.
 - **`last_updated_time` is not usage.** It moves on a rename or a label change,
   and an auto-heal moves it without anyone deciding anything.
-- **An absent field is not an empty one.** A branch with no `entities` key has
-  not been shown to strand nothing.
+- **An absent field means whatever that field means, and you have to check.**
+  A branch with no `entities` key has not been shown to strand nothing. A plan
+  with no `triggers` key has no triggers. Same shape, opposite answers, and
+  guessing either way invents a finding or discards a real one.
 - **An empty used-by page is per branch.** It means unused *on the branch you
   indexed*, which defaults to `master`.
 - **A refused call is not an absent server**, and a lane closing on one tool
@@ -493,7 +498,7 @@ Say these three things and stop:
 - **Raisable defaults and a hard cap look alike, and are not.** `10` on the CLI
   lists, `100` on the paged MCP reports and `20` on `list_mabl_tests_using_flow`
   are defaults — raise them. The `200` on `list_mabl_tests` is a **cap** with no
-  cursor behind it; it cannot be raised, and a returned count of exactly 200 is
-  a truncation you have to work around, not a limit you forgot to set.
+  cursor: a returned count of exactly 200 is a truncation to work around, not a
+  limit you forgot to set.
 - **The inventory covers the default branch.** Tests that exist only on a mabl
   branch are outside it — the open-branch list from step 2 is what names them.

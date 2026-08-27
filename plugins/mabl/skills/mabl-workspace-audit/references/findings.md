@@ -24,7 +24,13 @@ means it over-reports "in no plan". Report those findings as unverified instead.
 
 ### Plan enabled with no triggers
 
-`PLANS` where `enabled == true` and `triggers` is empty.
+`PLANS` where `enabled == true` and `triggers` is empty or absent.
+
+`enabled` comes from `plans describe`; it is not in `plans list`. `triggers` is
+omitted from the describe when the plan has none and present when it has any, so
+an absent key here **is** the finding — verified 2026-08-27. Do not file it
+unverified on the strength of the general absent-is-not-empty rule; that rule is
+per field, and this field was checked.
 
 The plan is on, so it reads as live in the app, but nothing starts it. Its tests
 run only when someone presses a button. Usually the cheapest real finding in a
