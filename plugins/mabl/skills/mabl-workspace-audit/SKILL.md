@@ -123,11 +123,17 @@ agreed is not a finding:
 | Anything already known to be exempt | every finding |
 | **Whether a retirement convention already exists** — a label, a name prefix, a disabled-and-kept habit | the disposition in step 8 |
 | **What this audit is allowed to do at the end** — report only, or also stage a quarantine | whether step 8 happens at all |
+| **What to call the label**, if a quarantine is on the table | the naming in step 8 |
 
 The last two are the ones not to skip. **Ask them at the start, not at step 8.**
 A user who learns only at the end that the skill wanted to disable a hundred
 tests has been asked at the worst possible moment — after the work that would
 have to be redone if the answer is no.
+
+On the label name, offer the default in step 8 and take whatever the user
+prefers instead. It is their workspace and their vocabulary; the one property
+worth arguing for is that the name be unique to this run, and the reason for
+that is in step 8.
 
 **Never adopt an existing convention unless told to.** Most workspaces that have
 been audited before carry the traces — a `quarantine` label, an `(old) ` name
@@ -357,7 +363,8 @@ get an explicit yes. Nothing here runs off the back of the report alone, and
 nothing here runs off an instruction given before the report existed either —
 the set is only nameable once the findings are.
 
-**Every label this skill writes is unique to the run that wrote it.**
+**Use the name the user chose in step 1.** Where they had no preference, the
+default is a label unique to the run that wrote it:
 
     <disposition>-audit-<YYYY-MM-DD>        e.g. quarantine-audit-2026-08-27
 
@@ -367,10 +374,13 @@ there: it selects exactly one audit's set and nothing else. A bare `quarantine`
 does not — it accumulates every pass anyone ever ran, and once two sets share a
 label there is no query that separates them again.
 
-Labels are editable from the agent surfaces now, which is precisely why the
-naming has to be disciplined. A label is cheap to add and cheap to remove, so
-the cost of a bad one is not the writing — it is that the set it names can never
-be recovered.
+If the user names something else, use theirs. Say the uniqueness argument once,
+apply their answer either way, and record the label in the report so the undo
+instruction in step 9 names the right thing.
+
+A label is cheap to add and cheap to remove, which is exactly why the naming has
+to be disciplined: the cost of a bad one is never the writing, it is that the
+set it named can no longer be recovered.
 
 **Check the label is unused before applying it**, with `list_mabl_tests` and
 `labels: ["<the label>"]`. Any result at all means stop and ask. Do not merge

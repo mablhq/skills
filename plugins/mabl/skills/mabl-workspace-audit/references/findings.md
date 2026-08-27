@@ -271,6 +271,10 @@ These are not extra findings. They are conditions that change what the report
 
     <disposition>-audit-<YYYY-MM-DD>        e.g. quarantine-audit-2026-08-27
 
+The default, used where the user expressed no preference in step 1. Where they
+named a scheme, theirs wins — the argument below is worth making once, not
+worth overriding them with.
+
 Two parts, each doing work. The **disposition** records what was decided, so a
 later reader knows whether they are looking at a set someone meant to retire or
 one someone meant to re-examine. The **date** makes the label unique to one
