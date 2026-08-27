@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.7.0] - 2026-08-26
+## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"
   and stops there. It reports the difference as a classification split by whether
@@ -17,12 +17,31 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - **Two normalization gates run before anything is counted**, because both change
   what the counts mean. `description` and `annotation` are server-rendered and
   drift from the step body, so a version can report many changed steps that
-  changed no behaviour. And a step that left its position has four possible
-  causes, only one of which is deletion.
+  changed no behaviour. And a step that left its position has six possible
+  causes besides deletion.
 - **A removed step is never assumed deleted.** It may have moved (matching step
-  id), had its id regenerated, been part of a flow-invocation id migration, or
-  been extracted into a reusable flow. On real diffs, platform churn presented
-  as deletions outnumbered genuine moves several times over.
+  id), had its id regenerated, been part of a flow-invocation id migration, been
+  extracted into a reusable flow, or been **retargeted** — the same requirement
+  pointed at a new selector, which changes both the id and the body and so
+  matches none of the earlier checks. On real diffs, platform churn presented as
+  deletions outnumbered genuine moves several times over.
+- **"Deleted" has to be earned, and the residual case is named rather than
+  rounded off.** A removal only reports as deleted once the step's type count
+  actually dropped, or nothing of that type was added. If the count is flat and a
+  same-type step was added, it reports as an **unmatched removal** naming the
+  candidate — because a wait that was retargeted from an `<h1>` to its child
+  `<span>` is not a wait that was dropped, and the type count says so.
+- **The retargeting match is gated on evidence, not on a caveat.** Stripping the
+  locator leaves the requirement, but a `Hover` or `Click` strips to nothing at
+  all and every presence wait strips alike, so an ungated check would report any
+  two steps of those types as the same step retargeted. The match is claimed only
+  when what survives carries an author-supplied value; otherwise the removal
+  falls through to the unmatched case. A count that cannot distinguish a move
+  from a deletion is not allowed to assert that a step survived.
+- **A moved step is counted once.** The diff renders a move as a removal plus an
+  addition, so the pair is excluded before the add/remove totals are taken and
+  the per-type arithmetic has to close, which stops the report claiming one more
+  added assertion than it has.
 - **Extraction into a reusable flow gets its own resolution path**, because it is
   the most destructive-looking change that removes nothing and it produces no
   added step to pair against: the existing step group *becomes* the flow
@@ -83,6 +102,77 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   step ids, so it shows the flow is non-empty without proving which steps are in
   it. The CLI also cannot date a version or list a flow's versions, so unresolved
   removals are reported as unresolved rather than as deletions.
+## [1.6.1] - 2026-08-25
+### Changed
+- `mabl-test-edit`'s description now fits the 1024-character budget every skill
+  matcher reads. It was 1201, and Codex truncates at 1024 mid-word, so the
+  boundary clause — that a just-authored test's validation gap is the authoring
+  skill's decision, and this skill should take the specifiable fixes it routes
+  over because a structured step edit is instant and can't delete anything —
+  was being cut off before any matcher saw it. Scope and sibling routing are
+  unchanged; one redundant trigger phrase was dropped.
+- Every skill that routes you to a sibling skill now checks the sibling is there
+  first. A skill can be installed on its own, so "route this to
+  `mabl-test-edit`" was a dead end for anyone who installed only the skill they
+  were reading. The two places it happens — test authoring to test edit, and
+  coverage design to test authoring — now declare it with **Requires
+  `<name>`** and say which skill is missing when it isn't there, so you find out
+  from the skill rather than from it quietly doing nothing.
+- Three places named a sibling skill where nothing actually routes there:
+  `mabl-test-coverage-design` explained which Chrome `chrome-for-mabl` attaches
+  to by naming the skill that uses it, `mabl-test-edit` compared writing a
+  `test_case` to writing one for the authoring skill, and it cited `mabl-init` as
+  the source of a saved workspace it reads out of agent memory either way. All
+  three now say the thing itself.
+- `mabl-test-edit` no longer names mabl's internal feature flags when it explains
+  which edit lanes a workspace has. The flag names were never usable: the skill
+  says two lines later that an agent can't read a workspace's flags and has to
+  judge a lane by whether its tool is in the tool list. What that column was
+  really carrying — the lanes are gated **independently**, so one being closed
+  tells you nothing about the other — is now said outright, and the observable
+  signals (the tool list, the "contact mabl support" error) are unchanged.
+- `mabl-debug`'s fix-and-retry cycle no longer tells you to rebuild the mabl CLI
+  from a script in a repo you don't have. For an app-code fix the thing to
+  rebuild is the app under test, and the reason to start a fresh session is an
+  upgraded CLI — both now say so.
+- The Cursor install notes no longer promise that the CLI installer will pick up
+  `chrome-devtools` later. The caveat that matters is unchanged: `mabl agent
+  install cursor` wires up two of the three MCP servers, so add the third by
+  hand.
+- Four more places described mabl's internals rather than what you can see.
+  `mabl-debug` said a payload is absent on "TRA-recovered" runs — the status you
+  actually get is `recovered`, from Runtime recovery — and branched its step-id
+  guidance on whether a flow has persisted `json_steps` ids, which nothing you
+  can run reports; that branch is now the observable one, comparing the two id
+  strings before copying. `mabl-test-coverage-design` told you to open a test
+  with `get_test_definition`, which is the cloud planner's own tool, not yours;
+  it now points at `mabl tests export`. And `mabl-test-edit`'s escape-hatch note
+  no longer says "preview flags off".
+- Runtime recovery is gone from the skills — the feature, the `recovered` status
+  it left behind, and the recovery session id. It's sunset, so explaining it costs
+  every reader something to serve the shrinking few opening a run old enough to
+  carry it. Nothing is stranded: the triage recipe no longer depends on knowing
+  the status list at all. It selects any step that isn't passed or skipped — so it
+  still finds a recovered step without naming one — and stops loudly when there's
+  nothing to triage, instead of quietly passing an empty step id to three artifact
+  calls the way it briefly did.
+- The skills validator now has tests, and it needed them: the description budget
+  it enforces was passing a 2789-character description clean, because a blank
+  line inside a plain scalar ended the measurement instead of folding into it. A
+  CRLF checkout also made every valid file report as having no frontmatter. The
+  reader moved to `.github/scripts/lib/frontmatter.mjs` so its folding rules can
+  be tested without running the validator, and CI runs those tests first.
+- The validator no longer trusts a folder name. A skill directory is
+  PR-author-controlled on a public repo and its name was compiled straight into a
+  pattern, so `evil(((` crashed the run before any finding printed and `(a+)+$`
+  backtracked past the six-hour job default. Names are now checked and escaped,
+  symlinks and vendored trees are skipped, an empty skills directory fails
+  instead of reporting "All 0 skills are valid", and the workflow runs read-only
+  with a ten-minute bound.
+- "mablscript" is gone from the skills. It named the step format in three places
+  where the reader only ever sees the consequence — a `legacy_unsupported` flow
+  the structured lanes can't edit, or an export mabl refuses — so those now say
+  that instead.
 
 ## [1.6.0] - 2026-08-19
 ### Changed

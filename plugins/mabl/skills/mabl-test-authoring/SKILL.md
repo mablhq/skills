@@ -44,8 +44,8 @@ mabl auth info    # verify you're logged in and the token hasn't expired
               (see step 4 — a completed session is not proof)
 ```
 
-You can run multiple planning and authoring sessions concurrently —
-just track the session IDs.
+Multiple planning and authoring sessions can run concurrently — just track
+the session IDs.
 
 ### After authoring completes
 
@@ -123,8 +123,8 @@ for the planner to say it's ready — one call is often enough if the
 intent is specific. Call `--changes` only when the plan is missing
 something.
 
-You can run multiple planning sessions in parallel for different
-tests — each has its own session ID.
+Multiple planning sessions can run in parallel for different tests — each
+has its own session ID.
 
 ---
 
@@ -439,6 +439,10 @@ the `mabl-test-edit` skill's structured-step lane, which applies a named
 
 That lane is not just faster. **A structured insert cannot delete anything**, so
 it removes the whole risk this section is guarding against.
+
+**Requires `mabl-test-edit`.** If that skill isn't there, stop and say which
+skill is missing — don't attempt the edit yourself, and don't guess how to
+install it, because that depends on how this skill was installed.
 
 **Otherwise** — the fix needs the live app, e.g. "verify the toast appears" for
 an element nothing in the test has ever touched — edit through the authoring
