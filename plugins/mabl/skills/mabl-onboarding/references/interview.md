@@ -181,7 +181,7 @@ writing; owners and editors only). The MFA authenticator and the cloud-credentia
 checkbox are both options on that same form, which is why one trip covers every
 type. Name the path; do not send them to hunt for "the web app".
 
-### One workspace policy can override the type you asked for
+### One workspace policy can decide the type for you
 
 A workspace owner can turn on **Require cloud credentials** (`Settings >
 Workspace`), and mabl **enforces it in the API**, not just in the create form — so
