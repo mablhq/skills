@@ -109,8 +109,10 @@ plus an addition — then the per-type arithmetic has to close.
 
 ```bash
 jq '
-  [ .steps[] | select(.operation == "added")   | (.to   | to_entries[0].value.id) ] as $a
-  | [ .steps[] | select(.operation == "removed") | (.from | to_entries[0].value.id) ] as $r
+  [ .steps[] | select(.operation == "added")
+    | (.to   | to_entries[0].value.id) | select(. != null) ] as $a
+  | [ .steps[] | select(.operation == "removed")
+      | (.from | to_entries[0].value.id) | select(. != null) ] as $r
   | ($a - ($a - $r)) as $moved
   | { moved: ($moved | length),
       added_excl_moved:   ([ $a[] | . as $x | select(($moved | index($x)) == null) ] | length),
@@ -226,10 +228,10 @@ def discriminating:
       | $r + { verdict:
       (if   ($r.id != null) and ([$added[] | select(.id == $r.id)] | length) > 0
        then "moved (id match)"
-       elif ($r.flow != null) and ([$added[] | select(.flow == $r.flow)] | length) > 0
-       then "flow re-id (invariant match)"
        elif ([$added[] | select(.body == $r.body)] | length) > 0
        then "regenerated id (body match)"
+       elif ($r.flow != null) and ([$added[] | select(.flow == $r.flow)] | length) > 0
+       then "flow re-id (invariant match)"
        elif $r.disc and ([$same[] | select(.res == $r.res)] | length) > 0
        then "retargeted (requirement match; selector differs)"
        elif (($same | length) == 0) or (($src[$r.type] // 0) > ($tgt[$r.type] // 0))
@@ -386,15 +388,20 @@ branch — report the conditional and say the test needs a look.
 ### Date literals introduced
 
 ```bash
-jq --arg today "$(date +%Y-%m-%d)" '
+DATE_RE='[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|January|February|March|April|May|June|July|August|September|October|November|December'
+
+jq --arg today "$(date +%Y-%m-%d)" --arg date_re "$DATE_RE" '
   [ .steps[] | select(.operation == "added" or .operation == "changed")
     | { step: .stepNumber,
         was: (.from // {} | tostring),
         now: (.to   // {} | tostring) }
-    | select((.now | test("[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}|January|February|March|April|May|June|July|August|September|October|November|December"))
-             and (.was | test("[0-9]{4}-[0-9]{2}-[0-9]{2}|January|February|March|April|May|June|July|August|September|October|November|December") | not))
-    | { step, now } ]' "$DIFF"
+    | select((.now | test($date_re)) and ((.was | test($date_re)) | not))
+    | { step, now, matches_today: (.now | test($today)) } ]' "$DIFF"
 ```
+
+Both sides test the **same** `$date_re`, so a reformat (`01/02/2026` →
+`2026-01-02`) is not reported as a newly introduced date. `matches_today` carries
+the case the prose below calls strongest, rather than leaving `$today` unused.
 
 A date that reads as today's is the strongest signal — a test pinned to the
 day it was edited passes once and fails tomorrow. Quote the literal and its

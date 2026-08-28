@@ -102,6 +102,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   step ids, so it shows the flow is non-empty without proving which steps are in
   it. The CLI also cannot date a version or list a flow's versions, so unresolved
   removals are reported as unresolved rather than as deletions.
+
 ## [1.6.1] - 2026-08-25
 ### Changed
 - `mabl-test-edit`'s description now fits the 1024-character budget every skill
