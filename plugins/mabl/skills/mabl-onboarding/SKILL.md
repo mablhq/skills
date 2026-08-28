@@ -157,8 +157,12 @@ never overstate one.
   the wrong place is worse than saying it is outside every surface you have.
 - **The mabl CLI creates no application, no credential and no plan — the hosted
   MCP server creates all three.** So never say "no agent can create X" about
-  them: say **"the CLI can't"**, and name what did create it. Credentials are the
-  one capability this skill declines on purpose, and it says why. Plans are out of
+  them: say **"the CLI can't"**, and name what did create it. Credentials split two
+  ways and the halves need different sentences: a **Basic or Cloud** credential is
+  a capability this skill *declines on purpose*, and says why; a credential **with
+  MFA** is one no agent surface has at all — `create_mabl_credentials` takes no
+  authenticator-secret parameter — so that half is a limit, not a choice. Never
+  render a limit as a decision or a decision as a limit. Plans are out of
   reach on day one for a different reason: `create_mabl_plan` requires **at least
   one test id** and this workspace has none — a precondition, not a capability
   limit, and the report must word it that way (`references/mcp-and-handoff.md`).
@@ -253,13 +257,16 @@ assumption the application will appear later. → routes in
 drafting in `references/interview.md`.
 
 **4. Gate C4 — authentication and personas.** Decides the sign-in mechanism,
-whether credentials are per-environment or shared, how many roles, whether a
-temporary inbox is needed, and which personas are test **data** rather than mabl
+whether any login needs **MFA**, whether tests will be trained or run **locally**
+or only in the cloud — those two settle the credential *type*, which is fixed at
+creation — how many roles, and which personas are test **data** rather than mabl
 credentials. Record those personas as policy for the authoring hand-off; do not
 build a DataTable for them here. Must not: offer to create a credential over the
-MCP server — that puts a live password in this transcript — or record anything but
-names. →
-`references/interview.md`.
+MCP server — that puts a live password in this transcript — record anything but
+names, ask whether credentials are per-environment (they cannot be; that is what
+environment variables are for), or report a credential's type without reading it
+back, since a workspace policy can override it. Send them to
+**Configuration > Credentials**, by name. → `references/interview.md`.
 
 **5. The depth sheet.** Decides the fifteen policy rows, presented **pre-filled
 in one pass** and marked so the operator's eye goes to the guesses. Enforce the

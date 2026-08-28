@@ -121,25 +121,80 @@ Draft from the auth deps, login files and env **key names** found in gate C2,
 then confirm:
 
 - do tests sign in, and by what mechanism (SSO/OIDC/SAML, forms, API token)
-- are credentials per-environment or shared
+- **does any login need MFA**, and is there a temporary inbox for emailed codes
+- **will tests be trained or run locally, or only in the cloud** — this decides
+  the credential *type*, and it is not reversible by editing a name
 - how many roles, and does any single test need two users at once
-- is there a temporary inbox for 2FA or emailed codes
 - which personas are **DataTable rows** (a set of test users driving one flow)
   versus which are genuinely separate **mabl credentials**
+
+**Do not ask whether credentials are per-environment.** They are not: a mabl
+credential is workspace-scoped, and the product has no per-environment binding for
+one. Asking collects an answer that cannot be implemented and sets an expectation
+the workspace will break. Where a login genuinely differs per environment, the
+answer is **environment variables** (`environments create --variables`), which are
+per-environment by construction — so this belongs in the D7 row, not here.
+
+### Four types, and two of them no agent can create
+
+The type is chosen at creation and decides where the credential may be used, so it
+has to be settled in this gate rather than discovered when a local run fails.
+
+| Type | Local training + local runs | Cloud runs | Creatable by an agent |
+|---|---|---|---|
+| Basic | yes | yes | yes — MCP, `cloudOnly: false` |
+| Basic with MFA | yes | yes | **no** |
+| Cloud | **no** | yes | yes — MCP, `cloudOnly: true` |
+| Cloud with MFA | **no** | yes | **no** |
+
+**MFA is a capability limit, not a decision.** `create_mabl_credentials` takes
+`workspaceId`, `name`, `username`, `password`, `cloudOnly` and `description` —
+there is **no MFA authenticator-secret parameter on any agent surface**. So a
+TOTP credential is web-app-only, full stop. Say that as a limit. Do not blur it
+into the *choice* below, which is a different sentence about a capability you
+have and are declining.
+
+**Cloud credentials cannot be used for local training or local execution** — that
+includes agent sessions started with "Generate against local app". If the answers
+above include any local authoring or any local run, a cloud credential is the
+wrong type and picking it strands them.
+
+### The CLI can't, the MCP server can, and this skill declines anyway
 
 **The CLI cannot create a credential and cannot read one back.** `mabl
 credentials` is **`list` only** (`mabl credentials --help`) — no `create`, no
 `describe`, no flag that returns a secret. `list` does return the **id**, name,
 type, description and created time; it never returns a value.
 
-**The hosted MCP server can create one** (`create_mabl_credentials`, taking a
-username and a password) — but **do not offer it**: it would mean the operator
+**The hosted MCP server can create a Basic or a Cloud credential**
+(`create_mabl_credentials`) — but **do not offer it**: it would mean the operator
 pasting a live password into this session's transcript. Route credentials to the
 web app instead, and say *why* you are declining a capability you have: *"I could
 create it over the MCP server, but that means your password goes through this
 transcript. Create it in the web app and just tell me the name."* Then record it
 **by name only**. A credential *name* is often itself a test-account email, which
 is fine for a committed file; a value never goes anywhere.
+
+**Hand them the place, not just the instruction.** The nav is
+**Configuration > Credentials**, then **+ New credentials** (nav as of this
+writing; owners and editors only). The MFA authenticator and the cloud-credentials
+checkbox are both options on that same form, which is why one trip covers every
+type. Name the path; do not send them to hunt for "the web app".
+
+### One workspace policy can override the type you asked for
+
+A workspace owner can turn on **Require cloud credentials** (`Settings >
+Workspace`), and mabl **enforces it in the API**, not just in the create form — so
+it applies to the web app, the CLI and the public API alike, for every user and
+every API key. Two consequences:
+
+- A credential created as Basic can come back as **Cloud**. Never report the type
+  you asked for; read it back from `credentials list` and report what is
+  actually stored.
+- If that policy is on and the team also trains locally, those two facts are in
+  conflict and the operator needs to know before authoring starts, not after a
+  local run fails to log in. Existing credentials are unaffected by the policy —
+  it never converts one for you.
 
 ## 5. The depth sheet — one filled-in pass
 

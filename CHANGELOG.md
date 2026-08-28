@@ -32,6 +32,14 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   only the gap and hands the ids back.
 
 ### Changed
+- `mabl-onboarding`'s credential gate now settles the credential *type* rather than
+  just the name. mabl has four (Basic, Basic with MFA, Cloud, Cloud with MFA), the
+  type is fixed at creation, and cloud credentials cannot be used for local
+  training or local runs — so the gate asks about MFA and local execution, points
+  at `Configuration > Credentials`, and reads the stored type back because a
+  workspace-level "require cloud credentials" policy is enforced in the API and can
+  override what was asked for. It also no longer asks whether credentials are
+  per-environment: they cannot be, and environment variables are the answer.
 - `mabl-onboarding` now re-derives drafted content from the source before the gate
   that writes it, scopes "I read this" claims to what was actually checked, and
   verifies an intended absence rather than only a presence. A live run drafted an
