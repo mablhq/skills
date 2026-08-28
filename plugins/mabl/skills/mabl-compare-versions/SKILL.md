@@ -33,11 +33,7 @@ The caller is owed two things, and they are the whole contract:
   on a named axis. An unrecognized change is reported as unclassified, never
   dropped and never forced into a class that nearly fits.
 - **Fidelity.** What is stated is what actually changed. That is what the two
-  gates in step 3 are for — the caller should never have to sift churn.
-
-Stating a direction is not judging it. "The match went from exact to substring,
-so it is less strict" is a fact about the step. Whether that is an improvement
-depends on what was asked for, which this skill does not know.
+  normalization gates are for — the caller should never have to sift churn.
 
 **The input is a test id or a flow id.** This skill takes the entity as given and
 resolves what it needs from it. It does not search for the entity, and it cannot
@@ -57,22 +53,20 @@ Every grant here is read-only. Nothing edits, restores, re-runs, or merges.
 | Read a flow's steps on a branch | `get_mabl_flow_steps` | `mabl flows export --mabl-branch` — but **without step ids** |
 
 **The diff itself is identical on both lanes** — same engine, byte-for-byte the
-same JSON — so no lane classifies better and step 4 applies either way. Judge
+same JSON — so no lane classifies better and classification applies either way. Judge
 availability by what you can see: **the MCP lane is open when
 `compare_mabl_test_versions` is in your tool list.**
 
 They differ only in what you can *ask*:
 
 - **MCP alone is enough for everything here**, including the flow reads that
-  step 3's relocation gate depends on.
-- **The CLI alone diffs tests and flows** but cannot date a version and cannot
-  list a flow's versions. It *can* read a flow on a branch —
-  `mabl flows export --mabl-branch` — but **the export carries no step ids**, so
-  it corroborates step 3's extraction check without completing it: it shows the
-  flow is non-empty and which step types are in it, and cannot prove that
-  *these* removed steps are the ones inside. On that lane, say extraction is
-  corroborated rather than confirmed, and never report an unproven removal as a
-  deletion.
+  the relocation gate depends on.
+- **The CLI alone diffs tests and flows** but cannot date a version or list a
+  flow's versions. It *can* read a flow on a branch
+  (`mabl flows export --mabl-branch`), but **the export carries no step ids**: it
+  shows the flow is non-empty and which types are in it, and cannot prove *these*
+  removed steps are the ones inside. On that lane extraction is corroborated, not
+  confirmed — and an unproven removal is never a deletion.
 
 Say which lane you used.
 
@@ -141,7 +135,7 @@ list_mabl_test_versions({ testId: "<*-j>", branch: "<name>" })  // one branch
 Newest first: `version`, `is_latest`, `created_on_branch`, `created_time`
 (**Unix epoch milliseconds**), `change_description`.
 
-Two fields to read carefully. **`created_on_branch` is needed later** — step 3's
+Two fields to read carefully. **`created_on_branch` is needed later** — the
 extraction check reads a flow on the branch it was created on. And
 **`change_description` is almost always absent**; where populated it is
 system-generated ("Merged master into …", "Restored version 8") and never names a
@@ -175,33 +169,23 @@ on the MCP lane the response often overflows and is written to a file. That is
 convenient: **the `jq` recipes in `references/reading-the-diff.md` work on either
 lane**, since both end as a file.
 
-```json
-{ "source": "…:4", "target": "…:5",
-  "summary": { "added": 0, "removed": 7, "changed": 1, "unchanged": 2 },
-  "steps": [ { "operation": "changed", "stepNumber": 3,
-               "from": { "StepGroup": {…} }, "to": { "EvaluateFlow": {…} } } ] }
-```
-
 Each side is a **single-key object keyed by step type**, carrying the step's `id`
-when it has one. Two things about that `id`, because Gate B depends on it:
+when it has one. Two things about that `id`, because the removal evidence depends on it:
 
-- **Steps written by hand through the step-edit tools carry no `id` at all.**
-  Agent-authored steps do. Where ids are absent, Gate B below degrades to the
-  body comparison — say so, because that cannot tell a move from a
-  delete-plus-identical-add.
-- **`mabl tests export --format json` drops step ids entirely** (the only `id` in
-  the file is the test's own). An export can count assertions but never resolve a
-  removal, so it is the wrong surface for this work.
+- **A step may carry no `id`** — see the reference. Where ids are absent the
+  evidence degrades to a body comparison, which cannot tell a move from a
+  delete-plus-identical-add. Say which you used.
+- **`mabl tests export --format json` drops step ids entirely**, so an export can
+  count assertions but never resolve a removal. Wrong surface for this work.
 
 **If either reference fails to resolve, report the comparison as *not run*** —
 never substitute a single-version export and call it a diff.
 
 ## 3. Normalize before you count
 
-Two gates run **before** any classification, because both change what the counts
-mean. Skipping them produces confident, wrong numbers.
+Both run **before** classification. Skipping them produces wrong, confident numbers.
 
-### Gate A — strip commentary, then re-compare
+### Strip commentary, then re-compare
 
 **`description` and `annotation` are server-rendered and drift from the step
 body.** They are regenerated by the platform, so a version can change dozens of
@@ -223,38 +207,40 @@ gate makes the skill look like it missed an edit it deliberately reclassified.
 - **An all-zeros summary is a finding.** "A version was created and it changed no
   steps" is real and common — usually a branch operation or a metadata save.
 
-### Gate B — a removed step is not a deleted step
+### A removed step is not a deleted step
 
 `removed` at test level means *left this position*, which has six causes besides
 deletion. Work them in order and stop at the first that matches:
 
-| Check | Verdict |
+| Evidence, in this order | Verdict |
 |---|---|
-| 1. The removed step's `id` appears on an `added` step | **moved** |
-| 2. Bodies match with `id`, `description`, `annotation` excluded | **id regenerated** — platform churn |
-| 3. Removed and added `EvaluateFlow` share a `flow.invariant_id` | **flow re-id** — a migration, not a change |
-| 4. A step on the target side is an `EvaluateFlow` and the removed step is inside that flow | **extracted into a reusable flow** — see below |
-| 5. Residue matches (commentary **and** find/target stripped) **and** that residue carries an author-supplied value | **retargeted** — same requirement, new selector |
-| 6. The type's source → target count dropped, or nothing of that type was added | **deleted** |
+| The removed step's `id` appears on an `added` step | **moved** — matched by step id |
+| Bodies match with `id`, `description`, `annotation` excluded | **id regenerated** — matched by identical body; platform churn |
+| Removed and added `EvaluateFlow` share a `flow.invariant_id` | **flow re-id** — matched by flow id; a migration, not a change |
+| A target-side `EvaluateFlow` contains the removed step | **extracted** — found inside the new reusable flow; see below |
+| Residue matches once commentary **and** find/target are stripped, **and** that residue carries an author-supplied value | **retargeted** — same requirement, different selector |
+| The type's count dropped, or nothing of that type was added | **deleted** |
 | Nothing matched, count flat, a same-type step was added | **unmatched removal** — name the candidate |
 
 **Name the method you used** — a body or `flow.invariant_id` match is weaker than
 an id match, since it can't distinguish a move from a delete-plus-identical-add.
-**Order is load-bearing**: a moved step also satisfies check 5, and only check 1's
-precedence keeps it out of the retargeting class.
+**Order is load-bearing**: a moved step also matches on residue, and only the
+precedence of the id match keeps it out of the retargeting class. Address the
+rows by their evidence, never by position — inserting one renumbers the rest.
 
-**Check 5 needs a discriminating residue.** Stripping the find/target subtree
-leaves `condition` and `extract`. Claim **retargeted** only if that residue holds
+**The retargeted match needs a discriminating residue.** Stripping the
+find/target subtree leaves `condition` and `extract` on an assertion or a wait,
+and nothing at all on a `Hover` or a `Click`. Claim **retargeted** only if that residue holds
 an author-supplied value — `comparatorValue`, `userPrompt`, `value`, `name`,
 `generator.pattern`, `extract.attributeName`, or a `conditionType` other than
 `presence`. Without one it matches every step of its type (`Hover` and `Click`
-strip to `actionCode` alone): fall to check 7. Report a real match under
-Retargeting in §4 with the selector before and after.
+strip to `actionCode` alone): fall through to the count rows below. Report a real
+match under Retargeting, with the selector before and after.
 
-**Checks 6 and 7 — "deleted" has to be earned.** Count the type on both sides
+**"Deleted" has to be earned.** Count the type on both sides
 first. A removed `WaitUntil` against `WaitUntil 2 → 2` means something replaced
 it, not that a wait was dropped. Unchanged count plus a same-type addition is an
-**unmatched removal**: name the candidate and say Gate B could not join them.
+**unmatched removal**: name the candidate and say the evidence could not join them.
 
 ### The extraction case, and the trap in it
 
@@ -267,7 +253,7 @@ and every removal falls through unless you read inside the flow.
 Take `flow.invariant_id` from any target-side `EvaluateFlow`, get its branch from
 `list_mabl_flow_versions`, then read it **on that branch**. Ids survive
 extraction, so the match is exact. Recipes: `references/reading-the-diff.md`,
-"Gate B check 4".
+"Was it extracted into a reusable flow?".
 
 **Pass the branch.** `get_mabl_flow_steps` takes a bare invariant id and defaults
 to master, so a flow created on an agent-edit branch reads back `step_count: 0` —
@@ -284,29 +270,35 @@ Report the primary split first, then the detail. Two tiers.
 
 | Class | How you see it |
 |---|---|
-| Commentary rewrite | Gate A: only `description` / `annotation` differ |
-| Identity churn | Gate B check 2 or 3 |
-| Reordering | Gate B check 1 |
-| Extraction / inlining | Gate B check 4 |
+| Commentary rewrite | only `description` / `annotation` differ once both are stripped |
+| Identity churn | matched by identical body, or by flow id |
+| Reordering | matched by step id **and** it crossed only markers — the order of effective steps held |
+| Extraction / inlining | found inside the new reusable flow |
 | Regrouping | an added or removed `StepGroup` (`actionCode: "step_group"`) with its leaves unchanged — costs exactly one step |
 | Marker step | an `Echo` added or changed — it logs, it asserts nothing |
 | Binding representation | a binding whose resolved variable is the same on both sides (e.g. a `{name, tokens}` object becoming an inline `{{@…}}` token string) |
 
-Two asymmetries not to flatten:
+**A move is not automatically nonfunctional.** An id match proves the step is the
+same step, not that behaviour held. Split on what it crossed: a marker moving, or
+an effective step crossing only markers, changes nothing. An effective step
+crossing another — a click past a click, an assertion past a flow invocation —
+changes the order things run in, so it is functional. Effective means it acts or
+asserts; `Echo` does not.
 
-- **An added `Echo` is noise; removed `Echo`s are evidence.** Echo proves nothing
-  itself, but it is used as a section marker, so a drop in Echo count can mean
-  whole sections went. Report the direction.
-- **A group header embeds its step count** — `"Step Group: \"…\" (7 steps)"` — so
-  any change to a group's contents also churns its header. Expect one extra
-  churned step per affected group and don't report it as a second finding.
+Two asymmetries not to flatten. **An added `Echo` is noise; removed `Echo`s are
+evidence** — it is used as a section marker, so a drop in Echo count can mean
+whole sections went; report the direction. And **a group header embeds its step
+count** (`"Step Group: \"…\" (7 steps)"`), so any change inside a group churns its
+header — expect one extra churned step per affected group, not a second finding.
 
 ### Functional — behaviour changed
 
 | Class | How you see it |
 |---|---|
 | Coverage added | new `Assert*` / `AccessibilityCheck` steps |
-| Coverage deleted | Gate B exhausted with no match |
+| Resequencing | a step that acts or asserts crossed another one — name what it crossed |
+| Coverage deleted | no match, and the type's count dropped or nothing of that type was added |
+| Unmatched removal | no match, count flat, a same-type step added — report under Unresolved with the candidate named |
 | Strictness | a change in what the assertion requires — see the binding fields below |
 | Retargeting | same check, different selector — a `findTarget` swapped for a `locator`, a class chain for a `role=` |
 | Data binding | a `{{@…}}` token appearing or disappearing in a body field |
@@ -329,8 +321,8 @@ Exclude only these, each for a stated reason:
 
 | Excluded | Why |
 |---|---|
-| `description`, `annotation` | server-rendered commentary — Gate A already |
-| `id` | identity, not behaviour — Gate B's job |
+| `description`, `annotation` | server-rendered commentary — the commentary strip already covers it |
+| `id` | identity, not behaviour — the removal evidence handles it |
 | `condition.attribute` | execution-inert on a presence condition; it round-trips the UI selection and never affects the run |
 | absent ↔ its explicit default | serialization churn, not a change — see below |
 
@@ -420,10 +412,14 @@ the captured diff, so a read-only comparison leaves nothing in `git status`.
 - **Behavioural summary first** — *N functional, M nonfunctional*, carrying
   explicit zeros for unclassified and unresolved so a section omitted for being
   empty still reads as looked-at. If nothing survived the gates, say so.
+  **Both numbers count steps**, and a step belonging to two classes is counted
+  once, under the more consequential one. Each must equal the sum of the class
+  counts reported below it — a headline that disagrees with its own list is a
+  reporting bug, so add it up before printing.
 - **Nonfunctional** — one line per class that fired, with counts. Commentary
   rewrites get their step numbers and their before/after text, not just a count.
-- **Functional** — structure (added / deleted, with the Gate B method named),
-  assertions per type source → target with the net, then one row per changed
+- **Functional** — structure (added / deleted, naming the evidence each verdict
+  rests on), assertions per type source → target with the net, one row per changed
   binding field with its direction, then data bindings, dates, conditionals.
 - **Unclassified** — every real change that fits no class above, with its field,
   old value and new value.
@@ -435,10 +431,14 @@ no zero rows, no heading with nothing under it.
 
 **Reconcile before printing.** Exclude check-1 (moved) pairs from added and
 removed counts — a move is one relocation, not a delete plus an add — then assert
-per type that `added == net + removed`. A mismatch is a reporting bug: find it.
+in aggregate that `added == net + removed`. **Not per type** — a `changed` step
+can change type, moving one count between two types while appearing in neither
+`added` nor `removed`, so the per-type form false-alarms on a correct diff. A
+mismatch in the aggregate is a reporting bug: find it.
 
 **The reply is a lossy view of the report; the loss must not land on the
-caveats.** Name the Gate B method behind every verdict, list every added step
+caveats.** Give the evidence behind every verdict in words the reader can check
+without opening this skill, list every added step
 including non-assertions, quote counts from the type table and not the prose, and
 leave an adjacency observation an observation.
 
@@ -470,7 +470,7 @@ mabl flows compare <source> <target> --output json
   flow changed and note the reach; `list_mabl_tests_using_flow` enumerates
   callers and this skill doesn't call it for you.
 - **A flow read defaults to master.** Pass the branch from
-  `created_on_branch` — the same trap as step 3.
+  `created_on_branch` — the same trap as the extraction check.
 
 ## Boundaries
 

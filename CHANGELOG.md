@@ -40,8 +40,18 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   from a deletion is not allowed to assert that a step survived.
 - **A moved step is counted once.** The diff renders a move as a removal plus an
   addition, so the pair is excluded before the add/remove totals are taken and
-  the per-type arithmetic has to close, which stops the report claiming one more
-  added assertion than it has.
+  the arithmetic has to close, which stops the report claiming one more added
+  assertion than it has. The check is on the aggregate, not per type: a step that
+  changes type moves one count between two types while appearing in neither
+  `added` nor `removed`, so the per-type form raises false alarms on a correct
+  diff.
+- **The removal evidence is emitted as evidence, and the skill draws the
+  conclusion.** Candidate matches come back as lists rather than yes/no, because
+  two identically-bodied removals can otherwise both claim the same added step
+  and hide a real deletion. Each verdict is reported by the evidence it rests on
+  — matched by step id, found inside the new reusable flow, same type with the
+  count unchanged — rather than by an internal rule name the reader has no way to
+  look up.
 - **Extraction into a reusable flow gets its own resolution path**, because it is
   the most destructive-looking change that removes nothing and it produces no
   added step to pair against: the existing step group *becomes* the flow
