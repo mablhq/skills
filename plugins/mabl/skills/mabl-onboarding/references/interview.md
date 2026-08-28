@@ -186,15 +186,31 @@ type. Name the path; do not send them to hunt for "the web app".
 A workspace owner can turn on **Require cloud credentials** (`Settings >
 Workspace`), and mabl **enforces it in the API**, not just in the create form — so
 it applies to the web app, the CLI and the public API alike, for every user and
-every API key. Two consequences:
+every API key.
 
-- A credential created as Basic can come back as **Cloud**. Never report the type
-  you asked for; read it back from `credentials list` and report what is
-  actually stored.
-- If that policy is on and the team also trains locally, those two facts are in
-  conflict and the operator needs to know before authoring starts, not after a
-  local run fails to log in. Existing credentials are unaffected by the policy —
-  it never converts one for you.
+**You cannot read that policy, so do not branch on it.** No agent surface exposes
+it: `workspaces describe --output json` carries other workspace policy flags but
+not this one, and the MCP `list_mabl_workspaces` returns less again — ids and
+names. The only observable signal is the `Type` column on an **existing**
+credential, and an onboarding run is looking at a workspace that has none. That is
+the one moment the signal is guaranteed absent.
+
+So handle it the two ways that do not require reading it:
+
+- **Ask the operator.** Only an owner can set it and they can see it at `Settings >
+  Workspace`; the caller in this gate has already had their role resolved in C1.
+  Ask plainly — *"is 'Require cloud credentials' turned on for this workspace?"* —
+  and if they do not know, record it as unknown rather than assuming off.
+- **Read the type back after the fact.** Once a credential exists, `credentials
+  list` returns its type. Report **that**, never the type that was asked for. A
+  credential requested as Basic can be stored as Cloud and nothing in the request
+  says so.
+
+If the answer is yes and the team also trains or runs locally, those two facts are
+in conflict, and it is worth saying out loud in this gate: every new credential
+will be cloud-only, and cloud credentials do not work for local training or local
+runs. Existing credentials are unaffected — the policy never converts one for
+you — so a workspace can hold both kinds and only the new ones are constrained.
 
 ## 5. The depth sheet — one filled-in pass
 
