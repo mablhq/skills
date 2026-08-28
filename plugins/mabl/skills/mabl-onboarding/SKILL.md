@@ -264,8 +264,9 @@ credentials. Record those personas as policy for the authoring hand-off; do not
 build a DataTable for them here. Must not: offer to create a credential over the
 MCP server — that puts a live password in this transcript — record anything but
 names, ask whether credentials are per-environment (they cannot be; that is what
-environment variables are for), or report a credential's type without reading it
-back, since a workspace policy can override it. Send them to
+environment variables are for), or raise credential type before reading
+`require_cloud_only_credentials` off `workspaces describe` — that key is omitted
+when the policy is off, so absent means off, not unknown. Send them to
 **Configuration > Credentials**, by name. → `references/interview.md`.
 
 **5. The depth sheet.** Decides the fifteen policy rows, presented **pre-filled

@@ -32,6 +32,9 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   only the gap and hands the ids back.
 
 ### Changed
+- `mabl-onboarding`'s credential gate now reads `require_cloud_only_credentials`
+  off `mabl workspaces describe` instead of asking about it. The key is omitted
+  when the policy is off, so an absent key means off rather than unknown.
 - `mabl-onboarding`'s credential gate now settles the credential *type* rather than
   just the name. mabl has four (Basic, Basic with MFA, Cloud, Cloud with MFA), the
   type is fixed at creation, and cloud credentials cannot be used for local

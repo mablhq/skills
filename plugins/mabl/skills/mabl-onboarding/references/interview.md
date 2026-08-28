@@ -188,29 +188,35 @@ Workspace`), and mabl **enforces it in the API**, not just in the create form �
 it applies to the web app, the CLI and the public API alike, for every user and
 every API key.
 
-**You cannot read that policy, so do not branch on it.** No agent surface exposes
-it: `workspaces describe --output json` carries other workspace policy flags but
-not this one, and the MCP `list_mabl_workspaces` returns less again — ids and
-names. The only observable signal is the `Type` column on an **existing**
-credential, and an onboarding run is looking at a workspace that has none. That is
-the one moment the signal is guaranteed absent.
+**Read it, don't ask about it** — and read it *before* you raise credential type
+at all, because it can settle the question for you:
 
-So handle it the two ways that do not require reading it:
+```bash
+mabl workspaces describe <WORKSPACE_ID> --output json \
+  | jq '.require_cloud_only_credentials // false'
+```
 
-- **Ask the operator.** Only an owner can set it and they can see it at `Settings >
-  Workspace`; the caller in this gate has already had their role resolved in C1.
-  Ask plainly — *"is 'Require cloud credentials' turned on for this workspace?"* —
-  and if they do not know, record it as unknown rather than assuming off.
-- **Read the type back after the fact.** Once a credential exists, `credentials
-  list` returns its type. Report **that**, never the type that was asked for. A
-  credential requested as Basic can be stored as Cloud and nothing in the request
-  says so.
+**The key is omitted entirely when the policy is off**, not returned as `false`.
+So the `// false` default is load-bearing, and a missing key means *off* rather
+than *unknown* — do not report absence as "couldn't tell". (Verified 2026-08-28 on
+a workspace with the policy on, where the key is present and `true`.)
 
-If the answer is yes and the team also trains or runs locally, those two facts are
-in conflict, and it is worth saying out loud in this gate: every new credential
-will be cloud-only, and cloud credentials do not work for local training or local
-runs. Existing credentials are unaffected — the policy never converts one for
-you — so a workspace can hold both kinds and only the new ones are constrained.
+**This is a CLI read, not an MCP one.** `list_mabl_workspaces` returns ids and
+names only, so a session driving MCP alone cannot see this. Say which surface you
+used.
+
+**If the policy is on, it is a hard rejection rather than a silent coercion.** A
+create with `cloudOnly: false` fails with `HTTP 400 : This workspace requires
+credentials to be created as cloud credentials (set cloud_only: true)` and creates
+nothing — no partial state, nothing to clean up. So you cannot end up with a
+credential whose type quietly differs from the one that was asked for.
+
+What it means for this gate: if the policy is on, every **new** credential will be
+cloud-only, and cloud credentials do not work for local training or local runs. If
+the team also authors or runs locally, say that plainly here rather than letting
+them meet it as a failed login. Existing credentials are unaffected — the policy
+never converts one for you — so a workspace can hold both kinds and only new ones
+are constrained.
 
 ## 5. The depth sheet — one filled-in pass
 
