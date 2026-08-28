@@ -32,8 +32,8 @@ mabl auth login --auto   # one-time OAuth in browser — required before any com
 
 You also need the **`chrome-devtools` MCP**, which drives its own real Chrome
 instance, to explore the app during the design phase. Don't use
-`chrome-for-mabl` here — that server is reserved for `mabl-debug`, where it
-attaches to the specific Chrome instance `mabl agent debug session` launches.
+`chrome-for-mabl` here — that server attaches to the specific Chrome instance
+`mabl agent debug session` launches, so it can't drive a browser of its own.
 
 ## The two constraints — fix these before anything else
 
@@ -133,6 +133,10 @@ mabl agent authoring status --session-id <sessionId>
 The `mabl-test-authoring` skill covers this command in depth (the
 `--test-information` fields, API tests, local mode). Use it for the per-test
 detail; this skill owns deciding *which* tests to author and *in what order*.
+
+**Requires `mabl-test-authoring`.** If that skill isn't there, stop and say
+which skill is missing — don't author the suite without it, and don't guess how
+to install it, because that depends on how this skill was installed.
 
 ### When a session pauses to ask
 
@@ -437,7 +441,7 @@ definition — the same mechanism the mabl web app's "Add reference tests" uses.
 ### Referencing vs copying — two different asks
 
 A reference says *"match this test's conventions."* A copy says *"start from
-this test's actual steps."* They solve different problems and you can use both
+this test's actual steps."* They solve different problems and both apply
 at once:
 
 | | Reference block | Copy |
@@ -458,10 +462,10 @@ suite is copies** and only one test per path is authored cold. Which authored
 test each copy starts from is its own decision — see *The copy graph* below.
 
 Don't let reusable flows talk you out of it. It is tempting to reason "login and
-navigation are already flows, so there's nothing to inherit" — open the test
-you'd copy from with `get_test_definition` and count. The flows cover the
-walking about; the steps *between* them are inline, and they are the ones you
-actually want:
+navigation are already flows, so there's nothing to inherit" — export the test
+you'd copy from (`mabl tests export <testId> --format json --file
+/tmp/source.json`) and count. The flows cover the walking about; the steps
+*between* them are inline, and they are the ones you actually want:
 
 - the variable setup that names and shapes the subject
   (`Generate a string "editapp-{{digit:6}}"` → `appName`)

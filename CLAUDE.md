@@ -62,13 +62,43 @@ This repo is public — external developers read our PRs. Write them short and h
 
 `gh skill install` copies ONE skill folder at a time. Anything a skill needs (references, scripts, version pins) must live inside its own `plugins/mabl/skills/<name>/` folder. Never reference files from outside the skill folder.
 
+For the same reason, a body that routes the reader to a **sibling skill** has to confirm that skill is there first — someone who installed only the skill they're reading has no other copy to route to. Keep the block to three lines, at the place the reference actually happens:
+
+```markdown
+**Requires `mabl-test-edit`.** If that skill isn't there, stop and say which
+skill is missing — don't attempt the edit yourself, and don't guess how to
+install it, because that depends on how this skill was installed.
+```
+
+**`**Requires \`<name>\`.**` is the checked token.** A structural declaration, not a sentence: CI verifies it exactly, it reads as prose, and it names the skill so the error message is right. Every other word around it is free to edit. What CI can't verify is that the fallback beside it is correct — that stays a review item.
+
+**Name the missing skill, never an install command.** A skill cannot know which of the five surfaces installed it, so `gh skill install ...` is wrong guidance for the four readers who used a marketplace instead. Report what's missing and let the user install it their way.
+
+Don't name a sibling where nothing routes there — say the thing itself instead.
+
+**A `description` routes for the matcher, not mid-workflow, so it needs no declaration.** Six of the eight cross-skill references in this repo sit in frontmatter descriptions (`for CREATING a new test use mabl-test-authoring`), and CI deliberately exempts them: that text tells a reader they're in the wrong skill, it isn't a hand-off they depend on to finish a task. Forcing a declaration there would also spend the 1024-character budget the description is fighting for.
+
+**Routing lives in `SKILL.md`.** A `references/` file carries mechanics, not hand-offs — a reference restating a route is a second copy of a decision `SKILL.md` owns. CI checks every `.md` in the skill folder and wants the declaration in the *same file* as the mention, because a reference is loaded on its own and an agent acting from one may not have `SKILL.md` in context. A reference that trips this usually wants rewording rather than a second copy of the declaration.
+
 ### Folder name = frontmatter name
 
-The frontmatter `name` in `SKILL.md` must match the folder name exactly, lowercase with hyphens. Mismatched or prefixed names (`mabl/debug`, `mabl:debug`) silently fail to load in Copilot.
+The frontmatter `name` in `SKILL.md` must match the folder name exactly, lowercase with hyphens. Mismatched or prefixed names (`mabl/debug`, `mabl:debug`) silently fail to load in Copilot. CI checks this.
 
-### Every skill starts with the mabl CLI prerequisite block
+### Descriptions have a 1024-character budget
 
-Every `SKILL.md` must begin its instructions with a Prerequisites section that (1) installs the mabl CLI if missing and (2) upgrades it if older than the minimum version the skill needs. Use this canonical block, adjusting `MIN_MABL_CLI_VERSION` to the oldest CLI version that supports the commands the skill uses:
+OpenAI Codex hard-truncates a skill description at 1024 characters, mid-word, so anything past that never reaches the matcher that decides whether the skill fires. CI measures the description the way a YAML loader resolves it — a block scalar joined into one line — and fails over budget. Front-load scope and triggers, and keep boundary clauses and negative triggers ahead of anything optional so truncation can't eat them.
+
+### Frontmatter carries only the six spec keys
+
+`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools` — the full list the Agent Skills spec allows. Any other key makes claude.ai skill upload, the Skills API, and `package_skill.py` fail with a hard "Unexpected key(s)" error, so Claude Code-only fields (`disable-model-invocation`, `user-invocable`, `model`, `context`, `hooks`) stay out; a plugin-delivered skill carrying `disable-model-invocation` is also invisible in Cursor. CI checks this.
+
+### Any skill that uses the mabl CLI carries the prerequisite block
+
+A `SKILL.md` whose body invokes the mabl CLI — for anything — must begin its instructions with a Prerequisites section that (1) installs the CLI if missing and (2) upgrades it if older than the minimum version the skill needs. A skill that never runs a `mabl` command doesn't carry the block: it installs and version-checks a binary, which is a real prerequisite where a command runs and dead weight where none does.
+
+Where a skill drives the CLI on only some of its paths, say so rather than opening with an unconditional install. An `npm install -g` and a browser login sitting under a section that says another surface suffices tells a reader on that surface to do work they don't need.
+
+Use this canonical block, adjusting `MIN_MABL_CLI_VERSION` to the oldest CLI version that supports the commands the skill uses:
 
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
@@ -89,6 +119,8 @@ node .github/scripts/validate-copilot-manifest.mjs     # root plugin.json (Copil
 node scripts/validate-template.mjs                      # Cursor manifests (official validator)
 node .github/scripts/validate-cursor-parity.mjs        # mcp.json == .mcp.json + Cursor/Claude parity
 node .github/scripts/validate-codex-parity.mjs         # Codex/Claude manifest parity + marketplace
+node --test .github/scripts/lib/frontmatter.test.mjs    # the frontmatter reader's folding rules
+node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, sibling dependency declarations
 ```
 
 `scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (we ship no hooks), not an error.
@@ -103,4 +135,6 @@ To test the Codex plugin: `codex plugin marketplace add .` (or `mablhq/skills`) 
 
 ## Syncing with mabl-cli
 
-The skills originated from `mabl-cli` (`runtime/src/resources/skills/`). Content fixes that apply there too should be synced back in a follow-up PR on mabl-cli.
+These skills also ship inside the mabl CLI. mabl keeps the two copies in sync, so an outside contributor has nothing extra to do — fix it here.
+
+mabl maintainers: mirror content fixes into the CLI's copy in a follow-up PR.
