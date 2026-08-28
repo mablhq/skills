@@ -150,14 +150,40 @@ has to be settled in this gate rather than discovered when a local run fails.
 **MFA is a capability limit, not a decision.** `create_mabl_credentials` takes
 `workspaceId`, `name`, `username`, `password`, `cloudOnly` and `description` —
 there is **no MFA authenticator-secret parameter on any agent surface**. So a
-TOTP credential is web-app-only, full stop. Say that as a limit. Do not blur it
-into the *choice* below, which is a different sentence about a capability you
-have and are declining.
+TOTP credential is web-app-only, full stop. Say that as a limit, and hand them the
+create form rather than a shrug:
+
+```
+https://app.mabl.com/workspaces/<workspace-id>/configure/credentials/create
+```
+
+Do not blur this into the *choice* below, which is a different sentence about a
+capability you have and are declining.
 
 **Cloud credentials cannot be used for local training or local execution** — that
 includes agent sessions started with "Generate against local app". If the answers
 above include any local authoring or any local run, a cloud credential is the
 wrong type and picking it strands them.
+
+**When both types are open to them, offer the choice — do not pick.** A workspace
+without `require_cloud_only_credentials` can hold either kind, and the trade is a
+real one with an owner: Cloud is the stronger posture, because the password can
+never be retrieved again by anyone, while Basic is the one that still works for
+local training and local runs. Neither is the obvious default, and choosing
+silently on their behalf is how a team discovers months later that their
+credentials are weaker, or that nobody can train locally, without anyone having
+decided it. Put it to them in one line with the cost attached:
+
+> *"Your workspace allows both. **Basic** works everywhere, including local
+> training and local runs. **Cloud** is more secure — the password can never be
+> read back, by you or by mabl support — but it will not work for anything local.
+> Which do you want as the default for this workspace?"*
+
+Only where the C4 answers have already ruled one out — they told you every run is
+cloud, or they told you people train locally — say so and name which the answer
+settled, rather than asking a question they have effectively answered. And where
+`require_cloud_only_credentials` is on, there is no choice to offer at all; say
+that the workspace policy already decided it.
 
 ### The CLI can't, the MCP server can, and this skill declines anyway
 
@@ -175,11 +201,19 @@ transcript. Create it in the web app and just tell me the name."* Then record it
 **by name only**. A credential *name* is often itself a test-account email, which
 is fine for a committed file; a value never goes anywhere.
 
-**Hand them the place, not just the instruction.** The nav is
-**Configuration > Credentials**, then **+ New credentials** (nav as of this
-writing; owners and editors only). The MFA authenticator and the cloud-credentials
-checkbox are both options on that same form, which is why one trip covers every
-type. Name the path; do not send them to hunt for "the web app".
+**Hand them the link, not just the instruction.** Substitute the workspace id you
+resolved in C1 and give them the URL — it lands directly on the create form, and a
+URL survives a nav reshuffle in a way that a menu path does not:
+
+```
+https://app.mabl.com/workspaces/<workspace-id>/configure/credentials/create
+```
+
+The nav equivalent is **Configuration > Credentials** → **+ New credentials** (as
+of this writing; owners and editors only). The **MFA authenticator** and the
+**cloud credentials** checkbox are both options on that same form, which is why one
+trip covers every type — including the two you cannot create yourself. Never send
+them to hunt for "the web app".
 
 ### One workspace policy can decide the type for you
 
