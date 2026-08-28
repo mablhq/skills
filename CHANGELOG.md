@@ -32,6 +32,11 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   only the gap and hands the ids back.
 
 ### Changed
+- `mabl-onboarding` now offers the Basic-vs-Cloud credential choice instead of
+  picking, in any workspace that allows both, and states the trade: Basic works for
+  local training and local runs, Cloud is stronger because the password can never
+  be read back. It also links straight to the credential create form rather than
+  naming a menu path, which is where the two MFA types no agent can create are made.
 - `mabl-onboarding`'s credential gate now reads `require_cloud_only_credentials`
   off `mabl workspaces describe` instead of asking about it. The key is omitted
   when the policy is off, so an absent key means off rather than unknown.
