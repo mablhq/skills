@@ -71,6 +71,12 @@ When authoring, prefer to be explicit — pass `--capabilities` rather than leav
 
 *(Absent vs empty in the JSON, and how `list` renders each: `references/cli-surface.md`.)*
 
+### The one filter that is not empty, and cannot be changed here
+
+`test_types` is a fourth scoping field, and it does not follow the rule above. Every instruction the CLI creates is stored as `test_types: ["browser"]`, and **no CLI command — `create`, `update` or `list` — exposes a flag for it.** So a rule written here reaches browser tests only; API, mobile and performance tests never read it, and nothing in the output says so.
+
+Say this out loud whenever the change is about a non-browser test type, and send the reader to the mabl app to widen the row. Do not claim a rule applies to a test type this surface cannot scope it to.
+
 ## Establish the workspace, and name it out loud
 
 **The workspace is an input.** When the request names one, take it and move on.
@@ -197,7 +203,7 @@ Report in this shape. It leads with placement because that is the part most like
 2. **Where this change belongs** — the placement dimensions with their reasoning. Flag any judgment call the requester might disagree with.
 3. **What this rule will match** — the specificity finding, in plain words. Offer the narrowing; do not withhold the change over it.
 4. **What is already there that this touches** — **all** enabled candidates first, then disabled, never interleaved. One relationship per row from exactly this vocabulary: **owns-the-topic** / **adjacent** / **unrelated** / **contradicts**. Mark unscoped rows as such, and show application and environment scope **by name**.
-5. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the 1000 limit. For a rescope, the scope before and after, by name, and what newly gains the rule.
+5. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the 2000 limit. For a rescope, the scope before and after, by name, and what newly gains the rule.
 6. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope. Each states its consequence.
 7. **To apply** — the exact commands, in order, clearly not yet run.
 
@@ -222,13 +228,15 @@ So a narrowly-placed change created without `--application-ids` silently ships w
 
 **Confirm every id written, not just the first.** Echo each command and its result, then `describe` each affected instruction.
 
+`create` and `update` print the resulting row as JSON on their own and **reject `-o`** with `Unknown argument: o`, exiting non-zero without writing. Only `list` and `describe` take `-o json`. So read the id straight out of what `create` printed — never re-list and match on the name.
+
 **Never `delete`.** The command exists; this skill does not use it. `update <id> --disabled` is reversible with `--enabled` and keeps the audit trail. Deleting is not undoable and takes the history with it.
 
 ## Hard rules
 
 - **Never invent a rule.** Every word of proposed instruction text traces to what was actually requested. If the request is vague, ask — do not pad it with generic testing advice the team never asked for.
 - **Imperative and checkable.** "Wait for the spinner to disappear before asserting", not "handle timing properly." A reader must be able to tell whether the agent complied.
-- **1000 characters, hard.** A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
+- **2000 characters, hard.** The server enforces it and says so: `instruction_text must be 2000 characters or less`. The CLI's own `--help` claims 1000 — it is wrong; trust the server. A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
 - **One change — but landing it may take two writes.** Resolving a contradiction, or enabling the row being amended, is part of landing the change. Improvements merely *noticed* get mentioned, not written.
 - **Reflect intent, but flag a footgun.** If the change looks like trouble (disabling healing entirely, a rule far more specific than its scope, contradicting the team's own conventions), say so once, plainly, and let the human decide.
 

@@ -17,10 +17,11 @@ mabl agent-instructions delete    <id>          # exists; this skill never uses 
 ```
 
 - `describe` and `update` take the id as a **positional** and accept **no `-w`** — instruction ids are globally unique.
+- **`-o` exists only on `list` and `describe`.** `create` and `update` print the resulting row as JSON unconditionally, and passing `-o` to either fails with `Unknown argument: o` and a non-zero exit, writing nothing.
 - `--disabled` and `--enabled` conflict with each other on `update`; pass one.
 - `--capabilities`, `--application-ids` and `--environment-ids` are **arrays** — pass multiple values space-separated.
 - `list` accepts **no filters** beyond workspace and limit. Narrowing to one capability happens client-side, in the read script below.
-- The 1000-character cap on `instruction_text` is **server-enforced**: exceeding it returns a 400 on both `create` and `update`.
+- The cap on `instruction_text` is **2000 characters, server-enforced** — `instruction_text must be 2000 characters or less`, non-zero exit, nothing written. Measured 2026-08-28 by bisection: 2000 accepted, 2001 rejected. **The CLI's `--help` says "max 1000 characters" and is wrong.**
 
 ## The silent listing default
 
@@ -46,6 +47,7 @@ Each row from `list` / `describe` carries, among other fields:
 | `capabilities[]` | `authoring` · `recovery` · `results_analysis`; **optional** |
 | `application_ids[]` | may be **absent** rather than `[]` |
 | `environment_ids[]` | may be **absent** rather than `[]` |
+| `test_types[]` | always `["browser"]` — see below; lowercase on the wire |
 | `created_by_id` · `created_time` · `last_updated_by_id` · `last_updated_time` | audit fields, epoch ms |
 
 **Read every array defensively** — `r.get('application_ids') or []`, never `r['application_ids']`. Absent and empty both mean "all", and roughly half the rows in a real workspace omit these fields entirely.
@@ -67,7 +69,7 @@ So widening a row's scope means passing **every id the row should end up with**,
 
 `--enabled` is not a separate field: it is stored as `disabled: false`. That is why enabling is a real write with its own approval, and why it can be combined with a text edit in one command — which this skill deliberately does not do, to keep the two decisions separable.
 
-> **Untested:** whether passing a scope flag with **no values** on `update` clears the field back to "all". It plausibly sends an empty array, which means all — but it has not been run. Do not rely on it; state it as unknown if it comes up.
+**Passing a scope flag with no values clears it.** Measured 2026-08-28: `update <id> --application-ids` with nothing after it stores `application_ids: []` — an empty array, not an absent field. Empty means all, so the row does widen back to every application. But the two are not identical on screen: `list`'s table renders an absent field as `All` and an empty array as a **blank cell**, so a row cleared this way reads as scoped-to-nothing to the next person. Prefer it anyway over leaving a stale scope; just say in the report that the field is now empty rather than absent.
 
 ## How `list` renders scope — and why to read the JSON instead
 
@@ -80,6 +82,14 @@ The table view renders the capability column as `capabilities?.join(', ') ?? 'Al
 | `['authoring']` | `authoring` |
 
 **`All` and blank mean the same thing** — a workspace-wide rule every agent reads. A blank capability cell is the easiest row in a set to misread as "scoped to nothing" when it means the opposite. Judge scope from `-o json`, never from the table.
+
+## `test_types` is a closed lane
+
+Every row carries `test_types`, and every row this CLI creates carries exactly `["browser"]`. There is **no flag for it on `create`, `update` or `list`** — the value is a server default the CLI never sends and never lets you change.
+
+The consequence is a scoping dimension that behaves nothing like the other three: it is never empty, so it never means "all". An instruction managed from here applies to browser tests and to nothing else.
+
+Report it when it matters and name the fallback — widening a row to API, mobile or performance tests is done in the mabl app, not from this surface. Never describe a rule as workspace-wide without that caveat.
 
 ## Resolving the workspace
 
