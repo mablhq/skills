@@ -75,7 +75,7 @@ When authoring, prefer to be explicit — pass `--capabilities` rather than leav
 
 `test_types` is a fourth scoping field, and it does not follow the rule above. Every instruction the CLI creates is stored as `test_types: ["browser"]`, and **no CLI command — `create`, `update` or `list` — exposes a flag for it.** So a rule written here reaches browser tests only; API, mobile and performance tests never read it, and nothing in the output says so.
 
-Say this out loud whenever the change is about a non-browser test type, and send the reader to the mabl app to widen the row. Do not claim a rule applies to a test type this surface cannot scope it to.
+The mabl web app hardcodes the same value and offers no picker, so there is no other surface to route someone to. Say this out loud whenever the change is about a non-browser test type, and never claim a rule applies to a test type nothing can scope it to.
 
 ## Establish the workspace, and name it out loud
 
@@ -236,7 +236,7 @@ So a narrowly-placed change created without `--application-ids` silently ships w
 
 - **Never invent a rule.** Every word of proposed instruction text traces to what was actually requested. If the request is vague, ask — do not pad it with generic testing advice the team never asked for.
 - **Imperative and checkable.** "Wait for the spinner to disappear before asserting", not "handle timing properly." A reader must be able to tell whether the agent complied.
-- **2000 characters, hard.** The server enforces it and says so: `instruction_text must be 2000 characters or less`. The CLI's own `--help` claims 1000 — it is wrong; trust the server. A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
+- **2000 characters, hard.** The server enforces it and says so: `instruction_text must be 2000 characters or less`. Trust that over any number printed in `--help`. A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
 - **One change — but landing it may take two writes.** Resolving a contradiction, or enabling the row being amended, is part of landing the change. Improvements merely *noticed* get mentioned, not written.
 - **Reflect intent, but flag a footgun.** If the change looks like trouble (disabling healing entirely, a rule far more specific than its scope, contradicting the team's own conventions), say so once, plainly, and let the human decide.
 

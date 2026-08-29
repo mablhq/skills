@@ -7,7 +7,7 @@ Verified against mabl CLI `2.129.2` (measured 2026-08-28). Every command here is
 ```
 mabl agent-instructions list      -w <ws> -o json --limit <n>
 mabl agent-instructions describe  <id> -o json
-mabl agent-instructions create    -w <ws> --name <n> --instruction-text "<=1000 chars>"
+mabl agent-instructions create    -w <ws> --name <n> --instruction-text "<=2000 chars>"
                                   [--capabilities authoring recovery results_analysis]
                                   [--application-ids <a>...] [--environment-ids <e>...] [--disabled]
 mabl agent-instructions update    <id> [--name <n>] [--instruction-text "<...>"]
@@ -21,7 +21,7 @@ mabl agent-instructions delete    <id>          # exists; this skill never uses 
 - `--disabled` and `--enabled` conflict with each other on `update`; pass one.
 - `--capabilities`, `--application-ids` and `--environment-ids` are **arrays** — pass multiple values space-separated.
 - `list` accepts **no filters** beyond workspace and limit. Narrowing to one capability happens client-side, in the read script below.
-- The cap on `instruction_text` is **2000 characters, server-enforced** — `instruction_text must be 2000 characters or less`, non-zero exit, nothing written. Measured 2026-08-28 by bisection: 2000 accepted, 2001 rejected. **The CLI's `--help` says "max 1000 characters" and is wrong.**
+- The cap on `instruction_text` is **2000 characters, server-enforced** — over it the command fails with `instruction_text must be 2000 characters or less`, exits non-zero, and writes nothing. Measured 2026-08-28 by bisection: 2000 accepted, 2001 rejected. Trust the server over any number printed in `--help`.
 
 ## The silent listing default
 
@@ -42,7 +42,7 @@ Each row from `list` / `describe` carries, among other fields:
 |---|---|
 | `instruction_id` | suffix `-ain`; globally unique |
 | `name` | display name |
-| `instruction_text` | the text injected into the agent's prompt; max 1000 chars |
+| `instruction_text` | the text injected into the agent's prompt |
 | `disabled` | boolean — `true` means it steers nothing |
 | `capabilities[]` | `authoring` · `recovery` · `results_analysis`; **optional** |
 | `application_ids[]` | may be **absent** rather than `[]` |
@@ -89,7 +89,9 @@ Every row carries `test_types`, and every row this CLI creates carries exactly `
 
 The consequence is a scoping dimension that behaves nothing like the other three: it is never empty, so it never means "all". An instruction managed from here applies to browser tests and to nothing else.
 
-Report it when it matters and name the fallback — widening a row to API, mobile or performance tests is done in the mabl app, not from this surface. Never describe a rule as workspace-wide without that caveat.
+**There is no fallback surface.** The mabl web app hardcodes the same value and exposes no picker either, so this is not a CLI gap a reader can route around — it is what agent instructions currently are. Do not send anyone to the app to widen a row.
+
+So never describe a rule as reaching every test in the workspace. It reaches every **browser** test, and the honest report says so.
 
 ## Resolving the workspace
 
