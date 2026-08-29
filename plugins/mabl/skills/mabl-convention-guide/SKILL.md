@@ -1,89 +1,139 @@
 ---
 name: mabl-convention-guide
 description: |
-  Work out how a mabl workspace names and organizes things, and write it up so
-  new people follow the same pattern. Reads the STATED convention from agent
-  instructions first — which the MCP surface cannot see — before inferring one
-  from the tests, and flags where the two disagree.
-  Fire when someone inherits or joins a workspace and asks how things are
-  named or organized, wants conventions documented, an onboarding write-up, a
-  style guide, or a consistency audit of test and plan naming.
-  One boundary: `mabl-init` writes workspace *wiring* — ids, applications,
-  environments, credentials — into your local agent memory so a project can run
-  tests. This skill reads and documents the team's *conventions*, which live in
-  mabl itself and apply to everyone, not just this checkout.
-allowed-tools: Bash, mcp__mabl__list_mabl_tests, mcp__mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__mabl__list_mabl_data_tables, mcp__mabl__list_mabl_failure_reasons, mcp__mabl__get_mabl_test_steps, mcp__mabl__search_mabl_flows
+  REVIEW a whole mabl workspace for the conventions and best practices it
+  follows, and write them up. Reads the STATED rule from agent instructions
+  first — a CLI-only surface the MCP server cannot see — infers the OBSERVED
+  pattern from the tests second, and reports where the two disagree. Ends by
+  asking what to do with the findings: document them, turn them into agent
+  instructions, or both.
+  Fire when someone inherits or joins a workspace, or asks how things are named
+  and organized, for conventions or best practices to be documented, an
+  onboarding or style guide, or a consistency audit of test and plan naming.
+  Where nothing is written down, proposes a starting set instead of reporting
+  an empty result.
+  NOT for landing one rule change — that is mabl-update-agent-instructions.
+  NOT for local project wiring: mabl-init writes ids, applications and
+  environments into one checkout's agent memory; conventions live in mabl and
+  apply to everyone.
+allowed-tools: Bash, Read, Write, Edit, mcp__mabl__list_mabl_tests, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__mabl__list_mabl_data_tables, mcp__mabl__list_mabl_failure_reasons
 ---
 
 # mabl workspace convention guide
 
-Two different things can be called "the convention", and confusing them produces
-a confident, wrong write-up:
+Two different things get called "the convention", and confusing them produces a
+confident, wrong write-up:
 
 - **Normative** — what the team has *stated* the rule is. Lives in mabl **agent
   instructions**.
-- **Descriptive** — what the tests actually *do*, inferred from names.
+- **Descriptive** — what the tests actually *do*, inferred from what is there.
 
-A guide that presents the descriptive pattern as the rule tells new people to
+A guide that presents the descriptive pattern as the rule tells new joiners to
 copy the current drift. This skill exists because an unaided agent did exactly
 that: it derived the pattern from test names accurately, never found the stated
-rule, and never noticed two enabled instruction rows contradicted each other.
+rule, and never noticed that two enabled instruction rows contradicted each
+other.
+
+The workspace arrives as input. This skill reviews the workspace it is handed
+and does not go looking for one — and every call names it explicitly, because
+several surfaces silently fall back to the caller's default workspace and will
+describe a workspace nobody asked about.
 
 ## Prerequisites
 
+Agent instructions are **CLI-only**; the hosted `mabl` MCP server exposes no
+tool that reads them. The rest of the review runs on either surface. So the CLI
+is a hard dependency here.
+
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
-MIN_MABL_CLI_VERSION=2.123.0
+MIN_MABL_CLI_VERSION=2.109.27
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 
-mabl auth info    # verify you're logged in (run `mabl auth login --auto` if not)
+mabl auth info   # reading needs any key; run `mabl auth login --auto` if not logged in
 ```
 
-## Step 1 — Read the STATED convention first. CLI only.
+**Then probe for the surface, because a version number is not a capability.**
+Features ship together, so a build can satisfy the pin without carrying the
+command:
 
-**The MCP surface has zero agent-instruction tools.** If you work only through
-MCP you are structurally blind to the place stated conventions live, and you will
-infer a rule while a written one sits right there. Use the CLI:
+```bash
+mabl agent-instructions --help 2>&1 | grep -Eqw 'list' || echo "CLI has no agent-instructions surface"
+```
+
+If it is absent, say so and continue with the observed pattern alone — then
+report the normative side as **unread**, not as empty. Those are different
+findings, and collapsing them is the failure this skill exists to prevent.
+
+## Read the stated convention first
 
 ```bash
 mabl agent-instructions list -w "$WS" --output json --limit 500
-mabl agent-instructions describe "$ID"
 ```
 
-For every row, record: the text, whether it is **enabled or disabled**, and what
-it is **scoped to** (workspace, application, environment).
+**`--limit` defaults to 10 and truncates in silence** — no marker, no count, no
+error. A default-limit read of a 27-row workspace looks like a complete read of
+a 10-row one. Pass it explicitly, and if the response length equals the limit,
+raise it and read again.
 
-Then check for these four hazards explicitly — all of them occur in real
-workspaces:
+For every row, record the text, whether it is **enabled** (the JSON field is
+`disabled`, so an enabled row reads `"disabled": false`), and all four scoping
+dimensions:
+
+| Dimension | Field | Empty means |
+|---|---|---|
+| Agent capability | `capabilities` — `authoring`, `recovery`, `results_analysis` | every capability |
+| Test type | `test_types` | every test type |
+| Application | `application_ids` | every application |
+| Environment | `environment_ids` | every environment |
+
+**Capability is the dimension most often dropped, and dropping it invents
+conflicts that do not exist.** Two rows that state opposite things about healing
+are not in conflict if one is scoped to `authoring` and the other to `recovery`
+— they are read by different agents and never meet. Flattening the scope makes
+a clean workspace look broken.
+
+Then check for these hazards explicitly. All of them occur in real workspaces:
 
 | Hazard | Why it misleads |
 |---|---|
 | A **disabled** row stating a rule | Reads as authoritative in a dump; is not in force. Always report enabled state. |
-| **Two enabled rows that contradict** | Neither is "the" convention. Report the conflict as the finding. |
-| **Per-application variants** of one rule | The rule is conditional, not global. Don't flatten them. |
-| An **app-scoped** row where the question was workspace-wide | Quoting it as workspace policy is wrong. |
+| **Two enabled rows that contradict** *within the same scope* | Neither is "the" convention. Report the conflict as the finding. |
+| **Near-duplicate rows** saying the same thing twice | Which one a later edit lands in is a coin flip. Report the pair, not one of them. |
+| **Per-application or per-environment variants** of one rule | The rule is conditional, not global. Don't flatten them into one. |
+| A **narrowly scoped** row answering a workspace-wide question | Quoting it as workspace policy is wrong. Say what it is scoped to. |
+| An **unscoped** row that reads as absolute — "always make the run pass" | Applies to every capability, every app, every environment. Its blast radius is the finding. |
+
+Resolve `application_ids` and `environment_ids` to names via
+`list_mabl_applications` and `list_mabl_environments` before quoting a row.
+A raw id in a guide for new joiners is unreadable.
 
 If a stated rule exists and the tests do not follow it, that gap **is** the
 answer to "how do they organize things" — report both sides.
 
-## Step 2 — Infer the descriptive pattern
+## Infer the observed pattern
 
 ```
-mcp__mabl__list_mabl_tests(workspaceId, limit: 200)
+list_mabl_tests(workspaceId, limit: 200)
 ```
 
 Look at name grammar (delimiter, casing, segment order), description style,
-prefix conventions (`[BROKEN]`, `DND-`, ticket keys), and label taxonomy. Report
-conformance as a count — "22 of 26 conform" — and name every violator.
+prefix conventions (`[BROKEN]`, `DND-`, ticket keys), and label taxonomy.
+Report conformance as a count — "22 of 26 conform" — and name every violator.
 
-Then the surrounding structure: `list_mabl_plans` / `get_mabl_plan` for stage
-shape and whether stages select by id or label; `list_mabl_applications`,
+Then the surrounding structure: `list_mabl_plans` and `get_mabl_plan` for stage
+shape and whether stages select tests by id or by label; `list_mabl_applications`,
 `list_mabl_environments`, `list_mabl_credentials`, `list_mabl_data_tables` for
-naming across config; `list_mabl_failure_reasons` for the one workspace-level
-taxonomy MCP exposes.
+naming across configuration; `list_mabl_failure_reasons` for the one
+workspace-level taxonomy the MCP server exposes.
 
-## Step 3 — Do not assert product behaviour you have not tested
+For practices that live inside tests rather than in their names — how the team
+waits, how it selects elements, how it logs in, how it sets up data — read the
+steps of a handful of tests with `get_mabl_test_steps`. Say how many you read.
+A habit seen in four tests is a habit seen in four tests, not a workspace rule.
+
+## Do not assert product behaviour you have not tested
 
 This is the failure mode that most damages a convention write-up. An unaided
 agent wrote *"mabl labels are case- and separator-sensitive, so these are 8
@@ -96,51 +146,102 @@ So `smoke` / `Smoke` / `SMOKE` are already one label for selection purposes, and
 recommending a cleanup of them is recommending cosmetic churn. `smoke` vs
 `smoke-test` is genuinely different. Getting this backwards inverts the advice.
 
-General rule: if a recommendation depends on how a mabl mechanism behaves, either
-test it in one call or state it as an open question. Never infer mechanism from
-appearance.
+General rule: where a recommendation depends on how a mabl mechanism behaves,
+either test it in one call or state it as an open question. Never infer a
+mechanism from appearance.
 
-## Step 4 — State your completeness basis
+## State your completeness basis
 
 Say what you could and could not see. Silence reads as completeness.
 
-- **`list_mabl_tests` caps at 200 with no cursor.** Beyond that, shard by
-  `applicationId` / `testType` / `authorId` and say so.
-- **There is no exhaustive flow enumerator.** `search_mabl_flows` is
-  relevance-ranked and capped, so **flow naming cannot be fully audited** — say
-  that rather than generalizing from a sample.
-- **`search_mabl_flows` takes no `workspaceId`** and silently resolves against
-  the caller's default workspace. If you call it, confirm the results belong to
-  the workspace under review, or you will describe a different one.
-- **There is no user roster.** `list_mabl_users` requires ids; harvest them from
-  `createdById` / `lastUpdatedById` and note the roster is partial.
-- Check authorship spread. If every asset has one author, the "conventions" are
-  one person's habits — frame them that way rather than as team policy.
+- **`list_mabl_tests` caps at 200 and returns no cursor.** Past that, shard by
+  `applicationId`, `testType` or `authorId`, and say that you did.
+- **Reusable flows cannot be enumerated exhaustively.** There is no flow lister
+  — search is relevance-ranked and capped — so flow naming is out of scope for a
+  conformance count. Say so rather than generalizing from whatever a search
+  returned.
+- **There is no user roster.** Harvest ids from `createdById` and
+  `lastUpdatedById` and note that the roster is partial.
+- Check authorship spread. Where every asset has one author, the "conventions"
+  are one person's habits — frame them that way, not as team policy.
 
-## Step 5 — Write the guide
+## When nothing is written down
 
-Structure it so a new joiner can act on it:
+A workspace with no agent instructions and no consistent pattern is the normal
+starting state, not a failed review. Reporting an empty finding set is useless
+to the person who asked.
 
-1. **Stated rules** — quoted, with enabled state and scope. Conflicts called out.
+Say plainly that nothing is stated and what, if anything, is consistent. Then
+propose a starting set drawn only from what is observable in this workspace:
+
+- the test-name shape already most common, written as a rule
+- the wait and selector habits seen in the steps you read
+- how credentials and test data are set up
+- the label vocabulary already in use, deduplicated
+
+Mark each proposal with the evidence behind it and how thin that evidence is.
+Then stop and let the reader confirm, edit or reject each one. Proposing is the
+deliverable here; writing is not, until they say so.
+
+## Write it up
+
+Structure the guide so a new joiner can act on it:
+
+1. **Stated rules** — quoted, with enabled state and full scope. Conflicts and
+   duplicate pairs called out.
 2. **Observed pattern** — the grammar, with a conformance count.
 3. **Where they disagree** — the most useful section, and the reason to read.
 4. **Violators** — named, so they can be fixed or accepted deliberately.
 5. **Structure** — plans, applications, environments, labels, prefixes.
-6. **Completeness basis** — what you enumerated fully and what you sampled.
+6. **Completeness basis** — what was enumerated in full and what was sampled.
 
 Keep normative and descriptive claims visibly separate throughout. Never present
 an inferred pattern in the voice of a rule.
 
-## Optional follow-through
+## Decide what happens to the findings
 
-If the workspace has **no** stated convention and the observed pattern is
-consistent, the natural next step is to write it down where mabl's own agents will
-read it:
+A review that ends in a message is a review nobody acts on. Having reported the
+findings, ask which of these to do, and do only what is chosen:
 
-```bash
-mabl agent-instructions create -w "$WS" --name "Test naming convention" \
-  --instruction-text "<the pattern, in one paragraph>"
+**1. Document them.** Write the guide to `.mabl/conventions.md`. That is the
+only path this skill writes on its own initiative.
+
+`.mabl/` is normally ignored, so a doc written there is invisible to everyone
+else on the team — which defeats the point of writing it. Offer to add an
+exception, and add it only if the reader says yes, because `.gitignore` is
+theirs and outside this skill's own territory:
+
+```gitignore
+.mabl/*
+!.mabl/conventions.md
 ```
 
-Propose this; do not do it unasked. And check for an existing row first — that
-check is Step 1.
+**The trailing-slash form does not work here.** With `.mabl/` ignored as a
+directory, git never descends into it, so `!.mabl/conventions.md` is never
+consulted and the file stays invisible — with no error to say so. Excluding the
+children (`.mabl/*`) is what makes the negation reachable.
+
+**2. Turn them into agent instructions**, so mabl's own agents follow the
+convention rather than only humans reading a file.
+
+**Requires `mabl-update-agent-instructions`.** Hand each finding to that skill
+one at a time and let it decide where the change belongs. If it is not
+installed, say which skill is missing and stop — do not create or edit
+instructions from here. Do not guess how to install it; that depends on which
+of the five surfaces installed this one.
+
+Do not reimplement any of what that skill owns: placing a change by capability
+and scope, reading only the instructions the affected agent reads, preferring to
+amend the row that already owns the topic over adding a second one, and halting
+when a change would contradict an enabled row. Duplicating that logic here is
+how the two drift apart and start giving opposite advice.
+
+Findings convert unevenly, so triage before handing anything over. A conflict
+between two enabled rows and a near-duplicate pair are both existing-row
+problems and go over as they are. A violator count is not a rule and converts to
+nothing — leave it in the document.
+
+**3. Both** — write the document, then hand the rules over.
+
+**4. Something else** — take the instruction given. These are defaults, not
+limits: asked to write somewhere specific, write there.

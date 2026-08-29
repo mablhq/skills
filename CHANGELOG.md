@@ -5,6 +5,21 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.0] - 2026-08-28
+### Added
+- `mabl-convention-guide` — reviews a whole workspace for the conventions it
+  follows and writes them up for someone who just inherited it. It reads the
+  stated rule out of agent instructions first (a CLI-only surface), infers the
+  observed pattern from the tests second, and treats the gap between them as the
+  finding rather than picking one. Scope is read on all four dimensions an
+  instruction carries, because two rules that look contradictory are not in
+  conflict when different agents read them.
+- The review ends by asking what to do with the findings: write them to
+  `.mabl/conventions.md`, hand them to `mabl-update-agent-instructions` so
+  mabl's own agents follow them, or both. Where a workspace has nothing written
+  down, it proposes a starting set from what is observable instead of reporting
+  an empty result.
+
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"
