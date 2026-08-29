@@ -157,9 +157,13 @@ for r in candidates:
 
 unscoped = sum(1 for r in candidates if not (r.get('capabilities') or []))
 by_cap = Counter(c for r in setaside for c in (r.get('capabilities') or []))
+multi = sum(1 for r in setaside if len(r.get('capabilities') or []) > 1)
 print(f"{len(candidates)} candidates read in full ({unscoped} of them unscoped); "
-      f"{len(setaside)} set aside as out of scope for '{cap}'"
-      + (f" -> {dict(by_cap)}" if setaside else ""))
+      f"{len(setaside)} set aside as out of scope for '{cap}'")
+if setaside:
+    print(f"  set-aside rows appear under (a row with two capabilities is counted "
+          f"under each, so these need not sum to {len(setaside)}): {dict(by_cap)}"
+          + (f"; {multi} row(s) carry more than one" if multi else ""))
 print(f"reconcile: {len(candidates)} + {len(setaside)} == {len(rows)} fetched")
 EOF
 ```
@@ -167,4 +171,5 @@ EOF
 Two details in there are load-bearing:
 
 - **`not caps` keeps unscoped rows in the candidate set.** Filtering on `cap in caps` alone drops exactly the broadest rows in the workspace — the ones most likely to contradict the change.
+- **The set-aside tally counts capabilities, not rows.** A row scoped to two capabilities appears under both, so the per-capability numbers can exceed the row count. Report the row count as the total and the tally as a breakdown; presenting the tally as a partition makes the reconciliation look wrong when it is right.
 - **The `apps=` / `envs=` line** is what makes the overlap rules in the skill usable. Without it a conflict confined to one application or one environment is indistinguishable from a workspace-wide one, and every conflict gets reported at full blast radius.
