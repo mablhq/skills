@@ -35,6 +35,17 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   person reads the diff and decides — and it is granted only the four read-and-run
   tools it calls, so the tools that could edit or merge are not on the table.
 
+### Changed
+- `mabl-test-authoring` routes its no-weakening gate to `mabl-verify-change`
+  instead of diffing versions itself. The rule it enforced — any `Assert*` in
+  `removed` is a failed attempt — contradicted the fix it recommends two
+  paragraphs earlier, because moving an assertion into the right place renders as
+  a removal plus an addition. So did extracting steps into a reusable flow. Both
+  burned one of three heal attempts on a correct edit.
+- The gate is stated once. `references/validate-and-heal.md` carried a second
+  copy of the rule and its recipe; a reference that restates a decision
+  `SKILL.md` owns is the copy that goes stale.
+
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"

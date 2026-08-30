@@ -12,7 +12,7 @@ description: |
   over a branch with an edited test on it.
   It does NOT make the change: to edit a test use mabl-test-edit, to work out
   what's wrong in the first place use mabl-debug. This is the step after.
-allowed-tools: mcp__mabl__*, Bash, Read
+allowed-tools: mcp__mabl__list_mabl_test_versions, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_test_cloud, mcp__mabl__get_mabl_test_run
 ---
 
 # mabl verify change
@@ -27,21 +27,22 @@ branch.** The output is evidence and a state; the merge is a person's.
 
 ## Prerequisites
 
-```bash
-# Check the mabl CLI is installed and recent enough; install/upgrade if not
-MIN_MABL_CLI_VERSION=2.119.0
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
+The **`mabl` MCP server**, which ships in this plugin. Every step here is an MCP
+call, so **the mabl CLI is not used** — nothing to install, no login to complete.
+The absence of a CLI guard block is deliberate, not an omission.
 
-mabl auth login --auto   # one-time OAuth in browser
-mabl auth info           # verify you're logged in and the token hasn't expired
-```
+The server is what takes a branch and hands back the ids of the runs it started,
+which is why the isolated lane runs there. **That lane is available when
+`run_mabl_test_cloud` is in the tool list.** Absent, the server isn't connected:
+name it and stop after the content gate, reporting the behaviour as not
+verified — a real, reportable outcome, not a failure to be papered over. A tool
+that is present can still refuse the call because the workspace isn't entitled
+to it, and only the call reveals that: quote the error verbatim and take the
+same fallback.
 
-Isolated verification runs on the mabl MCP server, because that's what takes a
-branch and hands back the ids of the runs it started. **The isolated lane is
-available when `run_mabl_test_cloud` is in your tool list.** Without it you can
-still do the content gate below and then say the behaviour was not verified —
-which is a real, reportable outcome, not a failure to be papered over.
+Workspace, environment, and application come from the caller. The environment
+and branch of the run being verified are also on its history entry
+(`environmentId`, `branch`).
 
 ## 1. Establish what changed, before running anything
 
@@ -97,13 +98,21 @@ gate.
 
 ### Reading the result
 
-Three results stop the verification outright, whatever any run says:
+These stop the verification outright, whatever any run says. Address them by the
+class `mabl-compare-versions` reports, not by re-deriving its matching — it
+already separates a removal it could resolve from one it couldn't, and that
+distinction is the whole difference between the first two rows.
 
-| In the diff | Verdict |
+| What the diff reports | Verdict |
 |---|---|
-| An assertion **removed** that nobody asked to remove (and it isn't a move) | **Not verified.** Coverage was deleted. |
-| An assertion **weakened** — exact match to substring to existence, a value emptied, a step disabled, a check now behind an added `If` | **Not verified.** Same shape, less proved. |
-| A **date literal** introduced | **Not verified.** It passes today and fails tomorrow. |
+| **Coverage deleted** — an assertion gone, and nobody asked to remove it | **Not verified.** Coverage was deleted. |
+| **Unmatched removal** — a removal it could not join to any added step | **Not verified.** Neither proof of deletion nor proof against it. Name the candidate it named, and say that resolving the pair is what would settle it. |
+| **Strictness** loosened — exact match to substring to existence, a value emptied, a step disabled, a check now behind an added `If` | **Not verified.** Same shape, less proved. |
+| **Date literal** introduced | **Not verified.** It passes today and fails tomorrow. |
+
+"Loosened" is this skill's word, not the diff's. The diff reports the change in
+what the assertion requires and leaves the valence alone, because only the
+intent says which direction was wanted.
 
 Deleting a check is legitimate in exactly one case: the behaviour it checked
 genuinely went away, and the person who asked for the change said so. That has
@@ -118,15 +127,15 @@ A real mode, not a courtesy. Ask for it whenever the runs are the expensive or
 irreversible half: an unattended session, someone else's workspace, a first look
 at what this would cost.
 
-Everything in step 1 is read-only and still happens. So does reading the run
-history in step 3. **What stops is step 2.**
+The content gate is read-only and still happens. So does reading the run
+history. **What stops is the isolated run.**
 
 Report, then stop:
 
 - the two versions picked and the content gate's verdict — a dry run that fails
   the gate is a complete answer, not a partial one;
 - what the run history says the test was doing, and therefore how many clean runs
-  step 3 would require;
+  the gate would require;
 - the exact `run_mabl_test_cloud` call that would be made, every parameter filled
   in;
 - the cost: runs times browsers, each one minutes of real cloud execution.
@@ -151,8 +160,14 @@ run_mabl_test_cloud({
 })
 ```
 
-**Use the run ids it returns.** The tool hands back the ids of the runs it
-created — that is the only reliable way to know which runs are yours. A
+**A call that returns no run ids did not start a run.** When the environment
+binds more than one URL for the application, the tool returns the candidate
+deployments instead of starting — no error raised, nothing running. Ask which
+URL and re-invoke with that `deploymentId`. Never pick one: the wrong URL
+verifies the change against the wrong app and reads as a clean result.
+
+**Otherwise, use the run ids it returns.** The tool hands back the ids of the
+runs it created — that is the only reliable way to know which runs are yours. A
 workspace has other plans on other schedules, and picking runs by "most recent"
 will eventually attribute someone else's execution to your change.
 
@@ -170,8 +185,8 @@ get_mabl_test_run({ testRunId: "<*-jr>", workspaceId })
 - Only once `terminal` is true are `success` and `failureSummary` trustworthy.
 
 Each run is real cloud execution — minutes of wall clock, one run per browser.
-Say that before starting a multi-run gate. If a dry run was asked for, this step
-is the one that does not happen.
+Say that before starting a multi-run gate. If a dry run was asked for, this is
+the step that does not happen.
 
 ## 3. How many clean runs are enough
 
@@ -186,8 +201,17 @@ expect from changing nothing.
 | Failing intermittently | **3**, all clean |
 | Unknown which | Treat as intermittent — **3** |
 
-Check the history rather than assuming: `list_mabl_test_runs({ testId })` shows
-whether it was alternating or solidly failing.
+Check the history rather than assuming:
+
+```
+list_mabl_test_runs({ testId: "<*-j>", workspaceId })
+```
+
+The first page carries a `history` block — streaks, per-browser and
+per-environment pass rates — which answers alternating-versus-solidly-failing
+outright. Read that rather than eyeballing statuses. It returns **10 runs by
+default**, so say how many were looked at: "failed every time" over ten runs and
+over fifty are different claims.
 
 And for an intermittent test, ask what the change actually did. A longer wait
 around a race is not the same as fixing the race, and three green runs can't

@@ -1,7 +1,7 @@
 ---
 name: mabl-test-authoring
 description: |
-  Create a SINGLE mabl browser and API tests through conversational planning
+  Create a SINGLE mabl browser or API test through conversational planning
   and cloud authoring. Plan one test with an AI agent, refine the plan
   iteratively, initiate cloud (or local) test generation, then validate that
   the test it built actually matches what you asked for and fix it if not.
@@ -11,7 +11,7 @@ description: |
   For broad coverage of a whole feature / page / flow with MULTIPLE tests,
   use mabl-test-coverage-design instead — it explores the feature, designs
   the suite, and calls THIS skill once per test.
-allowed-tools: Bash
+allowed-tools: Bash, Read
 ---
 
 # mabl agent authoring
@@ -39,9 +39,10 @@ mabl auth info    # verify you're logged in and the token hasn't expired
               (kicks off cloud test authoring)
 3. Poll     → mabl agent authoring status --session-id <id>
               (check until sessionStatus is terminal; if it pauses on
-               needs_attention, answer it — see step 3.1)
+               needs_attention, answer it — see "the session is waiting on
+               you")
 4. Validate → check the built test against the intent you asked for
-              (see step 4 — a completed session is not proof)
+              (a completed session is not proof — see Validate below)
 ```
 
 Multiple planning and authoring sessions can run concurrently — just track
@@ -118,7 +119,7 @@ mabl agent authoring plan \
 
 You decide. Review `testInformation` (name, URL, credentials) and
 `planContent` (the step-by-step outline) after each call. If they
-capture what you want to test, move to step 2. You don't need to wait
+capture what you want to test, move on to generating the test. You don't need to wait
 for the planner to say it's ready — one call is often enough if the
 intent is specific. Call `--changes` only when the plan is missing
 something.
@@ -217,6 +218,10 @@ progress from elapsed time. Most non-terminal statuses do clear on their own:
 sessions run at once, and a sweep admits the queued-up ones as slots free, so a
 session can sit there well past 20 minutes and still start. Keep polling it, and
 never re-launch the test: the session you'd be replacing is still going to run.
+**Past 30 minutes queued, stop waiting — but never stop the session.** Report the
+test as *queued, not yet started*, leave it running, and hand it back the way a
+pause is handed back. Terminating to reclaim a slot throws away a test that was
+about to run; polling forever reports nothing at all.
 `needs_attention` is the exception, and it's the one that costs you a run.
 
 Four more statuses are terminal, and none of them is wedged: `skipped` (the agent
@@ -368,7 +373,10 @@ Then check, against your own intent:
 
 - Every "verify / check / assert that ..." in the intent has a matching
   `Assert*` step. A test that only navigates and clicks proves nothing.
-- **Zero assertion steps is always a failure**, whatever the run said.
+- **Zero `Assert*` steps is always a failure**, whatever the run said. This
+  counts *functional* verification, which is why it keys on `Assert*` alone. An
+  `AccessibilityCheck` does real work and can carry assertions of its own, but it
+  is not what this check is asking about.
 - The actions the intent asked for are present.
 
 `mabl tests export` writes a **file** — it prints nothing to stdout. It also
@@ -401,7 +409,7 @@ Then check that:
 
 - every step carrying an assertion is `passed`, **not `skipped`** — a skipped
   assertion is a test that proved nothing while looking green;
-- every assertion you found in 4.1 appears in the trace.
+- every assertion found in the export appears in the trace.
 
 **If you cannot line the two up, the test is unverified — say so.** Do not fall
 back to position and do not guess: a wrong match makes you report "the assertion
@@ -433,7 +441,7 @@ the `mabl-test-edit` skill's structured-step lane, which applies a named
 - the intent asked to verify a variable, the URL, or the viewport — no element
   lookup needed;
 - the element is one the test already interacts with, so the find descriptor is
-  already sitting on that step in the export you read in 4.1 — copy it into the
+  already sitting on that step in the export already read — copy it into the
   assertion;
 - an assertion exists but ran in the wrong place, and the fix is to move it.
 
@@ -456,7 +464,7 @@ mabl agent authoring initiate --test-information '{
 }'
 ```
 
-Poll it like any other session, then re-validate from 4.1. **Bound the agent
+Poll it like any other session, then re-validate from the export check. **Bound the agent
 lane at 3 attempts**, then stop and report.
 
 Keep the decision here, in this loop: it holds the authoring intent and the
@@ -465,20 +473,36 @@ has no way to know. Delegate only the mechanism. And for any change that isn't a
 validation fix at all — a rename, a label, a deliberate step edit — the user
 should be pointed at `mabl-test-edit` directly.
 
-Before accepting any attempt, prove the fix didn't just delete the problem:
+Before accepting any attempt, prove the fix didn't just delete the problem.
 
-```bash
-mabl tests versions <createdTestId>
-mabl tests compare <createdTestId>:<previousVersion> <createdTestId>:<newVersion> --output json
-```
+**Requires `mabl-verify-change`.** If that skill isn't there, stop and say which
+skill is missing — don't hand-roll the diff, and don't guess how to install it,
+because that depends on how this skill was installed.
 
-The diff summarizes `added` / `removed` / `changed` steps. **Any `Assert*`
-step in `removed` that you did not explicitly ask to remove is a failure, not
-a fix** — an edit that turns a run green by dropping coverage is worse than the
-mismatch you started with. Re-prompt with "add the assertion; do not remove
-steps", and count it as one of the three attempts. Run this after a structured
-edit too: it should show a clean single insert, and if it doesn't, something
-other than your edit changed the test.
+Hand it the test and the two versions and ask for its content gate alone. It has
+a dry-run mode that does exactly that and starts no runs, which is what you want
+here: the authoring agent already ran the test, and a fresh run costs minutes and
+proves less.
+
+**A removed `Assert*` is not on its own lost coverage**, and this is where an
+honest heal gets thrown away. Moving an assertion into the right place — the fix
+named above — renders as a removal plus an addition, and so does extracting steps
+into a reusable flow. Resolving that is why the gate lives in
+`mabl-verify-change` and not here. Act on what it reports:
+
+- **Coverage deleted** — a failure, not a fix. An edit that turns a run green by
+  dropping coverage is worse than the mismatch you started with. Re-prompt with
+  "add the assertion; do not remove steps", and count it as one of the three
+  attempts.
+- **Unmatched removal** — it could not join the removal to anything added. Report
+  it with the candidate it named and stop. Don't spend an attempt on a guess.
+- **Nothing flagged** — accept the attempt. After a structured edit expect a
+  single clean insert; if it isn't, something other than your edit changed the
+  test.
+
+One judgement stays here whatever the gate says: whether a deletion was *asked
+for*. This loop holds the authoring intent, so it is the only place that can
+answer it — nothing downstream knows what the user wanted removed.
 
 If neither lane is open — the workspace has neither the structured edit tools nor
 agentic test editing — stop looping and report the mismatch unverified. Don't
