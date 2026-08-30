@@ -18,9 +18,9 @@ create a duplicate. Say this once in the report.
 
 **The uniform `--output json --limit N` idiom is not universal, and the misses
 hard-fail.** An unknown flag prints a usage block plus `Unknown argument: output`
-and **exits 1**. The exceptions that matter to this skill are enumerated under
-"The four commands that reject `--output`" below — including
-`agent-instructions create`, which is the headline write. Check
+and **exits 1**. The shape is **writes reject `--output`, reads accept it**, with
+exceptions running both ways — see "Which commands reject `--output`" below,
+including `agent-instructions create`, which is the headline write. Check
 `--help` before you add `--output` to any command you have not run before.
 
 > **Where the version floor comes from.** `2.109.19` is the release that added
@@ -39,9 +39,9 @@ yourself: `mabl applications --help` is `list` / `describe`,
 
 The middle column names **subcommands, not invocations**. Every one of these
 `list` subcommands silently caps at 10 — when you actually run one it carries an
-explicit `--limit` and `--output json` (the **four** commands that reject
-`--output`, enumerated below: `agent-instructions create`,
-`agent-instructions update`, `datatables export`, `auth info`).
+explicit `--limit` and `--output json`. The reads that reject `--output` are
+`auth info` and `datatables export`; the writes reject it as a rule — see
+"Which commands reject `--output`" below.
 
 | Entity | CLI surface (names only) | Who can create it |
 |--------|-------------------------|-------------------|
@@ -62,10 +62,10 @@ If you created the application over the MCP server, say that, with the tool name
 
 | Write | Command | Notes |
 |---|---|---|
-| Environment | `mabl environments create --name … [--application-id … --app-url … --api-url …] [--variables k:v …] [--preview] [--link <agent>] [--mabl-branch <b>] -w <ws>` | prints `Environment <id> CREATED`, **not JSON** |
+| Environment | `mabl environments create --name … [--application-id … --app-url … --api-url …] [--variables k:v …] [--preview] [--link <agent>] [--mabl-branch <b>] -w <ws>` | prints `Environment <id> CREATED`, **not JSON**, and **rejects `--output`** — passing it exits 1 with nothing created |
 | Environment | `mabl environments update <id> [--name …] [--variables k:v …] [--preview] [--link <a>] [--link-bypass] [--mabl-branch <b>]` | PATCH. **Not a sparse one — see the footgun below.** No `-w`. `--link-bypass` is real but `hidden:true`, so it's absent from `--help` |
 | Environment | `mabl environments delete <id>` | |
-| URL row | `mabl environments urls add <id> --application-id <app> [--app-url …] [--api-url …]` | `mabl environments urls add <id>` declares `--application-id` as **required** (`mabl environments urls add --help`) — so no URL row exists without an application. No `-w`. **No upsert, no edit, no delete** |
+| URL row | `mabl environments urls add <id> --application-id <app> [--app-url …] [--api-url …]` | `mabl environments urls add <id>` declares `--application-id` as **required** (`mabl environments urls add --help`) — so no URL row exists without an application. No `-w`. **No upsert, no edit, no delete**, and **rejects `--output`** |
 | DataTable | `mabl datatables create <file> --name "…" -w <ws>` / `mabl datatables update <id> <file> [--format csv\|json]` | `create` emits JSON; `update` prints nothing. **No `delete` subcommand exists — a created DataTable is permanent from the CLI**, and `update` deletes rows absent from the file |
 | Agent Instruction | `mabl agent-instructions create --name … --instruction-text "…" [--capabilities …] [--application-ids …] [--environment-ids …] [--disabled] -w <ws>` / `update <id> …` / `delete <id>` | both **print JSON unprompted and accept no `--output`** — passing it exits 1. Text limit: see below, the `--help` figure is stale. Response carries a `test_types` you cannot set — see below |
 | Branch | `mabl branches create <name> -w <ws> --output json \| sed '/^Creating Branch \[/d'` / `merge --from <b> --to master` / `delete <identifier>` | ⚠ `create` prints `Creating Branch [<name>]` to **stdout before** the JSON, so a bare `\| jq` fails (`Invalid numeric literal at line 1, column 9`, exit 5) — **the `sed` is required, and the branch was still created**. `delete`/`describe` take an id **or** a name (`--name` forces name) |
@@ -82,23 +82,44 @@ list|describe|urls list` · `datatables list|describe|scenarios|export` ·
 `agent-instructions list|describe` · `branches list|describe` · `plans list` ·
 `credentials list` · `users list` · `link-agents list` · `auth info`
 
-#### The four commands that reject `--output`
+#### Which commands reject `--output`
 
-**Exactly four commands reject `--output`, and each rejection exits 1.** Verified
-against `--help` — none of the four lists an `--output` option:
+**Writes reject `--output`; reads accept it.** Each rejection prints a usage block
+plus `Unknown argument: output` and **exits 1**, with nothing created. Never carry a
+count of them — the set is long, it differs per command group and it moves with the
+CLI. Learn the shape, then ask `--help`.
 
-1. **`agent-instructions create`** — prints JSON anyway. Passing `--output json`
-   prints a usage block plus `Unknown argument: output` and **exits 1** — mid-write,
-   on the skill's headline entity. If that happens, the fix is to drop the flag,
-   **not** to suspect you invented the subcommand.
-2. **`agent-instructions update`** — same, and the same fix.
-3. **`datatables export`** — it takes `--format json|yaml|csv` instead
-   (default `json`). `describe`, `list` and `scenarios` all *do* have `--output`.
-4. **`auth info`** — parse its text.
+The exceptions run both ways. On this skill's surface, measured on CLI 2.129.2:
 
-That count is **four, not three**. It is the number of *commands*, and grouping
-`agent-instructions create` and `update` into one bullet does not make it three;
-any summary sentence elsewhere in this skill says four.
+- **Writes that accept `--output`** — `branches create` (which also puts prose on
+  stdout, below), `branches merge`, `deployments create`.
+- **Reads that reject it** — `auth info`, whose text you parse, and
+  `datatables export`, which takes `--format json|yaml|csv` instead (default
+  `json`; `describe`, `list` and `scenarios` all *do* have `--output`).
+
+Everything else follows the rule, including the writes this skill runs at its own
+gates: `agent-instructions create` and `update` print JSON unprompted and reject
+the flag, and so do `environments create` and `environments urls add`. When one exits
+1 that way, the fix is to drop the flag, **not** to suspect you invented the
+subcommand.
+
+Settle it against the CLI in front of you rather than trusting this paragraph. The
+sweep is one line per command, reads only, and needs no auth:
+
+```bash
+for c in "environments create" "environments urls add" "agent-instructions create" \
+         "branches create" "datatables export" "auth info"; do
+  if sh -c "mabl $c --help" 2>&1 | grep -q -- '--output'; then
+    echo "$c  accepts --output"
+  else
+    echo "$c  REJECTS --output"
+  fi
+done
+```
+
+Add any command you are about to reach for to that list. `sh -c` is deliberate:
+`mabl $c --help` does not word-split under `zsh`, so the loop would otherwise report
+top-level help for every entry and call them all rejections.
 
 #### A second, separate hazard: `--output` accepted, but prose on stdout first
 

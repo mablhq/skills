@@ -386,7 +386,7 @@ the `§` numbers inside these files refer to the numbered steps above.
 Finding things inside the four long files:
 
 ```bash
-grep -n 'reject `--output`' references/cli-surface.md   # the four that hard-fail
+grep -n 'reject `--output`' references/cli-surface.md   # the writes that hard-fail
 grep -n 'unobservable'      references/cli-surface.md   # the day-one-invisible footguns
 grep -n 'WRITE LOG'         references/write-gates.md   # the log's rules
 grep -n 'THREE modes'       references/write-gates.md   # CREATE / APPEND / REPLACE

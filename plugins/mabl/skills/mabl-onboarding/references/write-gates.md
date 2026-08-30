@@ -90,6 +90,11 @@ WRITE LOG <k>   <mabl | committed file | untracked file | machine | session>
   reconstruct a line from memory afterwards.
 - **A failed write still gets a line**, with `result  FAILED — nothing created`. It
   is evidence, and it does **not** count toward §10's applied tally.
+- **`result` is sometimes parsed out of prose, not read out of JSON.** `environments
+  create` prints `Environment <id> CREATED` — text, and it rejects `--output` — so the
+  id is that line's second field (`awk '{print $2}'`), not something `jq` can reach.
+  `branches create` needs its `sed` (`references/cli-surface.md`) before `jq` for the
+  same reason. Whichever parse you used belongs in `command`, exactly as it ran.
 - **A non-zero exit is not proof that nothing was created, and exit 0 is not proof
   that everything landed.** `mabl branches create … | jq` exits 5 with the branch
   created (see the `sed` above), and `environments create` / `urls add` exit 0 with a
@@ -423,7 +428,7 @@ Render it so it cannot be mistaken for configuration:
   the four flags `environments update` needs re-passed, the **2000**-character
   instruction-text limit (never the stale 1000 from `--help`), the fact that
   DataTables cannot be deleted and that `datatables update` deletes absent rows,
-  that `urls add` has no upsert, the **four** commands that reject `--output`, and
+  that `urls add` has no upsert, that writes reject `--output` while reads accept it, and
   the two that put prose on stdout and therefore need a `sed` before `jq`
   (`credentials list` after the JSON, `branches create` **before** it)
 - record the array-flag punctuation rule **with its scope attached** — it applies to
