@@ -21,8 +21,9 @@ allowed-tools: mcp__mabl__*, Bash
 A plan is a set of tests, grouped into ordered stages, pointed at one
 application in one environment. This skill builds one and changes one.
 
-Two things shape everything below. The API **silently drops test ids it doesn't
-recognise**, so what you asked for and what got saved are different questions.
+Two things shape everything below. The API **accepts test ids it doesn't
+recognise and reconciles them away afterwards**, so what you asked for and what
+got saved are different questions — and the answer arrives about a minute late.
 And a plan is CI coverage — adding to it is cheap, removing from it is a
 coverage decision someone should make on purpose.
 
@@ -95,15 +96,24 @@ in the same way:
   sent as a header. Getting these backwards produces a plan that fails on every
   test for a reason that looks nothing like credentials.
 
-## 3. Read back what was actually saved — always
+## 3. Validate the ids before you send them, and re-read after
 
-**Test ids that aren't valid tests in this workspace are silently dropped by
-the API.** No error, no warning. The plan comes back smaller than you asked for
-and nothing says so.
+**An id that isn't a test in this workspace is accepted, not rejected.**
+`create_mabl_plan` echoes it straight back, and a `get_mabl_plan` taken seconds
+later still lists it. A server-side reconcile removes it within about a minute
+(measured 2026-08-30). So diffing the returned `execution_stages` against the
+`testIds` you sent proves nothing — the two agree while the id is still doomed,
+and the plan comes back smaller later, when nobody is looking.
 
-So compare the returned `execution_stages` against the `testIds` you sent, and
-**name any id that didn't land**. A plan quietly missing two of its nine tests
-is worse than a failed call, because it looks finished.
+Catch it on the way in instead. Before the create, and before any `add_test`,
+confirm every `*-j` appears in `list_mabl_tests({ workspaceId })` or resolves
+through `get_mabl_test`. An id that doesn't resolve never goes into the payload.
+
+Where an id went out unverified, re-read with `get_mabl_plan` **60 seconds
+later** rather than immediately, and name any id that is gone. An id you could
+not verify is unverified: report it as that, not as saved. A plan quietly
+missing two of its nine tests is worse than a failed call, because it looks
+finished.
 
 Report the plan id and `viewPlanUrl` either way.
 
@@ -133,8 +143,12 @@ edit_mabl_plan({ planId, operations: [
 **Append a stage** by adding a test with `stage_index` equal to the current
 stage count. Any higher index is out of bounds and rejected.
 
-**Clear a credential** by passing an empty string, not by omitting the field —
-an omitted field leaves the old one attached.
+**Omitting a credential field leaves the old one attached**, so swapping a
+credential means passing the new id. There is no clear-it path here: the tool's
+schema says an empty string clears it, and `credentials_id: ""` is rejected with
+HTTP 400 `id is required` (measured 2026-08-30) — which, the batch being atomic,
+takes every other operation in the same call down with it. Detaching a
+credential is done in the mabl app.
 
 ### The five traps
 
@@ -146,8 +160,8 @@ than a bare tool call.
 | **Stage indices shift mid-batch** | Removing the last test in a stage deletes the stage. Later operations in the **same batch** are applied against the shortened list, so indices you computed from the original plan now point at the wrong stage. Order removals last, or apply them one batch at a time and re-read between. |
 | **`stage_index` defaults to 0** | On both add and remove. A remove without it looks only in the first stage and fails with "not found in stage 0" even though the test is sitting in stage 2. Always pass it. |
 | **Adding the same test twice succeeds** | There is no duplicate check. The test lands in the stage twice and runs twice, burning a run each time. Check the stage's contents before adding. |
-| **Emptying the plan is rejected** | Removing the last test of the last stage fails the whole batch and saves nothing. That's the guard working — a plan needs at least one stage with at least one test. |
-| **412 means someone else edited it** | The plan changed between read and write, so nothing was saved. Re-read with `get_mabl_plan` and re-apply on top of the current version. Don't retry the same payload blind — you'd be overwriting their change. |
+| **Emptying the plan is rejected, in the language of stage indices** | Removing the last test of the last stage fails the whole batch and saves nothing. It reports as `Stage index 0 is out of bounds. The plan has 0 stage(s).`, which reads like a bad index and isn't one — it's the guard working, because a plan needs at least one stage with at least one test. Don't adjust the index and retry; drop a removal from the batch. |
+| **A concurrent edit is lost silently** | There is no conflict error to catch and no version or etag to send: two `edit_mabl_plan` calls against one plan both return 200, and the last write wins (measured 2026-08-30). What comes back can also be structurally rewritten rather than merged — stages collapsed and deduped. So re-read with `get_mabl_plan` after every edit and diff it against what you intended. Treat any difference as somebody else's write, and re-apply on top of what is there rather than resending your payload. |
 
 ### Confirm before you shrink coverage
 
