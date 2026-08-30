@@ -12,7 +12,7 @@ description: |
   over a branch with an edited test on it.
   It does NOT make the change: to edit a test use mabl-test-edit, to work out
   what's wrong in the first place use mabl-debug. This is the step after.
-allowed-tools: mcp__mabl__list_mabl_test_versions, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_test_cloud, mcp__mabl__get_mabl_test_run
+allowed-tools: mcp__mabl__get_mabl_test, mcp__mabl__list_mabl_test_versions, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_test_cloud, mcp__mabl__get_mabl_test_run
 ---
 
 # mabl verify change
@@ -40,9 +40,11 @@ that is present can still refuse the call because the workspace isn't entitled
 to it, and only the call reveals that: quote the error verbatim and take the
 same fallback.
 
-Workspace, environment, and application come from the caller. The environment
-and branch of the run being verified are also on its history entry
-(`environmentId`, `branch`).
+Workspace, environment, and application come from the caller. When the caller
+gives only the workspace, they are recoverable rather than guessable: the
+environment and branch of the run being verified are on its history entry
+(`environmentId`, `branch`), and `get_mabl_test` carries the test's application,
+credentials, labels, and the intent recorded on the test object.
 
 ## 1. Establish what changed, before running anything
 
