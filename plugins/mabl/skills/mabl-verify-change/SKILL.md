@@ -163,10 +163,15 @@ run_mabl_test_cloud({
 ```
 
 **A call that returns no run ids did not start a run.** When the environment
-binds more than one URL for the application, the tool returns the candidate
-deployments instead of starting — no error raised, nothing running. Ask which
-URL and re-invoke with that `deploymentId`. Never pick one: the wrong URL
-verifies the change against the wrong app and reads as a clean result.
+binds more than one URL for the application, the tool answers with the candidate
+deployments instead of starting — and it delivers them **as a tool error**, with
+the candidate list in the error payload. Nothing is running, and the call is not
+retryable: retrying re-asks the same question. The candidates carry no marker
+saying which is canonical, and the list can include URLs unusable from cloud
+execution (a localhost binding, say). Ask which URL and re-invoke with that
+`deploymentId`; the test's own `url` from `get_mabl_test` says which candidate
+the test actually targets. Never pick one blind: the wrong URL verifies the
+change against the wrong app and reads as a clean result.
 
 **Otherwise, use the run ids it returns.** The tool hands back the ids of the
 runs it created — that is the only reliable way to know which runs are yours. A
