@@ -487,11 +487,14 @@ Reading a flow's steps at a resolved version `N`:
 | `N > 0` | diff `<*-f>:<N-1>` against `<*-f>:<N>` and read the target side (`.to // .from`, skipping `removed`) |
 | `N` is 0 and not the latest | diff `<*-f>:0` against `<*-f>:1` and read the **source** side (`.from`, skipping `added`) |
 
-So recurse, and bound it. **Stop at depth 3**, and **stop on a flow id already
-expanded** on this path, which also closes a cycle. If anything is still
-unexpanded at either stop, list those flows by id and say they were not expanded.
-Report the depth you actually reached rather than implying you went all the way
-down.
+So recurse, and bound it. **The test is depth 0 and the flows it calls directly
+are depth 1. Expand through depth 3, and refuse anything at depth 4.** Also
+**stop on a flow id already expanded on this path**, which closes a cycle. Both
+bounds are load-bearing: the authoring surface accepts a flow that calls back
+into one of its own callers, with no error and no warning, so a cycle is
+reachable and an unbounded walk does not terminate. At either stop, list the
+flows left unexpanded by id and say which stop you hit. Report the depth you
+actually reached rather than implying you went all the way down.
 
 ## 5. Classify
 
