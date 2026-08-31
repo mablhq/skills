@@ -15,7 +15,7 @@ description: |
   or flow id (`*-f`). Takes the entity as given; it does not search for it.
   Standalone, and built to be called by other skills. To CHANGE a test use
   mabl-test-edit; for a FAILING run use mabl-debug.
-allowed-tools: Bash, Read, mcp__mabl__list_mabl_test_versions, mcp__mabl__compare_mabl_test_versions, mcp__mabl__list_mabl_flow_versions, mcp__mabl__compare_mabl_flow_versions, mcp__mabl__get_mabl_flow_steps, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_tests
+allowed-tools: Bash, Read, Write, mcp__mabl__list_mabl_test_versions, mcp__mabl__compare_mabl_test_versions, mcp__mabl__list_mabl_flow_versions, mcp__mabl__compare_mabl_flow_versions, mcp__mabl__get_mabl_flow_steps, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_tests
 ---
 
 # mabl compare versions
