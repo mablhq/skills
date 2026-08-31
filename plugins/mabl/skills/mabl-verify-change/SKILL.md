@@ -243,9 +243,6 @@ collapsing it is how an unproven fix reaches a merge.
 ## What counts as clean
 
 - **`success` on a terminal run is the pass signal.** Nothing else is.
-- **A run that needed recovery is not clean here.** Something on the page still
-  isn't what the test expects; it just got past it. For a fix you're about to
-  merge, that's a partial result, not a pass.
 - **One trigger can produce more than one run** — a browser each, for instance.
   All of them have to pass. One green sibling is not a green result.
 - **A `terminated` run is not a failed run.** It is terminal with
