@@ -306,7 +306,8 @@ it, not that a wait was dropped. Unchanged count plus a same-type addition is an
 Extraction is the most destructive-looking change that removes nothing, and it
 produces **no added step**: the existing `StepGroup` *becomes* the
 `EvaluateFlow`, keeping its id. Signature: **`removed: N`, `added: 0`, one
-`changed` step whose type became `EvaluateFlow`** — so checks 1–3 and 5 all fail,
+`changed` step whose type became `EvaluateFlow`** — so the id, body, flow-id and
+residue matches all fail,
 and every removal falls through unless you read inside the flow.
 
 Take `flow.invariant_id` from any target-side `EvaluateFlow`, get its branch from
@@ -704,9 +705,10 @@ the captured diff, so a read-only comparison leaves nothing in `git status`.
   two resolved versions with their `created_on_branch` and `created_time`, and
   then either its own functional / nonfunctional breakdown in the same vocabulary,
   or one line saying both sides resolved to the same version and nothing was
-  compared, which still leaves whatever its own nested flows produced. Flows on one side only are named as called or dropped, with what they
-  hold. Flows left unexpanded are listed by id with the reason — depth cap, cycle,
-  or no version list on this lane. The verbatim flow-version caveat from step 4
+  compared, which still leaves whatever its own nested flows produced. Flows on
+  one side only are named as called or dropped, with what they hold. Flows left
+  unexpanded are listed by id with the reason — depth cap, cycle, or no version
+  list on this lane. The verbatim flow-version caveat from step 4
   goes at the head of this section.
 - **Unclassified** — every real change that fits no class above, with its field,
   old value and new value.
@@ -716,7 +718,7 @@ the captured diff, so a read-only comparison leaves nothing in `git status`.
 **Omit empty sections**, in the file and the reply alike. No "Unresolved: none",
 no zero rows, no heading with nothing under it.
 
-**Reconcile before printing.** Exclude check-1 (moved) pairs from added and
+**Reconcile before printing.** Exclude id-matched (moved) pairs from added and
 removed counts — a move is one relocation, not a delete plus an add — then assert
 in aggregate that `added == net + removed`. **Not per type** — a `changed` step
 can change type, moving one count between two types while appearing in neither
