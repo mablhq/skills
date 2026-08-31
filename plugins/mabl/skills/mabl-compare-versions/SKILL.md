@@ -230,8 +230,19 @@ gate makes the skill look like it missed an edit it deliberately reclassified.
 - **You cannot tell an authored description edit from renderer churn.** Both
   arrive as the same field differing with the body identical. Report the change
   and say the diff carries no signal for which it was.
-- **An all-zeros summary is a finding.** "A version was created and it changed no
-  steps" is real and common — usually a branch operation or a metadata save.
+- **An all-zeros summary is a finding, once the source reference is ruled out.**
+  "A version was created and it changed no steps" is real and common, usually a
+  branch operation or a metadata save. It is not the only cause, and the other
+  one looks identical.
+- **A test's version 0 on the source side is the reference to distrust.**
+  Measured 2026-08-31 on two tests created through `create_mabl_test`:
+  `<*-j>:0` against `<*-j>:1` returned `changed: 0` with **both sides rendering
+  the version-1 body**, and `get_mabl_test_steps` at `:0` returned the version-1
+  steps as well, so the source side was never a distinct snapshot. A flow's
+  version 0 does not behave this way, and `<*-f>:0` against `<*-f>:1` renders
+  version 0 correctly, so this is the test reference rather than the diff engine.
+  Where the source is a test's version 0 and the summary is all zeros, report the
+  comparison as ungrounded rather than as no change, and offer a later pair.
 
 ### A removed step is not a deleted step
 
