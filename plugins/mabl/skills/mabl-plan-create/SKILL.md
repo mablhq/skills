@@ -40,8 +40,17 @@ in the mabl app. Don't approximate a plan with something else.
 
 ## Prerequisites
 
+The mabl MCP server, with `create_mabl_plan` and `edit_mabl_plan` in the tool
+list. Every step below runs over MCP, and a session with no shell completes the
+whole job (measured 2026-08-30).
+
+The CLI is optional and buys exactly one thing: `mabl plans describe <*-p> -o
+json` is the only surface that reads a stage's `concurrency` back, because
+`get_mabl_plan` never returns it. Skip this block where there is no shell, and
+report concurrency as unread rather than asserting it.
+
 ```bash
-# Check the mabl CLI is installed and recent enough; install/upgrade if not
+# Only where you have a shell and need the concurrency read-back
 MIN_MABL_CLI_VERSION=2.111.0
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
@@ -50,8 +59,7 @@ mabl auth login --auto   # one-time OAuth in browser
 mabl auth info           # verify you're logged in and the token hasn't expired
 ```
 
-The CLI is how you read plans (`mabl plans list`, `mabl plans describe <*-p>`)
-and label them; the writes below run on the mabl MCP server.
+Reading, labeling, creating and editing all run on the MCP server.
 
 ## 1. Resolve the target before you build anything
 
@@ -68,8 +76,29 @@ list_mabl_tests({ workspaceId })            → the test ids (*-j) to group
 
 **The application must already be deployed to that environment.** If more than
 one deployment binds them, `create_mabl_plan` refuses and hands back the
-candidates — ask the user which one, and re-invoke. Don't pick for them: the
-choice decides what URL the whole plan runs against.
+candidates. You can also see it before sending anything: `list_mabl_applications`
+repeats an application and environment pair once per deployment URL, so a pair
+listed twice is already ambiguous (measured 2026-08-30).
+
+Either way, stop at the ambiguity and report it: name the candidate deployments
+with their URLs, name the tests you were going to group, and say the target is
+ambiguous. Three rules hold on this branch.
+
+- **Don't pick.** The choice decides what URL the whole plan runs against.
+- **Don't substitute.** Building against a different application or environment
+  than the request implies is a larger change than the pick you are avoiding, and
+  it produces a real plan whose tests cannot run against its URL. Disclosing the
+  swap afterwards does not repair it (measured 2026-08-30: a cold session hit this
+  gate, found no unambiguous environment on the application the tests belong to,
+  and quietly built the plan against a different application instead).
+- **With nobody to ask, stop and create nothing.** An unattended, headless or CI
+  invocation has no user in the loop, so asking is not available. End there,
+  with the candidates listed and what you need to proceed: which deployment, or
+  an application and environment pair bound by exactly one.
+
+`create_mabl_plan` takes no `deploymentId`, so a chosen deployment is not
+something you can send. Once someone answers, the routes are an application and
+environment pair bound by one deployment, or the plan editor in the mabl app.
 
 ## 2. Create
 
@@ -155,7 +184,9 @@ edit_mabl_plan({ planId, operations: [
 ```
 
 **Append a stage** by adding a test with `stage_index` equal to the current
-stage count. Any higher index is out of bounds and rejected.
+stage count. Any higher index is out of bounds and rejected. An appended stage
+carries no concurrency of its own, so say that as you append it (last limit
+below).
 
 **Omitting a credential field leaves the old one attached**, so swapping a
 credential means passing the new id. There is no clear-it path here: the tool's
@@ -215,7 +246,11 @@ reads as hedging and buries the one limit that actually applies today.
   create). So a plan whose stages deliberately differ — sequential, then
   parallel — cannot be built here at all. `get_mabl_plan` doesn't return
   `concurrency` either; `mabl plans describe <*-p> -o json` is the only way to
-  read back what a stage actually got.
+  read back what a stage actually got. So don't tell anyone how a stage will
+  execute unless you read it back that way: report stage 0 as the value you sent
+  at create, and an appended stage as taking the API default, unread (measured
+  2026-08-30: a cold session reported an appended stage as running its tests in
+  parallel, which nothing available to it could have shown).
 
 ## Running it
 
