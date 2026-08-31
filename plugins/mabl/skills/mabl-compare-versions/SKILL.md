@@ -389,7 +389,9 @@ Four things about that list:
   branch and a flow version on another never coexisted, and saying so is better
   than hiding it behind a filter.
 - **Both sides resolving to the same version is the common case**, and it is an
-  answer. Name the version and say the flow did not change between them.
+  answer. Name the version and say the flow did not change between them. It
+  settles that flow's own steps and nothing about the flows it calls, so read its
+  steps at that version and carry on down. See "Flows inside flows".
 - **Version numbers are global per flow**, so `<*-f>:<N>` is branch-independent,
   exactly like a test reference.
 - **A busy flow's history is long** — 355 versions on one of the flows here. Ask
@@ -459,16 +461,31 @@ means the reusable flows the test calls.
 
 ### Flows inside flows
 
-Check for it, don't assume either way. Run the same enumeration over each flow
-diff: an `EvaluateFlow` among a flow's steps is a nested flow, and it resolves by
-the same timestamp rule.
+A flow can call a flow. `create_mabl_flow` accepts an `EvaluateFlow` step among
+its `steps`, `get_mabl_flow_steps` reads it back unchanged, and the step appears
+in a flow diff under the same type name it carries in a test. Nesting is a shape
+to handle, not a hypothetical. `compare_mabl_flow_versions` states that it
+compares nested flows as `EvaluateFlow` steps and does not expand them, so the
+expansion is this skill's job at every level, not only the first.
 
-What is known: the platform anticipates nesting. `compare_mabl_flow_versions`
-states that nested flows are compared as `EvaluateFlow` steps and not expanded,
-and a flow's steps come back in the same singleton-map format under the same step
-type names as a test's, so an `EvaluateFlow` among them is well-formed. What was
-not observed: none of the flows read while writing this contained one, so there
-is no example here to pattern-match against.
+**Enumerate a flow's nested flows from its steps at the resolved version, never
+from its diff.** A flow that resolves to the same version on both sides has no
+diff at all, so enumerating from diffs stops dead there and never reads the flows
+it calls. A nested flow changes independently of its parent, so that omission
+drops real behavioural changes and reports zero with no sign anything was
+skipped.
+
+Resolution is against the **test version's** `created_time` at every depth. Each
+nested flow gets its own two versions resolved exactly as its parent's were, so a
+parent holding still says nothing about its children.
+
+Reading a flow's steps at a resolved version `N`:
+
+| Case | Route |
+|---|---|
+| `N` is the flow's latest | `get_mabl_flow_steps` returns that version |
+| `N > 0` | diff `<*-f>:<N-1>` against `<*-f>:<N>` and read the target side (`.to // .from`, skipping `removed`) |
+| `N` is 0 and not the latest | diff `<*-f>:0` against `<*-f>:1` and read the **source** side (`.from`, skipping `added`) |
 
 So recurse, and bound it. **Stop at depth 3**, and **stop on a flow id already
 expanded** on this path, which also closes a cycle. If anything is still
@@ -651,7 +668,7 @@ the captured diff, so a read-only comparison leaves nothing in `git status`.
   two resolved versions with their `created_on_branch` and `created_time`, and
   then either its own functional / nonfunctional breakdown in the same vocabulary,
   or one line saying both sides resolved to the same version and nothing was
-  compared. Flows on one side only are named as called or dropped, with what they
+  compared, which still leaves whatever its own nested flows produced. Flows on one side only are named as called or dropped, with what they
   hold. Flows left unexpanded are listed by id with the reason — depth cap, cycle,
   or no version list on this lane. The verbatim flow-version caveat from step 4
   goes at the head of this section.
