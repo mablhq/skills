@@ -15,7 +15,7 @@ description: |
   instruction id.
   NOT for changing a test — to edit one use mabl-test-edit, to create one use
   mabl-test-authoring. NOT for first-time workspace setup — use mabl-init.
-allowed-tools: Bash, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__get_current_user
+allowed-tools: Bash, Read, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__get_current_user
 ---
 
 # mabl update agent instructions
@@ -137,7 +137,11 @@ Three facts worth having in hand while answering:
 - The row will reach browser tests only, with no flag on any command that changes that. See the closed lane, above.
 - Instruction text is capped at 2000 characters, enforced by the server, regardless of what a draft is shaping up to need.
 
-Wait for an answer to every item above before moving on. A partial answer, "recovery's right, don't worry about the rest," settles only that one dimension; the rest stays open until it is settled too.
+**A dimension the request already settled is answered; one it never mentioned is not.** A request naming the capability, saying the rule applies everywhere, and saying to enable it has answered all four. Restate that configuration in one line as the answer it is, and carry on. Nothing here asks a second time for something already stated.
+
+**Anything still open ends the turn.** Send the confirmation and stop there: no fetch, no candidate read, no proposal, nothing below this section. Silence is not a yes, and neither is a plausible inference. A partial answer, "recovery's right, don't worry about the rest," settles that one dimension and leaves the others open, which is still open.
+
+**An unanswered dimension never travels into the proposal as a numbered decision.** Folding it in there is the failure this section exists to prevent: by then the workspace has been read and a change drafted against a scope nobody agreed to, which is exactly the guess a requester would have corrected.
 
 ## Read what that agent actually reads
 
