@@ -60,7 +60,7 @@ Compare that against the number of things your intent asked to verify. If the
 intent named three checks and the test has one assertion, you know what's
 missing before you look at any run.
 
-`export` refuses performance tests and tests that aren't mablscript-backed
+`export` refuses performance tests and mabl's own default tests
 ("Default mabl tests can not be exported"). That is a real limit, not an error
 to work around — skip 4.1 and say the structure was not checked.
 
@@ -70,9 +70,9 @@ to work around — skip 4.1 and say the structure was not checked.
 mabl agent debug steps <reportedTestRunId> --all --output json
 ```
 
-Pass `--all`. Without it the output filters to failed and recovered steps,
-which on a passing validation run means an empty `steps` array — correct, but
-not what you want here.
+Pass `--all`. Without it the output filters to failed steps, which on a passing
+validation run means an empty `steps` array — correct, but not what you want
+here.
 
 The envelope carries `step_addressing: "index"`, which is how you know this is
 an agent-reported run rather than an ordinary cloud run. Entries look like:
@@ -159,9 +159,10 @@ Note what you do *not* have: these runs capture screenshots only, no DOM
 snapshot. So a descriptor for an element the test never touched has to come from
 a live session — that is the case the agent lane exists for.
 
-When the edit is nameable, hand it to the `mabl-test-edit` skill's
-structured-step lane (`insert_after` / `replace` / `move`). Keep the decision —
-what is missing, and whether a fix weakened the test — in this loop.
+When the edit is nameable, hand it to the structured-step lane
+(`insert_after` / `replace` / `move`) the way step 4.3 describes — that step owns
+the routing, including checking the skill it routes to is there. Keep the
+decision — what is missing, and whether a fix weakened the test — in this loop.
 
 ### The agent lane
 
