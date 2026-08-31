@@ -102,7 +102,7 @@ Resolve it with the ladder in `references/cli-surface.md`, then:
 | **Applications** | Scope to an application only if the request is about *that app's* quirks; general judgment stays unscoped. Match what comparable existing instructions do — an oddly-scoped rule is one someone will later fail to find. Resolve the name to an id, and if the request named an app in words, show which id it mapped to: that mapping is a guess worth surfacing. |
 | **Environments** | Same test. Scope only if the change genuinely differs by environment (stricter in Prod than Dev) — and if it does, that is **two** instructions, so say so. |
 
-Ambiguous scope is a question, not a guess. One question, then proceed.
+This is an inference, not a decision. The next section confirms it with the requester before anything gets read.
 
 ## Check the rule is no more specific than its scope
 
@@ -116,6 +116,28 @@ Two shapes to tell apart:
 The question to ask: **what does the agent do with this when the situation it describes is absent?** If the answer is "something odd", the rule needs a stated condition.
 
 **Never block on this.** State what the configuration will actually match, in plain words — *"this applies to every test the authoring agent writes here, not only checkout tests"* — offer the narrowing, and let the requester decide. A team is allowed to want a broad rule; they are just not well served by getting one without being told.
+
+## Confirm the configuration, then wait
+
+Everything above is analysis; none of it is a decision until the requester confirms it. Before reading a single existing instruction, state the full configuration this change would use and get an explicit answer on each part, even where nothing looked ambiguous. A guess a requester would have corrected is exactly what "forgot to say the scoping" turns into once a row is live.
+
+State these, and ask for a yes or a correction on each:
+
+- **Capability, or capabilities.** The inferred choice, and the reasoning behind it.
+- **Applications.** Named by name, or "every application in this workspace" if left unscoped.
+- **Environments.** Named by name, or "every environment" if left unscoped.
+- **Enabled or disabled**, for a row this would create.
+- **What it will actually match**, the specificity finding above, in plain words.
+
+This is the whole configuration surface `agent-instructions create` and `update` expose, checked against `--help` on both: capabilities, application ids, environment ids, and the enabled/disabled state. Nothing else on a row is configurable from here.
+
+Three facts worth having in hand while answering:
+
+- Leaving applications or environments unscoped does not mean "neither," it means "every one." See Empty means ALL, above.
+- The row will reach browser tests only, with no flag on any command that changes that. See the closed lane, above.
+- Instruction text is capped at 2000 characters, enforced by the server, regardless of what a draft is shaping up to need.
+
+Wait for an answer to every item above before moving on. A partial answer, "recovery's right, don't worry about the rest," settles only that one dimension; the rest stays open until it is settled too.
 
 ## Read what that agent actually reads
 
@@ -200,12 +222,11 @@ A disabled row steers nothing, so **nothing here halts** — there are no mixed 
 Report in this shape. It leads with placement because that is the part most likely to be wrong, and ends with commands that have not run.
 
 1. **Header** — the change verbatim; the workspace **name and id** and how it was resolved; rows fetched vs the limit passed (under it is the proof nothing truncated); how many reviewed as candidates and how many set aside, under which capabilities; CLI version; and that no writes happened.
-2. **Where this change belongs** — the placement dimensions with their reasoning. Flag any judgment call the requester might disagree with.
-3. **What this rule will match** — the specificity finding, in plain words. Offer the narrowing; do not withhold the change over it.
-4. **What is already there that this touches** — **all** enabled candidates first, then disabled, never interleaved. One relationship per row from exactly this vocabulary: **owns-the-topic** / **adjacent** / **unrelated** / **contradicts**. Mark unscoped rows as such, and show application and environment scope **by name**.
-5. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the 2000 limit. For a rescope, the scope before and after, by name, and what newly gains the rule.
-6. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope. Each states its consequence.
-7. **To apply** — the exact commands, in order, clearly not yet run.
+2. **Where this change belongs, and what it will match** — the placement dimensions and the specificity finding, exactly as confirmed with the requester before this read ran. Note only anything that changed since that confirmation.
+3. **What is already there that this touches** — **all** enabled candidates first, then disabled, never interleaved. One relationship per row from exactly this vocabulary: **owns-the-topic** / **adjacent** / **unrelated** / **contradicts**. Mark unscoped rows as such, and show application and environment scope **by name**.
+4. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the 2000 limit. For a rescope, the scope before and after, by name, and what newly gains the rule.
+5. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope. Each states its consequence.
+6. **To apply** — the exact commands, in order, clearly not yet run.
 
 **The text in the proposal and the text in the command must be byte-identical.** No emphasis added for the write-up, no punctuation swapped. A human approves what they read, and what they read has to be what gets written — so write the proposed text once, plainly, and reuse that exact string.
 
