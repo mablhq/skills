@@ -232,6 +232,14 @@ So a narrowly-placed change created without `--application-ids` silently ships w
 
 **Never `delete`.** The command exists; this skill does not use it. `update <id> --disabled` is reversible with `--enabled` and keeps the audit trail. Deleting is not undoable and takes the history with it.
 
+## The closing reply is terse
+
+Verification above stays complete: every id gets confirmed, every affected instruction gets `describe`d. The reply that goes to the requester after the write is not that transcript.
+
+State, once per instruction touched: the name, one line of what changed (row created, text amended, scope widened, enabled), and where (workspace name, capability, applications and environments named or "all"). Carry forward, verbatim, any halt, footgun flag, or set-aside caveat from the proposal; a caveat never gets summarized away for length. Nothing else goes in the reply by default.
+
+The echoed commands, the raw `describe` output, and the rows set aside during classification stay available; hand them over when asked, not before.
+
 ## Hard rules
 
 - **Never invent a rule.** Every word of proposed instruction text traces to what was actually requested. If the request is vague, ask — do not pad it with generic testing advice the team never asked for.
