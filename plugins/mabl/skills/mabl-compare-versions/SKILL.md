@@ -246,8 +246,8 @@ gate makes the skill look like it missed an edit it deliberately reclassified.
 
 ### A removed step is not a deleted step
 
-`removed` at test level means *left this position*, which has six causes besides
-deletion. Work them in order and stop at the first that matches:
+`removed` at test level means *left this position*, and deletion is only one of
+its causes. Work them in order and stop at the first that matches:
 
 | Evidence, in this order | Verdict |
 |---|---|
@@ -261,8 +261,8 @@ deletion. Work them in order and stop at the first that matches:
 | The type's count dropped, or nothing of that type was added | **deleted** |
 | Nothing matched, count flat, a same-type step was added | **unmatched removal** — name the candidate |
 
-**The four `EvaluateFlow` rows carry the whole flow-change vocabulary, and the
-rows above them cannot stand in.** A step written through the step-edit tools
+**The `EvaluateFlow` rows carry the whole flow-change vocabulary, and the rows
+above them cannot stand in.** A step written through the step-edit tools
 carries no `id`, so an edit to an `EvaluateFlow` arrives as a removal plus an
 addition rather than as one `changed` entry, and the id row misses it. The body
 row has already claimed every identical-body pair, so anything reaching the flow
