@@ -111,7 +111,7 @@ are not in conflict if one is scoped to `authoring` and the other to `recovery`
 — they are read by different agents and never meet. Flattening the scope makes
 a clean workspace look broken.
 
-Then check for these hazards explicitly. All of them occur in real workspaces:
+Then check for these hazards explicitly:
 
 | Hazard | Why it misleads |
 |---|---|
@@ -150,11 +150,17 @@ What the stages do report is how the work is split: how many stages there are,
 each stage's `concurrency`, and how many tests each holds.
 
 `mabl plans describe <id> -o json` returns more of a plan than the MCP tool
-does, including `triggers`, `browser_types`, `execution_runner_type`,
-`retry_on_failure` and `credentials_required`. Where the CLI is available,
-trigger and browser coverage are worth reporting. The two surfaces disagree on
-one shape: plan `labels` are plain strings from the MCP tools and objects
-carrying `name` and `color` from `plans describe`. Read whichever you called.
+does: `execution_runner_type` on every plan, and `triggers`, `browser_types`,
+`retry_on_failure` and `credentials_required` on the plans that set them. Where
+the CLI is available, trigger and browser coverage are worth reporting, and a
+plan with no `triggers` key runs only when something else starts it, which is
+worth reporting too.
+
+The two surfaces disagree on one shape. Plan `labels` are plain strings from the
+MCP tools and objects from `plans describe`: the same plan reads
+`["nightly"]` through `get_mabl_plan` and `[{"name": "nightly"}]` through the
+CLI, with a `color` key alongside `name` on labels that have one. Read whichever
+you called rather than assuming the type.
 
 `list_mabl_applications`, `list_mabl_environments`, `list_mabl_credentials` and
 `list_mabl_data_tables` cover naming across configuration.
