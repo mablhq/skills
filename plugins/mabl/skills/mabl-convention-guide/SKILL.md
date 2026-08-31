@@ -179,12 +179,16 @@ This is the failure mode that most damages a convention write-up. An unaided
 agent wrote *"mabl labels are case- and separator-sensitive, so these are 8
 unrelated tags"* — and that is **false**.
 
-**mabl label matching is case-INSENSITIVE** at both the CLI and REST layers.
-`FEATURE-FLOWS` returns the same tests as `feature-flows`.
+**mabl label matching is case-INSENSITIVE**, on the CLI and on the MCP server
+alike. In a workspace holding `smoke`, `Smoke` and `SMOKE` as separate stored
+spellings, `mabl tests list --labels` returned the same 13 tests for `smoke`,
+`Smoke`, `SMOKE` and `sMoKe`, and `list_mabl_tests` with `labels: ["SMOKE"]`
+returned that same 13, mixed spellings included (measured 2026-08-31).
 
 So `smoke` / `Smoke` / `SMOKE` are already one label for selection purposes, and
 recommending a cleanup of them is recommending cosmetic churn. `smoke` vs
-`smoke-test` is genuinely different. Getting this backwards inverts the advice.
+`smoke-test` is genuinely different, and returned 3 tests against the same 13.
+Getting this backwards inverts the advice.
 
 General rule: where a recommendation depends on how a mabl mechanism behaves,
 either test it in one call or state it as an open question. Never infer a
@@ -211,6 +215,12 @@ Say what you could and could not see. Silence reads as completeness.
   which ranks by relevance and caps, so it cannot ground a conformance count.
   Without the CLI, report flow naming as not enumerated rather than
   generalizing from whatever a search returned.
+- **A plan's target environment is not readable from here.** A plan carries
+  `deployment_ids`, and nothing in this skill's surface resolves a deployment id
+  to the environment it binds to, so a plan named "Staging Sanity" cannot be
+  confirmed to run against staging. Report the plan name and stop there rather
+  than inferring the environment from it. The application-to-environment binding
+  is readable, from `list_mabl_applications`, and is a different question.
 - **Names come back resolved; workspace membership does not.** `list_mabl_tests`
   returns `createdBy` and `lastUpdatedBy` as objects carrying `name` and
   `email`, `list_mabl_plans` returns a `users` map, and the CLI returns
