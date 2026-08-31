@@ -98,22 +98,36 @@ in the same way:
 
 ## 3. Validate the ids before you send them, and re-read after
 
-**An id that isn't a test in this workspace is accepted, not rejected.**
-`create_mabl_plan` echoes it straight back, and a `get_mabl_plan` taken seconds
-later still lists it. A server-side reconcile removes it within about a minute
-(measured 2026-08-30). So diffing the returned `execution_stages` against the
-`testIds` you sent proves nothing — the two agree while the id is still doomed,
-and the plan comes back smaller later, when nobody is looking.
+**An id that isn't a test in this workspace is accepted, not rejected.** There
+is no error at any point. `create_mabl_plan` echoes it straight back, `add_test`
+takes it, and a `get_mabl_plan` taken seconds later still lists it. A
+server-side reconcile deletes it about a minute on (30–58s, measured
+2026-08-30). So diffing the returned `execution_stages` against the `testIds`
+you sent proves nothing — the two agree while the id is still doomed, and the
+plan comes back smaller later, when nobody is looking.
+
+**A test from a *different application* is a different case: accepted and
+kept.** It survives the reconcile, because plan membership isn't scoped to the
+plan's application. That is the product working as intended — don't report it as
+a dropped id or try to "correct" it. But it does mean a `*-j` pasted from the
+wrong application lands silently, so it's worth naming when you see one.
 
 Catch it on the way in instead. Before the create, and before any `add_test`,
 confirm every `*-j` appears in `list_mabl_tests({ workspaceId })` or resolves
 through `get_mabl_test`. An id that doesn't resolve never goes into the payload.
 
-Where an id went out unverified, re-read with `get_mabl_plan` **60 seconds
-later** rather than immediately, and name any id that is gone. An id you could
-not verify is unverified: report it as that, not as saved. A plan quietly
-missing two of its nine tests is worse than a failed call, because it looks
-finished.
+Where an id did go out unverified, a later re-read is worth doing but **do not
+trust a clean one**. The cleanup is not on a clock: an invalid id has been seen
+sitting in a plan untouched for six minutes of polling, then being removed the
+instant an unrelated `set_enabled` wrote to the plan (measured 2026-08-30). So a
+re-read can come back clean because the sweep simply hasn't run yet. Report an
+id you could not verify as unverified — not as saved, and not as confirmed by a
+read. A plan quietly missing two of its nine tests is worse than a failed call,
+because it looks finished.
+
+And say what it puts at risk, not just what it costs: when that sweep does run,
+it **flattens every stage into one and resets concurrency** (see the trap table).
+On a multi-stage plan, one unchecked id is a structural hazard, not a missing row.
 
 Report the plan id and `viewPlanUrl` either way.
 
@@ -150,7 +164,7 @@ HTTP 400 `id is required` (measured 2026-08-30) — which, the batch being atomi
 takes every other operation in the same call down with it. Detaching a
 credential is done in the mabl app.
 
-### The five traps
+### The six traps
 
 None of these announce themselves. They are the reason this skill exists rather
 than a bare tool call.
@@ -161,7 +175,8 @@ than a bare tool call.
 | **`stage_index` defaults to 0** | On both add and remove. A remove without it looks only in the first stage and fails with "not found in stage 0" even though the test is sitting in stage 2. Always pass it. |
 | **Adding the same test twice succeeds** | There is no duplicate check. The test lands in the stage twice and runs twice, burning a run each time. Check the stage's contents before adding. |
 | **Emptying the plan is rejected, in the language of stage indices** | Removing the last test of the last stage fails the whole batch and saves nothing. It reports as `Stage index 0 is out of bounds. The plan has 0 stage(s).`, which reads like a bad index and isn't one — it's the guard working, because a plan needs at least one stage with at least one test. Don't adjust the index and retry; drop a removal from the batch. |
-| **A concurrent edit is lost silently** | There is no conflict error to catch and no version or etag to send: two `edit_mabl_plan` calls against one plan both return 200, and the last write wins (measured 2026-08-30). What comes back can also be structurally rewritten rather than merged — stages collapsed and deduped. So re-read with `get_mabl_plan` after every edit and diff it against what you intended. Treat any difference as somebody else's write, and re-apply on top of what is there rather than resending your payload. |
+| **A concurrent edit is lost silently** | There is no conflict error to catch and no version or etag to send: two `edit_mabl_plan` calls against one plan both return 200 (measured 2026-08-30). Two writes touching *different* fields both survived; two touching the same field would leave only the last, with nothing raised. So re-read with `get_mabl_plan` after every edit and diff it against what you intended. Treat any difference as somebody else's write, and re-apply on top of what is there rather than resending your payload. |
+| **An unrecognised id takes the plan's shape with it, on the next write** | The cleanup that deletes a bad id doesn't just delete the row — it **flattens the plan**. Measured 2026-08-30: a 4-stage plan (3/2/3/2 tests) carrying one invalid id came back as **1 stage of 10 tests with `concurrency` reset from `sequential` to `parallel`**. The valid tests and their order survive; the stage structure does not. Two things make this hard to see. It fires **on the next write to the plan, not on a timer** — the id sat untouched through six minutes of polling, then a single unrelated `set_enabled` triggered the rewrite. And the triggering write's **own response still shows the old structure**, so the echo you get back is already stale. The trigger is the invalid id, not the edit: a plan built only from ids verified against `list_mabl_tests` took adds, renames, simultaneous edits and `set_enabled` with every stage, order and concurrency intact. This is the real reason step 3 says validate on the way in — an unverified id risks the whole plan, not just itself. |
 
 ### Confirm before you shrink coverage
 
@@ -177,20 +192,30 @@ reversible — those don't need it.
 
 ## What this skill cannot do
 
-Say these plainly instead of leaving the user to discover them:
+Four limits, all of them the API's rather than the request's. Say each one **at
+the moment the work runs into it** — not as a disclaimer up front. A list of
+everything that won't work, delivered before anyone has asked for any of it,
+reads as hedging and buries the one limit that actually applies today.
 
-- **No schedule and no trigger.** A plan created here is enabled but wired to
-  nothing: it runs only when someone calls `run_mabl_plan`. Scheduling it, or
-  attaching it to a deployment trigger, is done in the mabl app. A plan that
-  "exists" is not a plan that runs.
-- **No concurrency change after creation.** There is no edit operation for it.
-  Wrong concurrency means creating a new plan.
-- **No stage rename, reorder, or move-test-between-stages.** Moving a test is a
-  remove plus an add — two operations, and the first one may collapse a stage,
-  so mind the trap table above.
+- **No schedule and no trigger.** Say it when you hand back a created plan, and
+  again if someone asks for "nightly" or "on deploy". A plan created here is
+  enabled but wired to nothing: it runs only when someone calls `run_mabl_plan`.
+  Scheduling it, or attaching it to a deployment trigger, is done in the mabl
+  app. Don't report a new plan as if it were wired up.
+- **No concurrency change after creation.** Say it while choosing the value, not
+  after. There is no edit operation — `set_concurrency` isn't in the enum, and
+  sending it fails argument validation. Wrong concurrency means a new plan.
+- **No stage rename, reorder, or move-test-between-stages.** Say it when someone
+  asks to move a test. Moving one is a remove plus an add — two operations, and
+  the first may collapse a stage, so mind the trap table above.
 - **A stage appended by `add_test` doesn't inherit the first stage's
-  concurrency.** It's created bare and takes the API's default. If that matters,
-  check the plan in the app after appending.
+  concurrency.** Say it when you append. Only the stage made by `create` carries
+  an explicit `concurrency`; every appended stage is created bare and takes the
+  API's default (measured 2026-08-30, from both a `sequential` and a `parallel`
+  create). So a plan whose stages deliberately differ — sequential, then
+  parallel — cannot be built here at all. `get_mabl_plan` doesn't return
+  `concurrency` either; `mabl plans describe <*-p> -o json` is the only way to
+  read back what a stage actually got.
 
 ## Running it
 
