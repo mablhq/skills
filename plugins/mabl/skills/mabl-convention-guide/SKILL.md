@@ -35,9 +35,12 @@ rule, and never noticed that two enabled instruction rows contradicted each
 other.
 
 The workspace arrives as input. This skill reviews the workspace it is handed
-and does not go looking for one — and every call names it explicitly, because
-several surfaces silently fall back to the caller's default workspace and will
-describe a workspace nobody asked about.
+and does not go looking for one. Every call that accepts a workspace names it
+explicitly: `mabl agent-instructions list` with no `-w` returns a full result
+from the caller's default workspace, with nothing in the output to say which
+workspace answered, so an unnamed call can describe a workspace nobody asked
+about. Where a call takes no workspace at all, the entity id carries it, which
+is one more reason to pass every id back exactly as it was returned.
 
 ## Prerequisites
 
@@ -72,21 +75,35 @@ findings, and collapsing them is the failure this skill exists to prevent.
 mabl agent-instructions list -w "$WS" --output json --limit 500
 ```
 
-**`--limit` defaults to 10 and truncates in silence** — no marker, no count, no
-error. A default-limit read of a 27-row workspace looks like a complete read of
-a 10-row one. Pass it explicitly, and if the response length equals the limit,
-raise it and read again.
+**`--limit` defaults to 10 and truncates in silence.** No marker, no count, no
+error. `mabl tests list` and `mabl flows list` both print a row count and the
+line `... use the --limit flag to return a larger set` when they cut a result
+short; `agent-instructions list` prints neither, so a default-limit read of a
+28-row workspace is indistinguishable from a complete read of a 10-row one
+(measured 2026-08-31). Pass it explicitly, and if the row count equals the
+limit, raise it and read again.
 
 For every row, record the text, whether it is **enabled** (the JSON field is
-`disabled`, so an enabled row reads `"disabled": false`), and all four scoping
-dimensions:
+`disabled`, so an enabled row reads `"disabled": false`), and its scope.
 
-| Dimension | Field | Empty means |
-|---|---|---|
-| Agent capability | `capabilities` — `authoring`, `recovery`, `results_analysis` | every capability |
-| Test type | `test_types` | every test type |
-| Application | `application_ids` | every application |
-| Environment | `environment_ids` | every environment |
+**An unset scope dimension is absent from the row, not present and empty.**
+`capabilities`, `application_ids` and `environment_ids` are omitted entirely
+when the instruction is not scoped on them, so a reader looking for an empty
+array finds no field and records no scope at all. Absent here means the widest
+possible scope, which is the opposite of what a missing field usually suggests.
+
+| Dimension | Field | Absent means | Set by |
+|---|---|---|---|
+| Agent capability | `capabilities`: `authoring`, `recovery`, `results_analysis` | every capability | `--capabilities` |
+| Application | `application_ids` | every application | `--application-ids` |
+| Environment | `environment_ids` | every environment | `--environment-ids` |
+| Test type | `test_types` | never absent | no flag on `create` or `update` |
+
+`test_types` behaves unlike the other three. It is present on every row, it read
+`["browser"]` on all 45 rows across the three workspaces measured 2026-08-31,
+and neither `agent-instructions create` nor `agent-instructions update` exposes
+a flag that sets it. Report any other value as something to ask about rather
+than as a scope the team chose.
 
 **Capability is the dimension most often dropped, and dropping it invents
 conflicts that do not exist.** Two rows that state opposite things about healing
@@ -122,16 +139,39 @@ Look at name grammar (delimiter, casing, segment order), description style,
 prefix conventions (`[BROKEN]`, `DND-`, ticket keys), and label taxonomy.
 Report conformance as a count — "22 of 26 conform" — and name every violator.
 
-Then the surrounding structure: `list_mabl_plans` and `get_mabl_plan` for stage
-shape and whether stages select tests by id or by label; `list_mabl_applications`,
-`list_mabl_environments`, `list_mabl_credentials`, `list_mabl_data_tables` for
-naming across configuration; `list_mabl_failure_reasons` for the one
-workspace-level taxonomy the MCP server exposes.
+Then the surrounding structure. `list_mabl_plans` gives plan names, labels and
+enabled state; `get_mabl_plan` gives the execution stages.
+
+**A plan selects its tests by id.** Every stage carries a list of `journey_id`
+values (under `tests` from `get_mabl_plan`, under `journeys` from the CLI), and
+no field anywhere in the payload selects tests by label, so a stage cannot be
+read as "everything tagged smoke". Labels on a plan describe the plan itself.
+What the stages do report is how the work is split: how many stages there are,
+each stage's `concurrency`, and how many tests each holds.
+
+`mabl plans describe <id> -o json` returns more of a plan than the MCP tool
+does, including `triggers`, `browser_types`, `execution_runner_type`,
+`retry_on_failure` and `credentials_required`. Where the CLI is available,
+trigger and browser coverage are worth reporting. The two surfaces disagree on
+one shape: plan `labels` are plain strings from the MCP tools and objects
+carrying `name` and `color` from `plans describe`. Read whichever you called.
+
+`list_mabl_applications`, `list_mabl_environments`, `list_mabl_credentials` and
+`list_mabl_data_tables` cover naming across configuration.
+
+`list_mabl_failure_reasons` returns mabl's nine default categories in every
+workspace, so the list by itself carries no local signal. Only rows with
+`isDefault: false` are a taxonomy this team created. Report those, and say "no
+custom failure reasons" rather than reprinting the defaults as if the workspace
+had chosen them.
 
 For practices that live inside tests rather than in their names — how the team
 waits, how it selects elements, how it logs in, how it sets up data — read the
-steps of a handful of tests with `get_mabl_test_steps`. Say how many you read.
-A habit seen in four tests is a habit seen in four tests, not a workspace rule.
+steps of a handful of tests with `get_mabl_test_steps`. Pass
+`detail: "compact"`: it returns one record per step carrying the step type and
+description, which is what a habit survey needs, where full steps run an order
+of magnitude larger. Say how many tests you read. A habit seen in four tests is
+a habit seen in four tests, not a workspace rule.
 
 ## Do not assert product behaviour you have not tested
 
@@ -156,12 +196,27 @@ Say what you could and could not see. Silence reads as completeness.
 
 - **`list_mabl_tests` caps at 200 and returns no cursor.** Past that, shard by
   `applicationId`, `testType` or `authorId`, and say that you did.
-- **Reusable flows cannot be enumerated exhaustively.** There is no flow lister
-  — search is relevance-ranked and capped — so flow naming is out of scope for a
-  conformance count. Say so rather than generalizing from whatever a search
-  returned.
-- **There is no user roster.** Harvest ids from `createdById` and
-  `lastUpdatedById` and note that the roster is partial.
+- **A returned cursor does not mean another page exists.** `list_mabl_plans`,
+  `list_mabl_applications`, `list_mabl_environments` and
+  `list_mabl_credentials` each hand back a cursor alongside a complete result,
+  and `list_mabl_applications` returns that same cursor again for the empty page
+  after it, which loops forever. Bound every page walk: stop on the first page
+  with no rows, stop if a cursor repeats, and stop after 10 pages whatever the
+  cursor says. Say so if you hit the bound.
+- **Enumerate reusable flows from the CLI, not the MCP server.** `mabl flows
+  list -w <ws> --limit 500` returns the whole set: the workspace measured
+  2026-08-31 returned the same 149 flows at `--limit 500` and at `--limit 5000`.
+  It prints a table of id, description and created time and takes no `--output`
+  flag, so parse the table. The MCP server offers only `search_mabl_flows`,
+  which ranks by relevance and caps, so it cannot ground a conformance count.
+  Without the CLI, report flow naming as not enumerated rather than
+  generalizing from whatever a search returned.
+- **Names come back resolved; workspace membership does not.** `list_mabl_tests`
+  returns `createdBy` and `lastUpdatedBy` as objects carrying `name` and
+  `email`, `list_mabl_plans` returns a `users` map, and the CLI returns
+  `created_by_user`, so no id lookup is needed to name an author. No call lists
+  who belongs to the workspace, so the people you can name are the people who
+  touched the assets you enumerated. Say that.
 - Check authorship spread. Where every asset has one author, the "conventions"
   are one person's habits — frame them that way, not as team policy.
 
