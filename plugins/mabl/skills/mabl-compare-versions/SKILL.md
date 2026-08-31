@@ -242,11 +242,33 @@ deletion. Work them in order and stop at the first that matches:
 |---|---|
 | The removed step's `id` appears on an `added` step | **moved** — matched by step id |
 | Bodies match with `id`, `description`, `annotation` excluded | **id regenerated** — matched by identical body; platform churn |
-| Removed and added `EvaluateFlow` share a `flow.invariant_id` | **flow re-id** — matched by flow id; a migration, not a change |
+| Removed and added `EvaluateFlow` share a `flow.invariant_id`, and their `config` matches | **flow re-id** — matched by flow id; a migration, not a change |
+| Removed and added `EvaluateFlow` share a `flow.invariant_id`, and their `config` differs | **flow invocation changed** — functional. The flow is untouched; what the caller asks of it is not |
 | A target-side `EvaluateFlow` contains the removed step | **extracted** — found inside the new reusable flow; see below |
+| The removed `EvaluateFlow`'s `flow.invariant_id` is on no target-side `EvaluateFlow` | **flow dropped** — functional, and settled. The test stopped calling that flow |
 | Residue matches once commentary **and** find/target are stripped, **and** that residue carries an author-supplied value | **retargeted** — same requirement, different selector |
 | The type's count dropped, or nothing of that type was added | **deleted** |
 | Nothing matched, count flat, a same-type step was added | **unmatched removal** — name the candidate |
+
+**The four `EvaluateFlow` rows carry the whole flow-change vocabulary, and the
+rows above them cannot stand in.** A step written through the step-edit tools
+carries no `id`, so an edit to an `EvaluateFlow` arrives as a removal plus an
+addition rather than as one `changed` entry, and the id row misses it. The body
+row has already claimed every identical-body pair, so anything reaching the flow
+rows differs somewhere. Two consequences:
+
+- **Check `config` before claiming a re-id.** Matching on a shared
+  `flow.invariant_id` alone calls a `config` edit a migration, which files a
+  functional change as identity churn and leaves the flow-invocation class
+  unreachable on any step without an id.
+- **A removal whose flow id is absent from the target side is settled.** Left to
+  fall through, it reaches the last row and is reported as an unmatched removal,
+  so the same pair lands under Unresolved here and under a functional class in
+  step 4. It belongs in one place, as a finding.
+
+Extraction is checked before the dropped-flow row on purpose: an `EvaluateFlow`
+that moved inside a newly extracted flow is also absent from the test's target
+side, and it was relocated rather than dropped.
 
 **Name the method you used** — a body or `flow.invariant_id` match is weaker than
 an id match, since it can't distinguish a move from a delete-plus-identical-add.

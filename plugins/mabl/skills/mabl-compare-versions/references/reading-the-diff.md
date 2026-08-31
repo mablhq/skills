@@ -124,10 +124,13 @@ jq '
     | group_by(.) | map({ (.[0]): length }) | add ) as $src
   | ( [ .steps[] | select(.operation != "removed") | ((.to // .from) | to_entries[0].key) ]
       | group_by(.) | map({ (.[0]): length }) | add ) as $tgt
+  | ( [ .steps[] | select(.operation != "removed")
+        | (.to // .from) | to_entries[0] | select(.key == "EvaluateFlow")
+        | .value.flow.invariant_id ] | map(select(. != null)) | unique ) as $tgtflows
   | [ .steps[] | select(.operation == "added")
       | (.to | to_entries[0]) as $e
       | { step: .stepNumber, type: $e.key, id: $e.value.id,
-          flow: $e.value.flow.invariant_id,
+          flow: $e.value.flow.invariant_id, cfg: $e.value.config,
           body: ($e.value | del(.id, .description, .annotation)),
           res:  ($e.value | residue) } ] as $added
   | [ .steps[] | select(.operation == "removed")
@@ -136,12 +139,16 @@ jq '
       | ($e.value | del(.id, .description, .annotation)) as $body
       | ($e.value | residue) as $res
       | ($e.value | discriminating) as $disc
+      | ($e.value.flow.invariant_id) as $fid
+      | ($e.value.config) as $cfg
       | ($added | map(select(.type == $base.type))) as $same
+      | ($added | map(select($fid != null and .flow == $fid))) as $sameflow
       | $base + {
           matched_by_id:   [ $added[] | select($base.id != null and .id == $base.id) | .step ],
           matched_by_body: [ $added[] | select(.body == $body) | .step ],
-          matched_by_flow: [ $added[] | select($e.value.flow.invariant_id != null
-                                               and .flow == $e.value.flow.invariant_id) | .step ],
+          matched_by_flow_same_config: [ $sameflow[] | select(.cfg == $cfg) | .step ],
+          matched_by_flow_diff_config: [ $sameflow[] | select(.cfg != $cfg) | .step ],
+          flow_absent_from_target: ($fid != null and (($tgtflows | index($fid)) == null)),
           residue_discriminating: $disc,
           matched_by_residue: [ $same[] | select(.res == $res) | .step ],
           same_type_added: [ $same[] | .step ],
@@ -149,6 +156,13 @@ jq '
           tgt_count: ($tgt[$base.type] // 0) } ]
 ' "$DIFF"
 ```
+
+The `flow.invariant_id` match is split on `config` because the ladder splits on
+it. An `EvaluateFlow` written through the step-edit tools carries no `id`, so a
+`config` edit arrives as a removal plus an addition sharing one `invariant_id`,
+and a single `matched_by_flow` list cannot tell that apart from an id-assignment
+migration. `flow_absent_from_target` is what separates a flow the test stopped
+calling from one it still calls.
 
 `residue_discriminating` is the guard, and it is not optional. `residue` strips `target` and `find`,
 so a step whose whole meaning is its target strips to `{actionCode}` alone: every `Hover` matches
@@ -353,6 +367,7 @@ than the author of any one version.
 | An id mismatch read as a deletion | an id match proves a move; a mismatch proves nothing. Compare bodies with `id` excluded — a regenerated id is not a deleted step |
 | `EvaluateFlow` remove+add read as a dropped flow | an id-assignment migration nulls the removed side's id AND changes the description, so both id and descriptor pairing fail. Pair on `flow.invariant_id` + `stepNumber` |
 | `EvaluateFlow` remove+add read as an id migration | the reverse error. A migration shares one `flow.invariant_id` across both sides; **different** invariant ids are one flow swapped for another, which is a functional change to the test |
+| An `EvaluateFlow` `config` edit read as an id migration | a hand-authored `EvaluateFlow` carries no `id`, so adding `config` to one arrives as a remove plus an add sharing a single `flow.invariant_id`. Pairing on the flow id alone calls that a migration and buries a functional change. Compare `config` before deciding |
 | A test version assumed to pin its flow versions | it does not. `flow` carries `invariant_id` and nothing else, and the step schema rejects the `:N` suffix outright. Which flow version applies is resolved on read, so the pair to diff is inferred from `created_time` and the report says so |
 | `get_mabl_test_steps` used to enumerate a test's flows | its `flows` array returned `flow_count: 1` on the test checked here, holding only the `structural` flow. Enumerate from the `EvaluateFlow` steps |
 | `detail: "compact"` used to read flow references | compact drops `flow.invariant_id` entirely, leaving an `EvaluateFlow` with no `flow` key. Use the diff, or `detail: "full"` |
