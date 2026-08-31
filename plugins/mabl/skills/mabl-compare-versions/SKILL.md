@@ -436,11 +436,15 @@ can change type, moving one count between two types while appearing in neither
 `added` nor `removed`, so the per-type form false-alarms on a correct diff. A
 mismatch in the aggregate is a reporting bug: find it.
 
-**The reply is a lossy view of the report; the loss must not land on the
-caveats.** Give the evidence behind every verdict in words the reader can check
-without opening this skill, list every added step
-including non-assertions, quote counts from the type table and not the prose, and
-leave an adjacency observation an observation.
+**The reply is terse; the report is complete.** The file carries the evidence;
+the reply carries only what the caller acts on: the behavioural headline
+(*N functional, M nonfunctional*), one line per functional change — step, class,
+direction — every Unresolved and Not-covered caveat verbatim, and the report
+path. Per-step evidence chains, added-step inventories, commentary before/after
+text, and the class-by-class nonfunctional detail stay in the file; whoever
+wants them opens it. Two rules survive the compression: counts come from the
+type table, never re-derived in prose, and the loss must not land on the
+caveats — an unresolved removal or a not-covered item is never summarized away.
 
 **No verdict, no score, no recommendation to restore or re-edit** — and no
 valence in the vocabulary either. "Step 28's match went from exact to substring"
