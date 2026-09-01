@@ -47,7 +47,6 @@ Each row from `list` / `describe` carries, among other fields:
 | `capabilities[]` | `authoring` · `recovery` · `results_analysis`; **optional** |
 | `application_ids[]` | may be **absent** rather than `[]` |
 | `environment_ids[]` | may be **absent** rather than `[]` |
-| `test_types[]` | always `["browser"]` — see below; lowercase on the wire |
 | `created_by_id` · `created_time` · `last_updated_by_id` · `last_updated_time` | audit fields, epoch ms |
 
 **Read every array defensively** — `r.get('application_ids') or []`, never `r['application_ids']`. Absent and empty both mean "all", and roughly half the rows in a real workspace omit these fields entirely.
@@ -82,16 +81,6 @@ The table view renders the capability column as `capabilities?.join(', ') ?? 'Al
 | `['authoring']` | `authoring` |
 
 **`All` and blank mean the same thing** — a workspace-wide rule every agent reads. A blank capability cell is the easiest row in a set to misread as "scoped to nothing" when it means the opposite. Judge scope from `-o json`, never from the table.
-
-## `test_types` is a closed lane
-
-Every row carries `test_types`, and every row this CLI creates carries exactly `["browser"]`. There is **no flag for it on `create`, `update` or `list`** — the value is a server default the CLI never sends and never lets you change.
-
-The consequence is a scoping dimension that behaves nothing like the other three: it is never empty, so it never means "all". An instruction managed from here applies to browser tests and to nothing else.
-
-**There is no fallback surface.** The mabl web app hardcodes the same value and exposes no picker either, so this is not a CLI gap a reader can route around — it is what agent instructions currently are. Do not send anyone to the app to widen a row.
-
-So never describe a rule as reaching every test in the workspace. It reaches every **browser** test, and the honest report says so.
 
 ## Resolving the workspace
 

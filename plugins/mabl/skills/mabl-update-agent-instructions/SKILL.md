@@ -71,12 +71,6 @@ When authoring, prefer to be explicit — pass `--capabilities` rather than leav
 
 *(Absent vs empty in the JSON, and how `list` renders each: `references/cli-surface.md`.)*
 
-### The one filter that is not empty, and cannot be changed here
-
-`test_types` is a fourth scoping field, and it does not follow the rule above. Every instruction the CLI creates is stored as `test_types: ["browser"]`, and **no CLI command — `create`, `update` or `list` — exposes a flag for it.** So a rule written here reaches browser tests only; API, mobile and performance tests never read it, and nothing in the output says so.
-
-The mabl web app hardcodes the same value and offers no picker, so there is no other surface to route someone to. Say this out loud whenever the change is about a non-browser test type, and never claim a rule applies to a test type nothing can scope it to.
-
 ## Establish the workspace, and name it out loud
 
 **The workspace is an input.** When the request names one, take it and move on.
@@ -134,7 +128,6 @@ This is the whole configuration surface `agent-instructions create` and `update`
 Three facts worth having in hand while answering:
 
 - Leaving applications or environments unscoped does not mean "neither," it means "every one." See Empty means ALL, above.
-- The row will reach browser tests only, with no flag on any command that changes that. See the closed lane, above.
 - Instruction text is capped at 2000 characters, enforced by the server, regardless of what a draft is shaping up to need.
 
 **A dimension the request already settled is answered; one it never mentioned is not.** A request naming the capability, saying the rule applies everywhere, and saying to enable it has answered all four. Restate that configuration in one line as the answer it is, and carry on. Nothing here asks a second time for something already stated.
