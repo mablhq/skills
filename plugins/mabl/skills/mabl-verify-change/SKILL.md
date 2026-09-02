@@ -123,6 +123,43 @@ to come from the intent, never from the change's own convenience.
 State the gate's result before any run result. A reader who sees "passed"
 first will stop reading.
 
+### A move is a change
+
+`mabl-compare-versions` resolves a removal to **moved** when the same step id
+turns up on the added side. That settles identity: the step was not deleted. It
+says nothing about whether the step still works where it now sits, and that
+question belongs here, because a test is a script. The steps before a step are
+its preconditions.
+
+So no move is waved through. For each one, ask which direction it went and what
+now runs between the old position and the new:
+
+| The move | What it means |
+|---|---|
+| **Later**, past steps that don't touch its target | Usually fine. Same element, same state, later clock. |
+| **Later**, past a step that changes the target's state | It still passes, and now proves something else. Coverage moved off the thing it guarded. |
+| **Later**, past a navigation | The target may not be on the page at all any more. |
+| **Later**, out from behind an assertion that guarded it | Whatever that assertion protected now runs unchecked. |
+| **Earlier**, before the step that produces its target | **Not verified.** A selection moved above the click that opens the view is a broken script, whatever a run says. |
+
+Answer from evidence rather than from reading the step list, and say which
+evidence you used.
+
+**A past run is the cheapest source, and it costs no run.** On the CLI lane,
+`mabl agent debug steps <*-jr> --all` emits every executed step rather than only
+the failed ones, so it reads a run that passed; from a step's id,
+`mabl agent debug artifact dom --step-run-id <id>` shows what was on the page
+when that step ran. Compare that against what the new position reaches.
+
+**The MCP lane cannot do this.** Artifact reads there need a `gs://` URI to start
+from, and those come from a failure: a run that passed carries no
+`failureScreenshotUri` and no `evidenceDetails`. On an MCP-only lane, say the
+move is unverified by evidence, and either run it or hand the question back.
+
+**A green run clears a move only as far as the reading you already did.** A move
+that lands on the same element in a different state passes and proves less,
+which is the failure this gate exists to catch.
+
 ## Dry run
 
 A real mode, not a courtesy. Ask for it whenever the runs are the expensive or
