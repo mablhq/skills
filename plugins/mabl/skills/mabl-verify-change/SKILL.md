@@ -8,8 +8,10 @@ description: |
   flaky test, and reports verified / not verified / verified-but-not-green. It never edits and never merges.
   Fire after a test was changed — by an agent, in the Trainer, by anyone — and
   someone asks "did that actually fix it", "verify this fix", "is this branch
-  safe to merge", "prove the test is fixed", "re-run it and check", or hands
-  over a branch with an edited test on it.
+  safe to merge", "prove the test is fixed", or asks whether the edits match
+  the intent the editor was given: "do these edits match what was asked", "did
+  the agent do what I told it to", "make sure the edit aligns with the intent".
+  Also fires on a handed-over branch with an edited test on it.
   It does NOT make the change: to edit a test use mabl-test-edit, to work out
   what's wrong in the first place use mabl-debug. This is the step after.
 allowed-tools: mcp__mabl__get_mabl_test, mcp__mabl__list_mabl_test_versions, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_test_cloud, mcp__mabl__get_mabl_test_run
