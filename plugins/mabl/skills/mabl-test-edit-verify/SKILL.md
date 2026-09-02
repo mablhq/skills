@@ -3,7 +3,7 @@ name: mabl-test-edit-verify
 description: |
   CERTIFIES an edit already made to a mabl test, without trusting the green
   run. NOT for reporting what changed between two versions — that is
-  mabl-compare-versions, which states the diff and leaves the verdict alone.
+  mabl-version-compare, which states the diff and leaves the verdict alone.
   This one holds the intent and rules on it. Diffs against the version before
   the change to catch a pass bought by deleting coverage, re-runs it
   isolated on a branch when that version still needs a run, requires more than
@@ -54,7 +54,7 @@ credentials, labels, and the intent recorded on the test object.
 The content gate comes first for a reason: **it can fail a change that passes
 every run.** A test that got smaller passes faster and proves less.
 
-**Requires `mabl-compare-versions`.** If that skill isn't there, stop and say
+**Requires `mabl-version-compare`.** If that skill isn't there, stop and say
 which skill is missing — don't hand-roll the diff, and don't guess how to
 install it, because that depends on how this skill was installed.
 
@@ -104,7 +104,7 @@ gate.
 ### Reading the result
 
 These stop the verification outright, whatever any run says. Address them by the
-class `mabl-compare-versions` reports, not by re-deriving its matching — it
+class `mabl-version-compare` reports, not by re-deriving its matching — it
 already separates a removal it could resolve from one it couldn't, and that
 distinction is the whole difference between the first two rows.
 
@@ -128,7 +128,7 @@ first will stop reading.
 
 ### A move is a change
 
-`mabl-compare-versions` resolves a removal to **moved** when the same step id
+`mabl-version-compare` resolves a removal to **moved** when the same step id
 turns up on the added side. That settles identity: the step was not deleted. It
 says nothing about whether the step still works where it now sits, and that
 question belongs here, because a test is a script. The steps before a step are
@@ -326,7 +326,7 @@ one and it buries the line someone has to act on.
 
 One file per verification, at `.mabl/verify/<test-id>-<before>-<after>.md`.
 
-**Not `.mabl/compare/`.** That is `mabl-compare-versions`' own cache, keyed by
+**Not `.mabl/compare/`.** That is `mabl-version-compare`' own cache, keyed by
 the same `<id>-<source>-<target>` shape. A verification report written there
 collides with the diff it was built from, and one silently replaces the other.
 

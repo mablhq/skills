@@ -12,7 +12,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   tell them apart. This skill can: it diffs the test against the version before
   the change first, and lost coverage, a loosened assertion, or a date literal
   fails the verification whatever the run said.
-- The diff is delegated to `mabl-compare-versions`, and its classes are read as
+- The diff is delegated to `mabl-version-compare`, and its classes are read as
   reported. A removal it could not resolve is its own verdict — not proof of
   deletion and not proof against it — rather than being rounded into a pass or a
   failure.
