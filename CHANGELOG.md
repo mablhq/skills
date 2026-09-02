@@ -5,6 +5,16 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [Unreleased]
+### Changed
+- `mabl-compare-versions` is renamed to **`mabl-version-compare`**, matching the
+  `mabl-<entity>-<verb>` shape the rest of the skills are moving to. The folder,
+  the frontmatter `name` and the README row all move with it. Anything that
+  invoked it by its old name, or declared it as a required sibling, has to be
+  updated: a skill name is how every surface addresses it, so the old name
+  resolves to nothing rather than falling back. The `.mabl/compare/` cache
+  path is deliberately unchanged, because other skills read artifacts from it.
+
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"

@@ -1,5 +1,5 @@
 ---
-name: mabl-compare-versions
+name: mabl-version-compare
 description: |
   Report what changed between two versions of a mabl test or reusable flow, or
   between two of them, separating changes that alter behaviour from ones that
