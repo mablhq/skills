@@ -3,9 +3,9 @@ name: mabl-verify-change
 description: |
   Prove that a change to an existing mabl test actually fixed it, without
   trusting the green run. Diffs the test against the version before the change
-  to catch a pass bought by deleting coverage, re-runs it isolated on a branch,
-  requires more than one clean run for a flaky test, and reports verified /
-  not verified / verified-but-not-green. It never edits and never merges.
+  to catch a pass bought by deleting coverage, re-runs it isolated on a branch
+  when that version still needs a run, requires more than one clean run for a
+  flaky test, and reports verified / not verified / verified-but-not-green. It never edits and never merges.
   Fire after a test was changed — by an agent, in the Trainer, by anyone — and
   someone asks "did that actually fix it", "verify this fix", "is this branch
   safe to merge", "prove the test is fixed", "re-run it and check", or hands
@@ -138,7 +138,10 @@ Report, then stop:
   the gate is a complete answer, not a partial one;
 - what the run history says the test was doing, and therefore how many clean runs
   the gate would require;
-- the exact `run_mabl_test_cloud` call that would be made, every parameter filled
+- whether the target version already has clean runs, and so whether a run is
+  needed at all — sometimes the honest dry-run answer is that nothing would be
+  started;
+- otherwise the exact call that would be made, lane and every parameter filled
   in;
 - the cost: runs times browsers, each one minutes of real cloud execution.
 
@@ -150,6 +153,68 @@ pass, it has stopped being a dry run.
 the tool list and a dry run was asked for, it stays uncalled.
 
 ## 2. Run it isolated
+
+### First: has this version already run?
+
+A version that already has terminal runs may already carry its own evidence.
+Firing another one spends minutes, and in the cloud credits, to re-learn it.
+Step 3 says how many clean runs the gate needs; read it before deciding.
+
+```
+list_mabl_test_runs({ testId: "<*-j>", workspaceId })
+```
+
+**Runs are version-qualified.** Each carries its `testId` as `<*-j>:<N>`, so a
+run can be attributed to the exact version under verification — and a run on any
+other version is not evidence about this one.
+
+Count the runs on the target version that are `terminal`, `success: true` and
+`attemptCount: 1`.
+
+| Runs already on the target version | Do |
+|---|---|
+| Enough clean ones for the gate | **Start nothing.** Report them, go to step 4 |
+| Fewer than the gate needs | Run the difference, not the whole gate again |
+| Non-terminal, or needed recovery | Run — those are not clean |
+| None | Run |
+
+**Say what a pre-existing run cannot tell you.** The run object carries the
+version, the outcome and the attempt count. It does **not** carry the branch,
+environment, deployment or credentials it used, so a pass on the right version
+may have been a pass against a different URL. State that caveat. It is not on
+its own a reason to discard the evidence and re-run by reflex — but if the
+reader needs the branch pinned, say so and run one.
+
+### Which lane
+
+**When the mabl CLI is installed, run locally.** Faster, no credits — only cloud
+runs consume them — and the artifacts land on the machine.
+
+Configuration is the whole risk: a run under different credentials, a different
+environment or a different URL is not a comparable result. Don't assemble it by
+hand. Seed it from a run that already happened:
+
+```bash
+mabl tests run --run-id <*-jr> --mabl-branch <branch> --headless
+```
+
+`--run-id` pulls the test id, browser, credentials and environment from that
+run. Point it at **the last failing run of the version before the change** —
+that is the exact configuration the test was failing under, which is what makes
+the comparison mean anything. `--mabl-branch` then moves it onto the branch.
+
+Two things the seed does not settle:
+
+- **A data-table-driven test.** Pass `--data-table-id` (or `--scenario-id`)
+  explicitly rather than assuming the seed carried it.
+- **Reachability.** Local and cloud execution sit on different networks, so a
+  URL one reaches the other may not. A `localhost` binding runs locally and never
+  in the cloud; an internal host can be the reverse.
+
+**Say which lane produced the result**, and say the other is unconfirmed. They
+are not interchangeable when the change is about anything environment-specific.
+
+### The cloud lane
 
 Run the changed version, on its branch, so nothing else can be mistaken for it:
 
