@@ -305,6 +305,56 @@ collapsing it is how an unproven fix reaches a merge.
   the run that got through the changed step as the evidence, and report the new
   failure as its own separate thing.
 
+## What the answer says
+
+The report is the evidence. **The answer is the verdict and what it costs the
+reader.** Those are two documents, not two lengths of the same one — and writing
+the report twice is the failure to avoid, because the second copy is the worse
+one and it buries the line someone has to act on.
+
+### The report
+
+One file per verification, at `.mabl/verify/<test-id>-<before>-<after>.md`.
+
+**Not `.mabl/compare/`.** That is `mabl-compare-versions`' own cache, keyed by
+the same `<id>-<source>-<target>` shape. A verification report written there
+collides with the diff it was built from, and one silently replaces the other.
+
+The report holds everything the answer leaves out: which two versions and why,
+the diff's classification and how each removal resolved, the gate table, the run
+history the required count was read from, the lane and the exact call made, the
+run ids and their outcomes, and what this verification could not see.
+
+### The answer
+
+It carries four things, in this order:
+
+1. **The verdict**, in the first line.
+2. **What changed**, in a line — what the test now requires, not how the diff
+   was matched.
+3. **What the verdict rests on**: the gate's result, and the run ids, or the
+   already-existing runs that made a new one unnecessary.
+4. **Anything the reader has to decide** — a disabled test, an intent question
+   the diff cannot settle, a run whose branch could not be confirmed.
+
+Then the path to the report. Nothing else.
+
+**Never narrate the method.** How a removal was joined to an addition, which
+lane ran, which call failed and how you got past it, how many versions were
+walked: all of it belongs in the report, none of it in the answer. Someone
+reaches for this skill so they don't have to know how it works. Where the method
+genuinely changed the verdict, the verdict is the thing to say.
+
+Two that get emitted by reflex:
+
+- **Recovery** is worth a word only when a run actually recovered. Say nothing
+  when none did.
+- **A tool error you got past is not a finding.** Getting past it is the job.
+  It earns a mention only if it changed the result or is still unresolved.
+
+Length is the symptom rather than the rule, but an answer that restates the
+report's tables has already gone wrong.
+
 ## What counts as clean
 
 - **`success` on a terminal run is the pass signal.** Nothing else is.
