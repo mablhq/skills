@@ -222,37 +222,6 @@ may have been a pass against a different URL. State that caveat. It is not on
 its own a reason to discard the evidence and re-run by reflex — but if the
 reader needs the branch pinned, say so and run one.
 
-### Which lane
-
-**When the mabl CLI is installed, run locally.** Faster, no credits — only cloud
-runs consume them — and the artifacts land on the machine.
-
-Configuration is the whole risk: a run under different credentials, a different
-environment or a different URL is not a comparable result. Don't assemble it by
-hand. Seed it from a run that already happened:
-
-```bash
-mabl tests run --run-id <*-jr> --mabl-branch <branch> --headless
-```
-
-`--run-id` pulls the test id, browser, credentials and environment from that
-run. Point it at **the last failing run of the version before the change** —
-that is the exact configuration the test was failing under, which is what makes
-the comparison mean anything. `--mabl-branch` then moves it onto the branch.
-
-Two things the seed does not settle:
-
-- **A data-table-driven test.** Pass `--data-table-id` (or `--scenario-id`)
-  explicitly rather than assuming the seed carried it.
-- **Reachability.** Local and cloud execution sit on different networks, so a
-  URL one reaches the other may not. A `localhost` binding runs locally and never
-  in the cloud; an internal host can be the reverse.
-
-**Say which lane produced the result**, and say the other is unconfirmed. They
-are not interchangeable when the change is about anything environment-specific.
-
-### The cloud lane
-
 Run the changed version, on its branch, so nothing else can be mistaken for it:
 
 ```
