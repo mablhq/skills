@@ -1,5 +1,5 @@
 ---
-name: mabl-verify-change
+name: mabl-test-edit-verify
 description: |
   CERTIFIES an edit already made to a mabl test, without trusting the green
   run. NOT for reporting what changed between two versions — that is

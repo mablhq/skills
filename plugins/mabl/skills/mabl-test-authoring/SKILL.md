@@ -475,7 +475,7 @@ should be pointed at `mabl-test-edit` directly.
 
 Before accepting any attempt, prove the fix didn't just delete the problem.
 
-**Requires `mabl-verify-change`.** If that skill isn't there, stop and say which
+**Requires `mabl-test-edit-verify`.** If that skill isn't there, stop and say which
 skill is missing — don't hand-roll the diff, and don't guess how to install it,
 because that depends on how this skill was installed.
 
@@ -488,7 +488,7 @@ proves less.
 honest heal gets thrown away. Moving an assertion into the right place — the fix
 named above — renders as a removal plus an addition, and so does extracting steps
 into a reusable flow. Resolving that is why the gate lives in
-`mabl-verify-change` and not here. Act on what it reports:
+`mabl-test-edit-verify` and not here. Act on what it reports:
 
 - **Coverage deleted** — a failure, not a fix. An edit that turns a run green by
   dropping coverage is worse than the mismatch you started with. Re-prompt with

@@ -7,7 +7,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 
 ## [1.8.0] - 2026-08-28
 ### Added
-- `mabl-verify-change` — the step after a fix. There are two ways to turn a red
+- `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
   test green, fix the behaviour or stop checking it, and a passing run cannot
   tell them apart. This skill can: it diffs the test against the version before
   the change first, and lost coverage, a loosened assertion, or a date literal
@@ -36,7 +36,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   tools it calls, so the tools that could edit or merge are not on the table.
 
 ### Changed
-- `mabl-test-authoring` routes its no-weakening gate to `mabl-verify-change`
+- `mabl-test-authoring` routes its no-weakening gate to `mabl-test-edit-verify`
   instead of diffing versions itself. The rule it enforced — any `Assert*` in
   `removed` is a failed attempt — contradicted the fix it recommends two
   paragraphs earlier, because moving an assertion into the right place renders as
