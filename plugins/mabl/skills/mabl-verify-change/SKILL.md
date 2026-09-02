@@ -145,16 +145,17 @@ now runs between the old position and the new:
 Answer from evidence rather than from reading the step list, and say which
 evidence you used.
 
-**A past run is the cheapest source, and it costs no run.** On the CLI lane,
-`mabl agent debug steps <*-jr> --all` emits every executed step rather than only
-the failed ones, so it reads a run that passed; from a step's id,
-`mabl agent debug artifact dom --step-run-id <id>` shows what was on the page
-when that step ran. Compare that against what the new position reaches.
+**Past runs settle this only when one of them failed.** A failed run carries
+step-level evidence — the failing step, and artifact URIs through
+`analyze_mabl_failure` — so what the page held at that point is readable. A run
+that passed carries its outcome and nothing more: no `failureScreenshotUri`, no
+`evidenceDetails`, no way to ask what a given step saw. A move on a test whose
+history is all green is therefore not answerable from history.
 
-**The MCP lane cannot do this.** Artifact reads there need a `gs://` URI to start
-from, and those come from a failure: a run that passed carries no
-`failureScreenshotUri` and no `evidenceDetails`. On an MCP-only lane, say the
-move is unverified by evidence, and either run it or hand the question back.
+Where history cannot answer it, say so and take one of two routes: run the
+changed version and read the result against the move, or report the move as
+unverified and hand it to whoever holds the intent. Never pass a move as clean
+because nothing contradicted it.
 
 **A green run clears a move only as far as the reading you already did.** A move
 that lands on the same element in a different state passes and proves less,
@@ -194,8 +195,8 @@ the tool list and a dry run was asked for, it stays uncalled.
 ### First: has this version already run?
 
 A version that already has terminal runs may already carry its own evidence.
-Firing another one spends minutes, and in the cloud credits, to re-learn it.
-Step 3 says how many clean runs the gate needs; read it before deciding.
+Firing another one spends minutes and credits to re-learn it.
+The run-count gate below says how many clean runs are needed; read it first.
 
 ```
 list_mabl_test_runs({ testId: "<*-j>", workspaceId })
@@ -210,7 +211,7 @@ Count the runs on the target version that are `terminal`, `success: true` and
 
 | Runs already on the target version | Do |
 |---|---|
-| Enough clean ones for the gate | **Start nothing.** Report them, go to step 4 |
+| Enough clean ones for the gate | **Start nothing.** Report them and go straight to the outcome |
 | Fewer than the gate needs | Run the difference, not the whole gate again |
 | Non-terminal, or needed recovery | Run — those are not clean |
 | None | Run |
