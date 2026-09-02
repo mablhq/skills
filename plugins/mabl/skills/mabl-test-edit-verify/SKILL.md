@@ -80,6 +80,17 @@ list_mabl_test_versions({ testId: "<*-j>" })   // newest first; carries created_
 
 Say which two you picked, and why, in the report.
 
+**A `:0` baseline is not a baseline.** Version 0 does not read back: once any
+later version exists, `<id>:0` returns the test's *current* steps rather than the
+steps version 0 held, so a diff with `:0` on either side compares the after
+version against itself and reports everything unchanged — no removals, whatever
+was actually done. Versions from 1 on read back correctly.
+
+So when *before* resolves to `:0` — the edit under scrutiny is the test's first —
+the gate has no baseline to rule on. That is **not verified**, reported as a
+missing baseline and not as a clean diff, and the verdict falls to the intent and
+the run. The sentence "nothing was removed" is unsupported here; don't write it.
+
 ### One diff, or the whole walk
 
 The endpoint diff — before to after — is what the verdict rests on. It is what a
@@ -122,6 +133,15 @@ intent says which direction was wanted.
 Deleting a check is legitimate in exactly one case: the behaviour it checked
 genuinely went away, and the person who asked for the change said so. That has
 to come from the intent, never from the change's own convenience.
+
+**Where the test calls reusable flows, carry the diff's own hedge into the
+verdict.** An `EvaluateFlow` step names a flow and never a version, so which
+version each side used is resolved on read, not recorded;
+`mabl-version-compare` infers the pair and says so. An inferred pair is weaker
+evidence than a step diff, and when both sides resolve to the same flow version
+the diff says nothing about that flow's contents at all. Don't let either fact
+get dropped on the way to a verdict — a gate that passes on an unstated
+inference is the quiet failure this section exists to prevent.
 
 State the gate's result before any run result. A reader who sees "passed"
 first will stop reading.
