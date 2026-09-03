@@ -58,6 +58,12 @@ every run.** A test that got smaller passes faster and proves less.
 which skill is missing — don't hand-roll the diff, and don't guess how to
 install it, because that depends on how this skill was installed.
 
+**What it has to give back, whatever route it arrives by:** a removal separated
+into one it could resolve to an added step and one it could not. Those are
+different verdicts here — a resolved removal is a move, an unresolved one is
+**can't verify** — so if what you have cannot tell them apart, you are holding
+the dependency's name and not the dependency. Say that, and don't rule.
+
 ### Which two versions
 
 Getting this wrong is the quiet failure here: the diff comes back clean because
