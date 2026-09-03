@@ -5,6 +5,26 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.8.0] - 2026-08-26
+### Added
+- `mabl-plan-create` — create a mabl plan from tests that already exist, and
+  change one that does: add or remove tests, append a stage, relabel, swap
+  credentials, enable or disable it. Plan writes have no CLI path, so the skill
+  says up front that it needs the plan tools and points at the app when they
+  aren't there.
+- It reads back what was saved rather than trusting the call. Test ids the API
+  doesn't recognise are dropped silently, so a plan can come back smaller than
+  you asked for with nothing to indicate it — the skill diffs the returned
+  stages against the ids it sent and names what didn't land.
+- It documents the five ways a stage edit goes wrong quietly: indices shifting
+  mid-batch when a removal empties a stage, `stage_index` defaulting to the
+  first stage on a remove, duplicate adds succeeding, an emptied plan rejecting
+  the whole batch, and a 412 meaning someone else got there first.
+- Disabling a plan or removing a test from it stops tests running in CI, so both
+  ask first; renames and labels don't.
+- It states what it cannot do instead of implying otherwise: no schedule, no
+  trigger, and no concurrency change after creation. A plan built here runs on
+  demand until a person schedules it in the app.
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"
