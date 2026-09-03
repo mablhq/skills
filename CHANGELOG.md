@@ -5,6 +5,24 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.0] - 2026-08-26
+### Added
+- `mabl-plan-triage` — the many-runs question. A plan run with six failures is
+  usually not six problems, and this skill produces the answer that says so:
+  group the failures by shared cause first, then judge each group, then report
+  what deserves a person and in what order. Everything comes from one
+  `get_mabl_plan_run` call rather than a fetch per test.
+- It checks the plan run's own status before reading any test, because a run
+  that failed as a unit turns every downstream test outcome into a consequence
+  rather than a finding.
+- Flaky versus broken is decided from each test's recent history, never from the
+  single run in front of it — and when the history wasn't checked, the skill
+  reports "unknown" instead of guessing. Failures that were already failing
+  before this run are separated out so they don't inflate what the run broke.
+- It reports a state, not a grade: no score, no percentage, and no "safe to
+  ship" verdict unless that is what was asked for.
+- Forensics stay with `mabl-debug`. Triage hands over one run id per finding,
+  not one per failing test.
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"
