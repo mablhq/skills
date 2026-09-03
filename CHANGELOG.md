@@ -5,6 +5,36 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.11.0] - 2026-08-27
+### Added
+- `mabl-test-import` — migrate an existing Playwright or Selenium suite into
+  mabl. The skill sorts the suite first, per test, because the right route is
+  not the same for every test. Two lanes convert a recording: `mabl tests
+  import playwright` converts trace files locally, and `mabl tests import
+  selenium` proxies a live WebDriver session to the cloud test authoring
+  agent. A third lane skips the recording entirely and reads the test's source
+  code, handing its intent to the same authoring agent — for tests a recording
+  would ruin, such as a Playwright test built on a page object model, on
+  chained locators, or on regex assertions the converter drops on the floor.
+  It needs no CLI. Tests whose value is in code rather than in the UI, like
+  ones that mock the network or drive the API to set up state, are better left
+  in Playwright with mabl Tools for Playwright, and the skill says so instead
+  of converting them.
+  Whichever lane a test comes through, it imports one before the rest and then
+  reports what did not come across, in both directions: steps the converter
+  degraded to echo steps, actions the Selenium proxy cannot see, dynamic
+  locators the authoring agent pinned to the element it happened to see, and
+  assertions the agent added that the source never asked for. It carries the
+  two verified reasons a freshly imported Playwright test fails on its first
+  cloud run: a source test that leans on `baseURL` gets no navigation step and
+  starts at `about:blank`, and `getByTestId` locators convert to CSS that mabl
+  cannot resolve.
+  It stops at the import. Trace-converted finds land in mabl's legacy raw-CSS
+  shape, which resolves by literal query with no auto-heal, visual fallback,
+  or Intelligent Wait, so the skill reports which tests are in that shape and
+  routes the rewrite to `mabl-test-edit`. Tests the authoring agent wrote are
+  not in that shape and must not be rewritten that way.
+
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"
