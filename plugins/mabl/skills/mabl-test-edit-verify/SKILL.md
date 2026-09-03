@@ -81,7 +81,7 @@ list_mabl_test_versions({ testId: "<*-j>" })   // newest first; carries created_
 Say which two you picked, and why, in the report.
 
 **A `:0` baseline is not a baseline.** Version 0 does not read back: once any
-later version exists, `<id>:0` returns the test's *current* steps rather than the
+later version exists, `<id>:0` returns the flow's *newest* content rather than the
 steps version 0 held, so a diff with `:0` on either side compares the after
 version against itself and reports everything unchanged — no removals, whatever
 was actually done. Versions from 1 on read back correctly.
