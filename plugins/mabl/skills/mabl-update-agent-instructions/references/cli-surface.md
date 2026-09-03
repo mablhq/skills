@@ -7,7 +7,7 @@ Verified against mabl CLI `2.129.2` (measured 2026-08-28). Every command here is
 ```
 mabl agent-instructions list      -w <ws> -o json --limit <n>
 mabl agent-instructions describe  <id> -o json
-mabl agent-instructions create    -w <ws> --name <n> --instruction-text "<=2000 chars>"
+mabl agent-instructions create    -w <ws> --name <n> --instruction-text "<text>"
                                   [--capabilities authoring recovery results_analysis]
                                   [--application-ids <a>...] [--environment-ids <e>...] [--disabled]
 mabl agent-instructions update    <id> [--name <n>] [--instruction-text "<...>"]
@@ -21,7 +21,7 @@ mabl agent-instructions delete    <id>          # exists; this skill never uses 
 - `--disabled` and `--enabled` conflict with each other on `update`; pass one.
 - `--capabilities`, `--application-ids` and `--environment-ids` are **arrays** — pass multiple values space-separated.
 - `list` accepts **no filters** beyond workspace and limit. Narrowing to one capability happens client-side, in the read script below.
-- The cap on `instruction_text` is **2000 characters, server-enforced** — over it the command fails with `instruction_text must be 2000 characters or less`, exits non-zero, and writes nothing. Measured 2026-08-28 by bisection: 2000 accepted, 2001 rejected. Trust the server over any number printed in `--help`.
+- **The `instruction_text` cap is stated in `SKILL.md`'s hard rules; this is how it was established.** Measured 2026-08-28 by bisection against the live server: the limit is exact, and one character over it fails with `instruction_text must be 2000 characters or less`, exits non-zero, and writes nothing. `create --help` prints a lower number and `update --help` prints none; the server is authoritative over both.
 
 ## The silent listing default
 
@@ -51,20 +51,13 @@ Each row from `list` / `describe` carries, among other fields:
 
 **Read every array defensively** — `r.get('application_ids') or []`, never `r['application_ids']`. Absent and empty both mean "all", and roughly half the rows in a real workspace omit these fields entirely.
 
-## `create` and `update` treat the same flags differently
+## Why `create` and `update` treat the same flags differently
 
-Verified in the CLI source, not inferred from the help text. The two commands hit the API differently, and the difference decides whether an omitted flag is a decision or a no-op.
+What an omitted flag does on each command is the operative table in `SKILL.md`'s apply step. This is the reason behind it.
 
-**`create` builds a full request body.** An omitted or empty scope array is sent as `undefined`, so the field is stored absent — which means **all**. There is no way to create a row scoped to "nothing".
+The two commands build their request bodies differently. `create` builds a full body, so an omitted or empty scope array goes out as `undefined` and the field is stored absent — which is why there is no way to create a row scoped to "nothing". `update` builds a sparse body and sends it as a `PATCH`, so only the flags actually passed appear in it at all.
 
-**`update` builds a sparse body and sends it as a `PATCH`.** Only the flags actually passed appear in it.
-
-| Flag on `update` | Effect |
-|---|---|
-| omitted | field **untouched** — the row keeps whatever scope it had |
-| passed | field **replaced wholesale** by the values given |
-
-So widening a row's scope means passing **every id the row should end up with**, additions and existing alike. Passing only the new ones drops the rest, and the command still exits 0.
+That single difference is what makes an omission a decision on one command and a no-op on the other. And a replacement that drops ids exits 0, so the only evidence of a scope written correctly is a `describe` afterwards.
 
 `--enabled` is not a separate field: it is stored as `disabled: false`. That is why enabling is a real write with its own approval, and why it can be combined with a text edit in one command — which this skill deliberately does not do, to keep the two decisions separable.
 
@@ -110,7 +103,6 @@ Scoping is stored as ids; humans think in names. Resolve both directions before 
 | workspaces, id ↔ name | `list_mabl_workspaces` | `mabl workspaces list -o json --limit 1000` |
 | applications, id ↔ name | `list_mabl_applications` | `mabl applications list -w "$WS" -o json --limit 1000` |
 | environments, id ↔ name | `list_mabl_environments` | `mabl environments list -w "$WS" -o json --limit 1000` |
-| who am I / access check | `get_current_user` | `mabl auth info` |
 
 **Detect, then degrade.** If the MCP server is not configured, use the CLI column and say once that you fell back. Nothing here is MCP-only.
 

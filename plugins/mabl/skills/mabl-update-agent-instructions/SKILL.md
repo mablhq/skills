@@ -15,7 +15,7 @@ description: |
   instruction id.
   NOT for changing a test — to edit one use mabl-test-edit, to create one use
   mabl-test-authoring. NOT for first-time workspace setup — use mabl-init.
-allowed-tools: Bash, Read, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__get_current_user
+allowed-tools: Bash, Read, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments
 ---
 
 # mabl update agent instructions
@@ -128,7 +128,7 @@ This is the whole configuration surface `agent-instructions create` and `update`
 Three facts worth having in hand while answering:
 
 - Leaving applications or environments unscoped does not mean "neither," it means "every one." See Empty means ALL, above.
-- Instruction text is capped at 2000 characters, enforced by the server, regardless of what a draft is shaping up to need.
+- Instruction text is capped, and the server enforces it, regardless of what a draft is shaping up to need. The number is in Hard rules, below.
 
 **A dimension the request already settled is answered; one it never mentioned is not.** A request naming the capability, saying the rule applies everywhere, and saying to enable it has answered all four. Restate that configuration in one line as the answer it is, and carry on. Nothing here asks a second time for something already stated.
 
@@ -142,10 +142,13 @@ Three facts worth having in hand while answering:
 
 ```bash
 WS="<workspace_id>"; mkdir -p .mabl
+printf '*\n' > .mabl/.gitignore   # required — see below
 mabl agent-instructions list -w "$WS" -o json --limit 1000 > .mabl/agent-instructions.json
 ```
 
-That file holds every instruction's full text. `.mabl/` is the CLI's own working directory; write nothing outside it.
+**Guarantee the ignore; do not assume it.** That file holds every instruction's full text for the whole workspace. `.mabl/` is the CLI's own cache directory, but the root `.gitignore` entry for it is written by `mabl agent debug` — in a repo where only this skill has run, `.mabl/` is untracked, and a workspace's entire agent policy is one `git add .` from being committed. A `.gitignore` of `*` inside `.mabl/` covers the whole tree including itself, and rewriting it is idempotent.
+
+Write nothing outside `.mabl/`.
 
 **`--limit` is not optional — the CLI's listing default is far lower than a real workspace and truncates silently, with no signal** (`references/cli-surface.md`). The only evidence of a complete fetch is a row count *below* the limit passed; if they are equal, raise it and fetch again.
 
@@ -221,7 +224,7 @@ Report in this shape. It leads with placement because that is the part most like
 1. **Header** — the change verbatim; the workspace **name and id** and how it was resolved; rows fetched vs the limit passed (under it is the proof nothing truncated); how many reviewed as candidates and how many set aside, under which capabilities; CLI version; and that no writes happened.
 2. **Where this change belongs, and what it will match** — the placement dimensions and the specificity finding, exactly as confirmed with the requester before this read ran. Note only anything that changed since that confirmation.
 3. **What is already there that this touches** — **all** enabled candidates first, then disabled, never interleaved. One relationship per row from exactly this vocabulary: **owns-the-topic** / **adjacent** / **unrelated** / **contradicts**. Mark unscoped rows as such, and show application and environment scope **by name**.
-4. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the 2000 limit. For a rescope, the scope before and after, by name, and what newly gains the rule.
+4. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the cap. For a rescope, the scope before and after, by name, and what newly gains the rule.
 5. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope. Each states its consequence.
 6. **To apply** — the exact commands, in order, clearly not yet run.
 
@@ -274,4 +277,4 @@ The echoed commands, the raw `describe` output, and the rows set aside during cl
 
 ## Additional resources
 
-- **`references/cli-surface.md`** — verified command and flag surface, the JSON row shape, the candidate read script, the silent listing default, `create` vs `update` field semantics, name↔id resolution (MCP preferred, CLI fallback), and the version pin rationale.
+- **`references/cli-surface.md`** — verified command and flag surface, the JSON row shape, the candidate read script, the silent listing default, why `create` and `update` treat the same flags differently, name↔id resolution (MCP preferred, CLI fallback), and the version pin rationale.
