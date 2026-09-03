@@ -77,6 +77,18 @@ unrelated branch. Read the branch, don't do arithmetic:
 list_mabl_test_versions({ testId: "<*-j>" })   // newest first; carries created_on_branch
 ```
 
+**Look on a branch first.** The normal subject here is a test edited on a branch
+and waiting on a merge decision, so when the caller names a test and no branch,
+don't settle for master: read the version list and take the newest version whose
+`created_on_branch` is not the default. That is the change under scrutiny, and
+saying which branch you picked is part of the answer.
+
+Where more than one branch carries a recent version of the same test, those are
+**different changes, not candidates for the same one**. Two branch names a
+character apart, cut hours apart, are the ordinary case rather than the exotic
+one. Name them and ask which is being verified; picking the newest and proceeding
+silently answers a question nobody asked.
+
 - **After** — the newest version whose `created_on_branch` is the change's
   branch. Name it explicitly as `<id>:<N>`; a bare `<id>` means the global latest
   and may be someone else's.
@@ -421,6 +433,11 @@ report's tables has already gone wrong.
   different change is a separate decision by whoever holds the intent.
 - **It does not merge**, and it doesn't recommend merging. It reports a state
   and the evidence behind it; a person reads the diff and decides.
+- **It does not predict what a merge would produce.** That the branch differs
+  from its merge target, and which side carries which content, is the gate's
+  finding and belongs in the report. What a merge would then *do* with that
+  difference is mabl's merge behaviour, which nothing in this skill observes.
+  State the difference and its direction; leave the outcome to the person.
 - **It does not re-verify forever.** Two failed rounds is where to stop and hand
   back what you learned. A third round of the same gate on the same change is
   not new information.
