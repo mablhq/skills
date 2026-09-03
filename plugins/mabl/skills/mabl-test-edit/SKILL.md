@@ -2,22 +2,20 @@
 name: mabl-test-edit
 description: |
   Change a mabl test that already exists — rename it, relabel it,
-  enable/disable it, or edit its steps (replace / insert / delete / move).
-  This skill is mostly a router: it reads the test, then picks the cheapest
-  lane that can make the change deterministically, and only spins up a live
-  browser agent when the change genuinely needs to look at the app.
-  Fire when the user names an existing test (a `*-j` id or a test name) and
-  wants to modify it: "rename this test", "add a label", "disable that test",
-  "delete step 7", "make step 4 wait for the spinner to disappear", "insert a
-  click before the assertion", "change the URL that step 2 opens".
-  For CREATING a new test use mabl-test-authoring; for debugging a FAILING
-  test use mabl-debug. This skill edits a test that already exists.
-  One boundary: if the test was just authored in this session and its own
-  validation found a gap, mabl-test-authoring's validate-and-fix step owns that
-  decision — it holds the authoring intent and the rule against converging by
-  deleting coverage. Don't take the decision over. Do accept the work: that step
-  routes its specifiable fixes here on purpose, because a structured step edit
-  is instant and cannot delete anything.
+  enable/disable it, or edit its steps (replace, insert, delete, move). Reads the
+  test, then routes to the cheapest lane that can make the change
+  deterministically — a live browser agent only when it needs the running app.
+  Fire when the user names an existing test (a `*-j` id or a test name) and wants
+  to modify it: "rename this test", "add a label", "disable that test", "delete
+  step 7", "make step 4 wait for the spinner to disappear", "change the URL that
+  step 2 opens".
+  For CREATING a new test use mabl-test-authoring; for debugging a FAILING test
+  use mabl-debug.
+  One boundary: if the test was just authored this session and its validation
+  found a gap, mabl-test-authoring's validate-and-fix step owns that decision —
+  it holds the authoring intent and the rule against converging by deleting
+  coverage. Don't take the decision over. Do accept the specifiable fixes it
+  routes here: a structured step edit is instant and cannot delete anything.
 allowed-tools: Bash, mcp__mabl__*
 ---
 
@@ -39,9 +37,9 @@ mabl auth info    # verify you're logged in and the token hasn't expired
 ```
 
 The metadata and structured-step lanes run entirely on the hosted `mabl` MCP
-server (no local browser). The step lanes are a preview behind a workspace
-feature flag — see [Lane availability](#lane-availability) for what to do when
-they're off.
+server (no local browser). The step lanes are a preview, so they aren't enabled
+in every workspace — see [Lane availability](#lane-availability) for what to do
+when they're off.
 
 ## The router
 
@@ -59,7 +57,7 @@ this tag is the whole routing decision for step edits:
 |--------|------------|------------------|
 | `structural` | steps that live directly in this test | `edit_mabl_test_steps` |
 | `reusable` | a shared flow reused by other tests (carries a `used_by` sample) | `edit_mabl_flow_steps` |
-| `legacy_unsupported` | old mablscript flow | neither — see [Legacy flows](#legacy-and-unsupported-flows) |
+| `legacy_unsupported` | a flow in an older format | neither — see [Legacy flows](#legacy-and-unsupported-flows) |
 
 Pick the lane by the *kind of change*, then confirm the target:
 
@@ -78,7 +76,7 @@ rather than *the step definition*, it belongs in the agent lane.
 
 ## Lane 1 — Metadata
 
-The always-available lane (no feature flag). One atomic call; a list of
+The always-available lane — every workspace has it. One atomic call; a list of
 operations applied in order, saved in a single PATCH — if any operation is
 invalid, nothing is saved.
 
@@ -189,8 +187,8 @@ mcp__mabl__mabl_get_authoring_guide({ uri: "mabl-author://authoring-patterns" })
 mcp__mabl__mabl_get_schema_resource({ uri: "mabl-schema://step" })
 ```
 
-(Both reference tools live behind the same `mabl_authoring_mcp` flag as the
-step-edit tools, so they're available exactly when Lane 2 is.)
+(Both reference tools ship with the same preview as the step-edit tools, so
+they're available exactly when Lane 2 is.)
 
 Steps are canonicalized on save (e.g. variable aliases are normalized); the
 response reports this under `canonicalization`.
@@ -279,15 +277,14 @@ mcp__mabl__mabl_authoring_edit({
 
 This is the only lane that needs a `workspaceId` (the others key off the test or
 flow id). Get it from `mcp__mabl__get_current_user` or
-`mcp__mabl__list_mabl_workspaces` — or reuse the workspace `mabl-init` saved to
-your agent memory.
+`mcp__mabl__list_mabl_workspaces` — or reuse the workspace already saved in your
+agent memory.
 
 Returns `{ sessionId, viewTaskUrl }`. It's an async cloud session (minutes, real
 compute), not a deterministic edit — track it with
 `mcp__mabl__mabl_authoring_status({ sessionId })` and, once it completes,
 verify with `mcp__mabl__run_mabl_test_cloud`. Write the `test_case` the way you
-would for `mabl-test-authoring`: concrete about what to change and what to
-verify.
+would an authoring intent: concrete about what to change and what to verify.
 
 The agent lane runs its **own** branch handling (a `branch` name in
 `testInformation`, resolved server-side), so the Lane 2 confirmation mechanic
@@ -299,20 +296,19 @@ no-branch agent edit targets the default branch before you start the session.
 
 ## Lane availability
 
-The lanes sit behind different feature flags, so "just fall back to the agent
-lane" isn't always possible. Check what's actually available before promising a
-change:
+The lanes are gated **independently**, so "just fall back to the agent lane"
+isn't always possible — one lane being closed tells you nothing about the other.
+Check what's actually available before promising a change:
 
-| Lane | Flag(s) required | If unavailable |
-|------|------------------|----------------|
-| Metadata | none | always available |
-| Structured step | `mabl_authoring_mcp` | the `edit_mabl_*_steps` tools aren't listed; calling one returns *"Mabl test authoring tools are not enabled for this workspace. Contact mabl support to join the preview."* |
-| Agent | `generative_ai` **and** `agentic_test_editing` | `mabl_authoring_edit` isn't listed / returns a not-enabled error |
+| Lane | If unavailable |
+|------|----------------|
+| Metadata | always available |
+| Structured step | the `edit_mabl_*_steps` tools aren't listed; calling one returns *"Mabl test authoring tools are not enabled for this workspace. Contact mabl support to join the preview."* |
+| Agent | `mabl_authoring_edit` isn't listed / returns a not-enabled error |
 
-Degrade honestly. You can't read a workspace's feature flags — so judge a lane
+Degrade honestly. You can't see which previews a workspace has — so judge a lane
 by what you *can* see: **a lane is open when its tool is in your tool list**, and
-closed when the tool is absent or returns the not-enabled error above. (The flag
-names are just there to explain *why* a tool might be missing.)
+closed when the tool is absent or returns the not-enabled error above.
 
 1. Prefer the structured lane for nameable step edits.
 2. If the `edit_mabl_*_steps` tools aren't in your tool list, the structured
@@ -327,7 +323,7 @@ names are just there to explain *why* a tool might be missing.)
 
 ## Legacy and unsupported flows
 
-A flow tagged `legacy_unsupported` (older mablscript format) can't be edited by
+A flow tagged `legacy_unsupported` (an older flow format) can't be edited by
 the structured lanes — `edit_mabl_test_steps` returns
 `reason: "wrong_authoring_boundary"` and `edit_mabl_flow_steps` returns
 `reason: "legacy_format_unsupported"`. Route these to the agent lane, or to the
@@ -337,6 +333,6 @@ Trainer GUI.
 
 `mabl tests edit` opens the test in the **Trainer GUI** — an interactive desktop
 editor a person drives by hand. It isn't agent-drivable, so this skill doesn't
-use it, but it's the right answer when every automated lane is closed (preview
-flags off, a legacy flow, or a change too fiddly to describe). Mention it to the
-user as the fallback; don't try to script it.
+use it, but it's the right answer when every automated lane is closed (the
+previews aren't enabled, a legacy flow, or a change too fiddly to describe).
+Mention it to the user as the fallback; don't try to script it.
