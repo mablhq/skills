@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.8.0] - 2026-08-28
+## [1.8.0] - 2026-09-03
 ### Added
 - `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
   test green, fix the behaviour or stop checking it, and a passing run cannot
@@ -45,6 +45,13 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - The gate is stated once. `references/validate-and-heal.md` carried a second
   copy of the rule and its recipe; a reference that restates a decision
   `SKILL.md` owns is the copy that goes stale.
+- `mabl-compare-versions` is renamed to **`mabl-version-compare`**, matching the
+  `mabl-<entity>-<verb>` shape the rest of the skills are moving to. The folder,
+  the frontmatter `name` and the README row all move with it. Anything that
+  invoked it by its old name, or declared it as a required sibling, has to be
+  updated: a skill name is how every surface addresses it, so the old name
+  resolves to nothing rather than falling back. The `.mabl/compare/` cache
+  path is deliberately unchanged, because other skills read artifacts from it.
 
 ## [1.7.0] - 2026-08-27
 ### Added
