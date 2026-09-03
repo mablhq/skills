@@ -92,9 +92,13 @@ OpenAI Codex hard-truncates a skill description at 1024 characters, mid-word, so
 
 `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools` — the full list the Agent Skills spec allows. Any other key makes claude.ai skill upload, the Skills API, and `package_skill.py` fail with a hard "Unexpected key(s)" error, so Claude Code-only fields (`disable-model-invocation`, `user-invocable`, `model`, `context`, `hooks`) stay out; a plugin-delivered skill carrying `disable-model-invocation` is also invisible in Cursor. CI checks this.
 
-### Every skill starts with the mabl CLI prerequisite block
+### Any skill that uses the mabl CLI carries the prerequisite block
 
-Every `SKILL.md` must begin its instructions with a Prerequisites section that (1) installs the mabl CLI if missing and (2) upgrades it if older than the minimum version the skill needs. Use this canonical block, adjusting `MIN_MABL_CLI_VERSION` to the oldest CLI version that supports the commands the skill uses:
+A `SKILL.md` whose body invokes the mabl CLI — for anything — must begin its instructions with a Prerequisites section that (1) installs the CLI if missing and (2) upgrades it if older than the minimum version the skill needs. A skill that never runs a `mabl` command doesn't carry the block: it installs and version-checks a binary, which is a real prerequisite where a command runs and dead weight where none does.
+
+Where a skill drives the CLI on only some of its paths, say so rather than opening with an unconditional install. An `npm install -g` and a browser login sitting under a section that says another surface suffices tells a reader on that surface to do work they don't need.
+
+Use this canonical block, adjusting `MIN_MABL_CLI_VERSION` to the oldest CLI version that supports the commands the skill uses:
 
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
