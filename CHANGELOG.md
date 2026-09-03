@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.7.0] - 2026-08-27
+## [1.12.0] - 2026-08-27
 ### Added
 - `mabl-workspace-audit` — audit a whole mabl workspace and stage a reversible
   cleanup. It builds a complete inventory from the CLI (the only surface that
@@ -51,6 +51,114 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   cleanup it performs is the reversible half — a dated quarantine label plus
   disable, read back to confirm it landed — and the removal stays a human action
   in the mabl app after the observation window.
+
+## [1.7.0] - 2026-08-27
+### Added
+- `mabl-compare-versions` — answers "what changed in this test or reusable flow"
+  and stops there. It reports the difference as a classification split by whether
+  behaviour actually changed: steps added, removed, changed and moved; assertion
+  counts per type; strictness moving (an exact match becoming a substring, a value
+  emptied, a step disabled); data-binding changes; date literals; description
+  rewrites. It requires no other skill and is built to be called by them: the
+  verdict is left to whoever holds the intent behind the edit.
+- **Two normalization gates run before anything is counted**, because both change
+  what the counts mean. `description` and `annotation` are server-rendered and
+  drift from the step body, so a version can report many changed steps that
+  changed no behaviour. And a step that left its position has six possible
+  causes besides deletion.
+- **A removed step is never assumed deleted.** It may have moved (matching step
+  id), had its id regenerated, been part of a flow-invocation id migration, been
+  extracted into a reusable flow, or been **retargeted** — the same requirement
+  pointed at a new selector, which changes both the id and the body and so
+  matches none of the earlier checks. On real diffs, platform churn presented as
+  deletions outnumbered genuine moves several times over.
+- **"Deleted" has to be earned, and the residual case is named rather than
+  rounded off.** A removal only reports as deleted once the step's type count
+  actually dropped, or nothing of that type was added. If the count is flat and a
+  same-type step was added, it reports as an **unmatched removal** naming the
+  candidate — because a wait that was retargeted from an `<h1>` to its child
+  `<span>` is not a wait that was dropped, and the type count says so.
+- **The retargeting match is gated on evidence, not on a caveat.** Stripping the
+  locator leaves the requirement, but a `Hover` or `Click` strips to nothing at
+  all and every presence wait strips alike, so an ungated check would report any
+  two steps of those types as the same step retargeted. The match is claimed only
+  when what survives carries an author-supplied value; otherwise the removal
+  falls through to the unmatched case. A count that cannot distinguish a move
+  from a deletion is not allowed to assert that a step survived.
+- **A moved step is counted once.** The diff renders a move as a removal plus an
+  addition, so the pair is excluded before the add/remove totals are taken and
+  the arithmetic has to close, which stops the report claiming one more added
+  assertion than it has. The check is on the aggregate, not per type: a step that
+  changes type moves one count between two types while appearing in neither
+  `added` nor `removed`, so the per-type form raises false alarms on a correct
+  diff.
+- **The removal evidence is emitted as evidence, and the skill draws the
+  conclusion.** Candidate matches come back as lists rather than yes/no, because
+  two identically-bodied removals can otherwise both claim the same added step
+  and hide a real deletion. Each verdict is reported by the evidence it rests on
+  — matched by step id, found inside the new reusable flow, same type with the
+  count unchanged — rather than by an internal rule name the reader has no way to
+  look up.
+- **Extraction into a reusable flow gets its own resolution path**, because it is
+  the most destructive-looking change that removes nothing and it produces no
+  added step to pair against: the existing step group *becomes* the flow
+  reference, keeping its id, so a seven-assertion refactor reports as seven
+  removals and one change. Step identity survives extraction, so matching the
+  removed ids inside the flow resolves it exactly — provided the flow is read on
+  the branch it was created on. Read on the default branch it comes back empty,
+  which looks like a confirmed catastrophe rather than a wrong lookup.
+- Separates nonfunctional classes the counts hide: regrouping (one added group
+  header, children untouched), marker steps, and binding changes that only alter
+  representation. Notes the asymmetries — a removed `Echo` is evidence where an
+  added one is noise, and a group header embeds its own step count so any change
+  inside it churns the header too.
+- States what the diff cannot see rather than implying otherwise: who changed it
+  (no version carries an author), whether the test is enabled, what a nested flow
+  did, and run results. A metadata-only edit creates no version at all.
+- States what changed and which way, without a verdict in the vocabulary. An
+  assertion going from an exact match to a substring is reported as less strict,
+  because that is a fact about the step; whether it was wanted depends on what
+  was asked for, which this skill does not know.
+- Assertion analysis works by diffing the two step descriptors and reporting
+  **every** field that differs, minus a short exclusion list with a stated reason
+  per entry: server-rendered commentary, step identity, the execution-inert
+  `condition.attribute`, and a field absent versus set to its own default. That
+  is complete by construction, so it covers step and condition types this skill
+  has never heard of — where any list of fields worth checking, or of ways a test
+  can get worse, is only as complete as whoever wrote it.
+- Two effects are called out because the field name doesn't reveal them.
+  `onFailure` switched to `continue` leaves an assertion that still appears,
+  still runs, and stops failing the test. And a prose condition has no operator
+  at all — an `ai_prompt` holds its whole requirement in `userPrompt`, `truthy`
+  holds none, so both are reported by quoting the texts rather than by ranking.
+- Movements off the one defined axis are said plainly instead of forced onto it:
+  a positive operator becoming its negation is **inverted**, not looser;
+  `AssertStartsWith` ↔ `AssertContains` is **lateral**; a changed target is
+  **rescoped**. Anything else is reported with its field and both values and no
+  invented rank.
+- A description-only change is reclassified, not suppressed: it is reported with
+  its step numbers and both texts, and the report says the diff carries no signal
+  for whether a person wrote it or the platform regenerated it.
+- Captured diffs and the written report go to the CLI's own `.mabl/` cache, and
+  the skill guarantees that directory is ignored rather than assuming it: the
+  root `.gitignore` entry for `.mabl/` is written by `mabl agent debug`, so in a
+  repo where only `compare` has run it is absent. A `.gitignore` of `*` inside
+  `.mabl/` covers the tree including itself and edits no tracked file.
+- The report gains an **Unclassified** section for real changes that fit no
+  class, so nothing is dropped or force-fit — the caller is owed every change,
+  not only the ones this skill has a name for.
+- Notes two facts about step ids that Gate B depends on: steps written by hand
+  through the step-edit tools carry no id at all (agent-authored ones do), and
+  `mabl tests export --format json` drops ids entirely — so an export can count
+  assertions but never resolve a removal.
+- Works over the mabl MCP server or the CLI — the diff is byte-identical on both.
+  The MCP lane needs nothing installed, so the CLI prerequisite is marked as the
+  CLI lane's alone rather than opening the skill unconditionally. On the CLI-only
+  lane the extraction check is corroborated rather than closed: `mabl flows
+  export --mabl-branch` does read a flow on a branch, but the export carries no
+  step ids, so it shows the flow is non-empty without proving which steps are in
+  it. The CLI also cannot date a version or list a flow's versions, so unresolved
+  removals are reported as unresolved rather than as deletions.
 
 ## [1.6.1] - 2026-08-25
 ### Changed
