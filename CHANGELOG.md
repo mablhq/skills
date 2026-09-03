@@ -5,6 +5,53 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.12.0] - 2026-08-27
+### Added
+- `mabl-workspace-audit` — audit a whole mabl workspace and stage a reversible
+  cleanup. It builds a complete inventory from the CLI (the only surface that
+  enumerates every test and reports who created it), indexes real run activity
+  over a window you set, and reports what the workspace has stopped using or
+  never governed: tests with no run in the window, tests in no plan, plans that
+  are enabled but have no trigger, disabled tests still sitting inside live
+  plans, consistently failing and flaky tests reported as the two separate
+  problems they are, unused reusable flows, stale open branches and what is
+  stranded on them, naming and label drift, and tests whose owner is no longer
+  in the workspace.
+
+  It audits against your conventions, not someone else's. Naming patterns, label
+  taxonomy, plan label minimums and pass-rate floors are asked for up front and
+  saved for next time — and where you have no convention, that is recorded too,
+  because a rule nobody agreed is not a finding. Re-run it later and it diffs
+  against the previous report, comparing only the metrics that were measured the
+  same way and naming the specific items that were actually fixed.
+
+  Findings are ranked by what the clutter costs, not by how many rows a category
+  has, and every count is reported against the limits and windows it was
+  measured with — with anything it could not establish kept in its own
+  unverified section rather than folded in.
+
+  Field-tested against a 621-test workspace before shipping, which changed how
+  it measures activity: paging the whole run history does not survive contact
+  with a busy workspace (that one holds roughly half a million runs in a 90-day
+  window, about 25x what any sane page bound reaches), and a truncated sweep is
+  indistinguishable from a genuinely idle workspace. So the skill now measures
+  the run volume first and picks its lane from the answer, one call per test
+  where paging cannot finish, and says which lane ran and what that costs the
+  duration numbers.
+
+  What it may do at the end is settled at the start, not sprung at the end: it
+  asks up front whether this audit is report-only or may also stage a cleanup,
+  and whether the workspace already has a retirement convention — which it then
+  never adopts unless told to. Every label it writes is unique to the run that
+  wrote it (`quarantine-audit-2026-08-27`), so one query returns exactly one
+  audit's set and an undo months later selects nothing it shouldn't.
+
+  It never deletes, and it never runs or creates a test either. There is no
+  delete for a test on any surface an agent can reach, and no undelete, so the
+  cleanup it performs is the reversible half — a dated quarantine label plus
+  disable, read back to confirm it landed — and the removal stays a human action
+  in the mabl app after the observation window.
+
 ## [1.7.0] - 2026-08-27
 ### Added
 - `mabl-compare-versions` — answers "what changed in this test or reusable flow"

@@ -25,6 +25,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change a test that already exists. Routes each edit to the cheapest lane that works: metadata (rename, labels, enable/disable), structured step edits (replace/insert/delete/move — no browser), or a live cloud authoring agent when the change needs to look at the running app. Reviews shared-flow blast radius and confirms before writing to the default branch. |
 | [`mabl-compare-versions`](plugins/mabl/skills/mabl-compare-versions/SKILL.md) | Say what changed between two versions of a test or reusable flow, without telling you what to think about it. Separates changes that alter behaviour from ones that only reorganize, so a refactor doesn't read as lost coverage: it works out whether a step that left actually moved, had its id regenerated, or was extracted into a reusable flow before calling anything deleted. Reports assertion counts by type and the changes that keep a test the same size while it proves less — a strict assertion swapped for a looser one, a value emptied, a step disabled. The classification is the output; the verdict stays with whoever asked for the change. |
 | [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
+| [`mabl-workspace-audit`](plugins/mabl/skills/mabl-workspace-audit/SKILL.md) | Audit a whole workspace and stage a reversible cleanup. Builds a complete inventory, then reports what the workspace has stopped using or never governed — tests with no run in the window, tests in no plan, plans that are on but have no trigger, failing and flaky tests, unused reusable flows, stale branches, naming and label drift, tests whose owner has left — ranked by what the clutter costs, against your conventions rather than someone else's. Re-run it later and it diffs against the last report. On request it quarantines the agreed set by labelling and disabling it. It never deletes, runs, or creates anything; removal stays yours, in the mabl app. |
 
 ### MCP servers
 
@@ -102,6 +103,7 @@ gh skill install mablhq/skills mabl-test-authoring
 gh skill install mablhq/skills mabl-test-coverage-design
 gh skill install mablhq/skills mabl-test-edit
 gh skill install mablhq/skills mabl-debug
+gh skill install mablhq/skills mabl-workspace-audit
 ```
 
 `gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging and coverage-design skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
