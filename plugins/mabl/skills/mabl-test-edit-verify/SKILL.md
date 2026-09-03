@@ -433,11 +433,6 @@ report's tables has already gone wrong.
   different change is a separate decision by whoever holds the intent.
 - **It does not merge**, and it doesn't recommend merging. It reports a state
   and the evidence behind it; a person reads the diff and decides.
-- **It does not predict what a merge would produce.** That the branch differs
-  from its merge target, and which side carries which content, is the gate's
-  finding and belongs in the report. What a merge would then *do* with that
-  difference is mabl's merge behaviour, which nothing in this skill observes.
-  State the difference and its direction; leave the outcome to the person.
 - **It does not re-verify forever.** Two failed rounds is where to stop and hand
   back what you learned. A third round of the same gate on the same change is
   not new information.
