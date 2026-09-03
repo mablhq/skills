@@ -7,8 +7,8 @@ description: |
   This one holds the intent and rules on it. Diffs against the version before
   the change to catch a pass bought by deleting coverage, re-runs it
   isolated on a branch when that version still needs a run, requires more than
-  one clean run for a flaky test, and reports verified / not verified /
-  verified-but-not-green. Never edits, never merges.
+  one clean run for a flaky test, and reports verified / problem found /
+  can't verify / verified-but-not-green. Never edits, never merges.
   Fire after a test was changed — by an agent, in the Trainer, by anyone — and
   someone asks "did that actually fix it", "verify this fix", "is this branch
   safe to merge", or whether the edits match the intent the editor was given:
@@ -37,8 +37,8 @@ The absence of a CLI guard block is deliberate, not an omission.
 The server is what takes a branch and hands back the ids of the runs it started,
 which is why the isolated lane runs there. **That lane is available when
 `run_mabl_test_cloud` is in the tool list.** Absent, the server isn't connected:
-name it and stop after the content gate, reporting the behaviour as not
-verified — a real, reportable outcome, not a failure to be papered over. A tool
+name it and stop after the content gate, reporting the behaviour as can't
+verify — a real, reportable outcome, not a failure to be papered over. A tool
 that is present can still refuse the call because the workspace isn't entitled
 to it, and only the call reveals that: quote the error verbatim and take the
 same fallback.
@@ -87,9 +87,10 @@ version against itself and reports everything unchanged — no removals, whateve
 was actually done. Versions from 1 on read back correctly.
 
 So when *before* resolves to `:0` — the edit under scrutiny is the test's first —
-the gate has no baseline to rule on. That is **not verified**, reported as a
-missing baseline and not as a clean diff, and the verdict falls to the intent and
-the run. The sentence "nothing was removed" is unsupported here; don't write it.
+the gate has no baseline to rule on. That is **can't verify** — a missing
+baseline, not a clean diff and not a defect — and the verdict falls to the intent
+and the run. The sentence "nothing was removed" is unsupported here; don't write
+it.
 
 ### One diff, or the whole walk
 
@@ -121,10 +122,10 @@ distinction is the whole difference between the first two rows.
 
 | What the diff reports | Verdict |
 |---|---|
-| **Coverage deleted** — an assertion gone, and nobody asked to remove it | **Not verified.** Coverage was deleted. |
-| **Unmatched removal** — a removal it could not join to any added step | **Not verified.** Neither proof of deletion nor proof against it. Name the candidate it named, and say that resolving the pair is what would settle it. |
-| **Strictness** loosened — exact match to substring to existence, a value emptied, a step disabled, a check now behind an added `If` | **Not verified.** Same shape, less proved. |
-| **Date literal** introduced | **Not verified.** It passes today and fails tomorrow. |
+| **Coverage deleted** — an assertion gone, and nobody asked to remove it | **Problem found.** Coverage was deleted. |
+| **Unmatched removal** — a removal it could not join to any added step | **Can't verify.** Neither proof of deletion nor proof against it. Name the candidate it named, and say that resolving the pair is what would settle it. |
+| **Strictness** loosened — exact match to substring to existence, a value emptied, a step disabled, a check now behind an added `If` | **Problem found.** Same shape, less proved. |
+| **Date literal** introduced | **Problem found.** It passes today and fails tomorrow. |
 
 "Loosened" is this skill's word, not the diff's. The diff reports the change in
 what the assertion requires and leaves the valence alone, because only the
@@ -163,7 +164,7 @@ now runs between the old position and the new:
 | **Later**, past a step that changes the target's state | It still passes, and now proves something else. Coverage moved off the thing it guarded. |
 | **Later**, past a navigation | The target may not be on the page at all any more. |
 | **Later**, out from behind an assertion that guarded it | Whatever that assertion protected now runs unchecked. |
-| **Earlier**, before the step that produces its target | **Not verified.** A selection moved above the click that opens the view is a broken script, whatever a run says. |
+| **Earlier**, before the step that produces its target | **Problem found.** A selection moved above the click that opens the view is a broken script, whatever a run says. |
 
 Answer from evidence rather than from reading the step list, and say which
 evidence you used.
@@ -319,15 +320,26 @@ And for an intermittent test, ask what the change actually did. A longer wait
 around a race is not the same as fixing the race, and three green runs can't
 tell you which one you got.
 
-## 4. The three outcomes
+## 4. The four outcomes
 
-Report exactly one. The middle one is the one that usually gets collapsed, and
-collapsing it is how an unproven fix reaches a merge.
+Report exactly one. The two middle ones are the ones that get collapsed, and
+collapsing them is how an unproven fix reaches a merge.
+
+**"Problem found" and "Can't verify" are opposites, not shades.** One says the
+edit is wrong and shows the evidence. The other says the evidence does not exist
+either way. Merging the first is a mistake; merging the second is a gamble the
+reader is entitled to know they are taking. A single label for both hides which
+one they are holding, so never reach for a phrase that covers both.
 
 - **Verified** — content gate passed, and the required number of clean runs
   passed. Quote the run ids.
-- **Not verified** — the gate failed, the runs failed, or they never finished.
-  Say which, and say what would settle it.
+- **Problem found** — the gate caught something, or a run failed. The edit is
+  wrong and there is evidence for it. Say what the evidence is, and what the
+  edit would have to do instead.
+- **Can't verify** — no evidence either way. A baseline that cannot be read, a
+  removal that resolved to nothing, a move the history cannot answer, runs that
+  never finished. Say what is missing and what would settle it. Never soften
+  this into a pass, and never sharpen it into a defect.
 - **Verified but not green** — the gate passed and the change is demonstrably
   working, but the run still can't come back clean because it now fails
   *somewhere else*: earlier in the test, or inside a shared flow this change
