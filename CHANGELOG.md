@@ -40,6 +40,14 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   what to do on reaching it — instead of saying "wait and re-poll" with no end.
   Reaching the bound still isn't a licence to re-fire, because the status is
   still not proven terminal.
+- `mabl-onboarding` drops two narrations of its own former state ("this is the
+  remedy the skill used to be missing", "it used to, and that repetition was one
+  of the four") for the durable rule and its reason. A reader who never saw the
+  old version gets nothing from the history.
+- `mabl-onboarding` datestamps its measured claims and names the file each
+  operative value is owned by, so a value that moves gets changed at its source
+  rather than drifting between the file that measured it and the two that
+  restate it.
 - `mabl-onboarding`'s closing report cites blocking items by section title and
   number (*"item 1 of `What still needs you`"*) rather than the internal
   letter-and-number shorthand, which means nothing to the person reading it.

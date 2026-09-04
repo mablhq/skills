@@ -135,10 +135,11 @@ the server it is true of, and show the inventory that ruled the others out.
 
 #### State 2 — the one-step fix, and it is the operator's step
 
-This is the remedy the skill used to be missing entirely. **Authenticating an
-already-configured server is not adding it.** Offer it as its own gated,
-**operator-run** step, exactly like `mabl auth login --auto` — it pops a browser
-OAuth consent, so it is never yours to run silently:
+**Authenticating an already-configured server is not adding it.** The two
+states look alike from the outside and have different remedies, which is why
+state 2 gets its own route instead of falling through to state 1's. Offer it as
+its own gated, **operator-run** step, exactly like `mabl auth login --auto` — it
+pops a browser OAuth consent, so it is never yours to run silently:
 
 ```
 WRITE n of m   authenticate the hosted `mabl` MCP server (session-level)  not applied

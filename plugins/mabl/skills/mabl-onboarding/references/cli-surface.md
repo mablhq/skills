@@ -182,10 +182,15 @@ above 2000 with `instruction_text must be 2000 characters or less`. So:
   truncated blob and stay independently editable.
 - **What still doesn't fit goes to §7 as policy**, marked as such, not dropped.
 - The same limit applies to `update <id>`.
-- *(The 2000 figure is verified by mabl against the server's own validator and by
-  storing a 1400-character instruction whole; the customer-runnable check is the
-  rejection message itself.)* Do not copy the stale 1000 into their committed
-  file.
+- *(Measured 2026-09 against CLI 2.129.2: the server's own validator rejects
+  above 2000, and a 1400-character instruction stored whole. The
+  customer-runnable check is the rejection message itself — re-measure it rather
+  than trusting this line if the CLI has moved on.)* Do not copy the stale 1000
+  into their committed file.
+
+**This file is where the 2000 lives.** `references/closing-report.md` and
+`references/write-gates.md` both restate it; if the limit moves, change it here
+first and follow the two.
 
 Capabilities are exactly `authoring`, `recovery`, `results_analysis`. **The CLI
 does not validate them, but the server does — and its rejection tells you

@@ -243,7 +243,9 @@ used.
 create with `cloudOnly: false` fails with `HTTP 400 : This workspace requires
 credentials to be created as cloud credentials (set cloud_only: true)` and creates
 nothing — no partial state, nothing to clean up. So you cannot end up with a
-credential whose type quietly differs from the one that was asked for.
+credential whose type quietly differs from the one that was asked for. (Measured
+2026-09 by attempting exactly that create against a policy-on workspace over
+`create_mabl_credentials`; it rejected and created nothing.)
 
 What it means for this gate: if the policy is on, every **new** credential will be
 cloud-only, and cloud credentials do not work for local training or local runs. If
@@ -255,6 +257,8 @@ are constrained.
 ## 5. The depth sheet — one filled-in pass
 
 Present the fifteen rows **pre-filled, in one pass**, and let the operator edit.
+**This file owns the row count**; `SKILL.md` restates it in summary, so a change
+to the sheet's length starts here.
 Mark every row so their eye goes to your guesses rather than the whole sheet:
 
 `[read]` I saw it in your repo · `[you]` you told me · `[guess]` I inferred it

@@ -426,7 +426,8 @@ Render it so it cannot be mistaken for configuration:
   prevent
 - include the CLI footguns from §6, so the next agent inherits them — including
   the four flags `environments update` needs re-passed, the **2000**-character
-  instruction-text limit (never the stale 1000 from `--help`), the fact that
+  instruction-text limit (never the stale 1000 from `--help`; the measurement
+  and its date live in `references/cli-surface.md`), the fact that
   DataTables cannot be deleted and that `datatables update` deletes absent rows,
   that `urls add` has no upsert, that writes reject `--output` while reads accept it, and
   the two that put prose on stdout and therefore need a `sed` before `jq`
