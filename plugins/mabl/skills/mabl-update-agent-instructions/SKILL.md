@@ -9,8 +9,8 @@ description: |
   A contradiction with an already-enabled instruction HALTS for a human; it
   is never overwritten silently.
   Fire on: "make the authoring agent stop using hard waits", "tell the agent
-  to use our URL variable instead of literal hosts", "the recovery agent
-  shouldn't heal a real regression away", "update our agent instructions",
+  to use our URL variable instead of literal hosts", "stop the results
+  agent calling every failure flaky", "update our agent instructions",
   "add a rule for the AI", "why is the agent doing X", or a pasted `*-ain`
   instruction id.
   NOT for changing a test — to edit one use mabl-test-edit, to create one use
@@ -49,23 +49,24 @@ If the surface is absent, say so and stop. Do not fall back to editing instructi
 
 **Read `references/cli-surface.md` before running anything.** It holds the verified command and flag surface, the JSON row shape, the read script this procedure runs, name↔id resolution, the listing default, and the reason for the version pin.
 
-## The three capabilities
+## The capabilities
 
 Getting the capability wrong is the most common way a change has no effect: the rule exists, but the agent that would follow it never reads it.
 
-| Capability | The agent | Reads instructions when |
+| Capability | The agents | Read instructions when |
 |---|---|---|
-| `authoring` | Test Authoring Agent | generating or editing test steps |
-| `recovery` | Test Recovery Agent | a step failed and it is deciding how to heal |
-| `results_analysis` | Results Analysis Agent | explaining a run or a failure |
+| `authoring` | Test Authoring Agent **and Test Planning Agent** | planning, generating or editing test steps |
+| `results_analysis` | the test-run, plan-run, deployment and workspace analysis agents | explaining a run, a plan run or a failure |
+
+**`recovery` is retired — never place a change there.** No agent reads it. A row scoped to `recovery` alone reaches nothing, so it steers no behavior and it can never be a live conflict, whatever its text says. The mabl UI offers `authoring` and `results_analysis` only. The CLI accepts the value, and a real workspace holds rows carrying it (retired 2026-08-03), so expect it in a read. Report such a row as retired and leave it as it is.
 
 ## Empty means ALL
 
-The one thing about this data that is easy to read backwards. **Every scoping field is a filter, and an empty or absent filter means "no restriction" — not "nothing".** An empty `capabilities` is a rule every agent reads; an empty `application_ids` applies to every application; likewise environments.
+The one thing about this data that is easy to read backwards. **Every scoping field is a filter, and an empty or absent filter means "no restriction" — not "nothing".** An empty `application_ids` applies to every application; likewise environments. An empty `capabilities` is read by every agent in the capability table above — the Test Planning Agent included, which is why an unscoped rule about how tests get written reaches the planner too. An agent absent from that table reads no instructions at all, scoped or unscoped.
 
 So the *least*-populated row is the *most*-reaching one, and a broad policy ("always make the run pass") is exactly the kind of thing that lives there — the most likely row to contradict a change and the easiest to miss.
 
-**This is why an unscoped row is never filtered out.** It is not an exception to reading only what is relevant: an unscoped row *is* relevant to every capability, because every agent reads it.
+**This is why an unscoped row is never filtered out.** It is not an exception to reading only what is relevant: an unscoped row *is* relevant to every capability, because every agent in the capability table reads it.
 
 When authoring, prefer to be explicit — pass `--capabilities` rather than leaving a new rule unscoped, so the next reader can tell the scoping was a decision and not an omission.
 
@@ -92,7 +93,7 @@ Resolve it with the ladder in `references/cli-surface.md`, then:
 
 | Dimension | How to decide |
 |---|---|
-| **Capability** | What moment does the change act on? Building a test → `authoring`. Reacting to a failure → `recovery`. Explaining a result → `results_analysis`. A change about behavior belongs on the agent that behaves, not the one that narrates. More than one capability is allowed, and widens the read. |
+| **Capability** | What moment does the change act on? Planning or building a test → `authoring`. Explaining a run or a failure → `results_analysis`. Never `recovery` — see The capabilities, above. A change about behavior belongs on the agent that behaves, not the one that narrates. Both capabilities at once is allowed, and widens the read. |
 | **Applications** | Scope to an application only if the request is about *that app's* quirks; general judgment stays unscoped. Match what comparable existing instructions do — an oddly-scoped rule is one someone will later fail to find. Resolve the name to an id, and if the request named an app in words, show which id it mapped to: that mapping is a guess worth surfacing. |
 | **Environments** | Same test. Scope only if the change genuinely differs by environment (stricter in Prod than Dev) — and if it does, that is **two** instructions, so say so. |
 
@@ -132,7 +133,7 @@ Three facts worth having in hand while answering:
 
 **A dimension the request already settled is answered; one it never mentioned is not.** A request naming the capability, saying the rule applies everywhere, and saying to enable it has answered all four. Restate that configuration in one line as the answer it is, and carry on. Nothing here asks a second time for something already stated.
 
-**Anything still open ends the turn.** Send the confirmation and stop there: no fetch, no candidate read, no proposal, nothing below this section. Silence is not a yes, and neither is a plausible inference. A partial answer, "recovery's right, don't worry about the rest," settles that one dimension and leaves the others open, which is still open.
+**Anything still open ends the turn.** Send the confirmation and stop there: no fetch, no candidate read, no proposal, nothing below this section. Silence is not a yes, and neither is a plausible inference. A partial answer, "authoring's right, don't worry about the rest," settles that one dimension and leaves the others open, which is still open.
 
 **An unanswered dimension never travels into the proposal as a numbered decision.** Folding it in there is the failure this section exists to prevent: by then the workspace has been read and a change drafted against a scope nobody agreed to, which is exactly the guess a requester would have corrected.
 
@@ -160,7 +161,7 @@ Then run the **candidate read** from `references/cli-surface.md` for the capabil
 
 ## Classify each candidate
 
-**A contradiction is found by reading text, never by reading names.** A name is a label someone chose; it can be neutral (`Recovery - Run completion policy`) while the text says the exact opposite of the change. Classifying from names alone means the halt only fires when a row happens to be helpfully named — luck, not a check.
+**A contradiction is found by reading text, never by reading names.** A name is a label someone chose; it can be neutral (`Analysis - Run completion policy`) while the text says the exact opposite of the change. Classifying from names alone means the halt only fires when a row happens to be helpfully named — luck, not a check.
 
 Put each candidate in exactly one bucket:
 
@@ -190,7 +191,9 @@ When a candidate already says what the change says, the topic is covered — but
 
 ### A conflict, and how far it reaches
 
-**A rule under a different capability is not a conflict**, even when it reads like one: a contradiction only bites when the *same agent* holds both rules. An unscoped row is read by every agent, so it is always live.
+**A rule under a different capability is not a conflict**, even when it reads like one: a contradiction only bites when the *same agent* holds both rules. An unscoped row is read by every agent in the capability table, so it is always live.
+
+**A row scoped to `recovery` alone is never a conflict either**, however flatly its text contradicts the change, because no agent reads it. Say that it contradicts on paper and steers nothing, and do not halt on it.
 
 **Application and environment scope narrow a conflict; they do not excuse it.** Because empty means all, the scopes overlap in one direction only:
 
@@ -266,8 +269,9 @@ The echoed commands, the raw `describe` output, and the rows set aside during cl
 - **Never invent a rule.** Every word of proposed instruction text traces to what was actually requested. If the request is vague, ask — do not pad it with generic testing advice the team never asked for.
 - **Imperative and checkable.** "Wait for the spinner to disappear before asserting", not "handle timing properly." A reader must be able to tell whether the agent complied.
 - **2000 characters, hard.** The server enforces it and says so: `instruction_text must be 2000 characters or less`. Trust that over any number printed in `--help`. A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
+- **Never clear a `recovery` row's capabilities.** Emptying that array does not retire the row, it promotes it: unscoped means every agent in the capability table, so a rule that reaches nothing becomes one the authoring and analysis agents follow. `--capabilities` on `update` replaces the whole list, so a rescope that forgets to re-pass `recovery` empties it by accident. To retire such a row, `update <id> --disabled` and leave its capabilities alone.
 - **One change — but landing it may take two writes.** Resolving a contradiction, or enabling the row being amended, is part of landing the change. Improvements merely *noticed* get mentioned, not written.
-- **Reflect intent, but flag a footgun.** If the change looks like trouble (disabling healing entirely, a rule far more specific than its scope, contradicting the team's own conventions), say so once, plainly, and let the human decide.
+- **Reflect intent, but flag a footgun.** If the change looks like trouble (a blanket "always make the run pass", a rule far more specific than its scope, contradicting the team's own conventions), say so once, plainly, and let the human decide.
 
 ## Boundaries
 

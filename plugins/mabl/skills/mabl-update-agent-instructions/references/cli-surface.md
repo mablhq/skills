@@ -44,7 +44,7 @@ Each row from `list` / `describe` carries, among other fields:
 | `name` | display name |
 | `instruction_text` | the text injected into the agent's prompt |
 | `disabled` | boolean — `true` means it steers nothing |
-| `capabilities[]` | `authoring` · `recovery` · `results_analysis`; **optional** |
+| `capabilities[]` | `authoring` · `results_analysis` · `recovery` (retired — see `SKILL.md`); **optional** |
 | `application_ids[]` | may be **absent** rather than `[]` |
 | `environment_ids[]` | may be **absent** rather than `[]` |
 | `created_by_id` · `created_time` · `last_updated_by_id` · `last_updated_time` | audit fields, epoch ms |
@@ -121,7 +121,7 @@ Reads `.mabl/agent-instructions.json`, written by the read step in `SKILL.md`. S
 **Fetch wide, review narrow.** This prints the full text of only the rows the target agent actually reads — the chosen capability, plus every unscoped row, because unscoped means every agent. Everything else is counted and set aside, never silently dropped: the closing reconciliation line is what makes "narrowed on purpose" distinguishable from "read incompletely".
 
 ```bash
-CAP="recovery"   # or authoring / results_analysis
+CAP="authoring"   # or results_analysis
 python3 - "$CAP" <<'EOF'
 import json, sys
 from collections import Counter
