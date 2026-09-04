@@ -5,6 +5,19 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.0] - 2026-09-04
+### Added
+- `mabl-update-agent-instructions` — land one change to how mabl's AI agents
+  behave in a workspace. It works out which agent capability and which
+  application or environment scope the change actually applies to, reads only
+  the instructions that agent reads, and proposes the smallest sensible action:
+  usually amending the rule that already owns the topic, or widening its scope,
+  rather than adding a second rule the agent has no way to rank. A change that
+  contradicts an instruction which is already enabled halts for a human instead
+  of being written, and the halt names the applications and environments where
+  the two rules actually meet. Nothing is applied without explicit approval, and
+  the skill never deletes — it disables, which is reversible.
+
 ## [1.8.0] - 2026-09-03
 ### Added
 - `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
