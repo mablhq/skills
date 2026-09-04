@@ -32,6 +32,17 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   only the gap and hands the ids back.
 
 ### Changed
+- `mabl-onboarding`'s `allowed-tools` no longer pre-approves `authenticate` and
+  `complete_authentication`. The MCP sign-in it offers is an operator command
+  (`claude mcp login mabl`), never a tool this skill calls, so those two were
+  grants for calls that never happen.
+- `mabl-onboarding` bounds the `RATE_LIMITED` re-poll — an interval, a stop, and
+  what to do on reaching it — instead of saying "wait and re-poll" with no end.
+  Reaching the bound still isn't a licence to re-fire, because the status is
+  still not proven terminal.
+- `mabl-onboarding`'s closing report cites blocking items by section title and
+  number (*"item 1 of `What still needs you`"*) rather than the internal
+  letter-and-number shorthand, which means nothing to the person reading it.
 - `mabl-onboarding` now offers the Basic-vs-Cloud credential choice instead of
   picking, in any workspace that allows both, and states the trade: Basic works for
   local training and local runs, Cloud is stronger because the password can never

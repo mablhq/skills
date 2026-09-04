@@ -16,7 +16,7 @@ description: |
   calls it rather than writing memory files itself.
   A human creates the workspace itself in the mabl UI; this skill never
   provisions one.
-allowed-tools: Bash, Read, Write, Edit, Skill, mcp__mabl__create_mabl_application, mcp__mabl__authenticate, mcp__mabl__complete_authentication
+allowed-tools: Bash, Read, Write, Edit, Skill, mcp__mabl__create_mabl_application
 ---
 
 # mabl onboarding
@@ -194,7 +194,8 @@ application you may create over the MCP server, and the URL row that comes with
 it. Probe the real surface in step 0 rather
 than trusting that sentence, never create anything as a probe in a no-delete
 family, and never re-issue a create on a status that is not proven terminal —
-`RATE_LIMITED` means *wait and re-poll*, not *failed*. Recovering a duplicate
+`RATE_LIMITED` means *wait and re-poll on a bound*, not *failed* — and hitting
+the bound still isn't a licence to re-fire. Recovering a duplicate
 (rename, disable, label `to-delete`, report it as human-only cleanup) and the
 probe itself: `references/write-gates.md`.
 

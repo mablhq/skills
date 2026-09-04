@@ -710,7 +710,9 @@ What you do instead, in order, all of it:
    fresh `mabl environments create … --application-id <app> --app-url <url>`.
    **In the report, the blocked step itself is a section-A item and stays there.**
    What section F carries is only what A does not: this literal resume command, and
-   the sentence that names which A item it resumes ("resumes A item 1"). F does not
+   the sentence that names which A item it resumes — spelled out for the reader,
+   *"resumes item 1 of `What still needs you`"*, not compressed to a bare
+   letter-and-number address. F does not
    re-tell the item (§10, "the blocking items get exactly one rendering").
 5. **Report it as a blocking item, counted in the headline**, not as a failure of
    the run. Report **section A** is where this lives.

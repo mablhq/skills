@@ -476,9 +476,19 @@ left an undeletable scratch test in a customer-shaped workspace.
 `RATE_LIMITED` from cloud authoring is the case that matters: it means the
 concurrency quota rejected *this attempt*, not that the session failed. It usually
 completes on its own. Wait and re-poll. Re-firing it produced four undeletable
-duplicate tests in a real run. Keep concurrent cloud-authoring sessions to about
-two or three — concurrency is a performance choice for reads and a **risk** choice
-for irreversible writes.
+duplicate tests in a real run.
+
+Re-polling needs a bound, or "wait" becomes an unbounded loop. **This skill's
+bound: re-poll every 30 seconds, stop after 10 minutes, and at the bound report
+the session as *still running* and hand it back.** Those two numbers are this
+skill's policy, not a platform guarantee — the platform publishes no completion
+SLA for a rate-limited authoring session. What is not a policy choice is the
+behaviour at the bound: a session that has not resolved is still *not proven
+terminal*, so hitting the bound never licenses a re-fire. Report it with the
+session id so the operator can check it, and leave it alone.
+
+Keep concurrent cloud-authoring sessions to about two or three — concurrency is
+a performance choice for reads and a **risk** choice for irreversible writes.
 
 ### Recovering a duplicate you cannot delete
 

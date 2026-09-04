@@ -222,7 +222,7 @@ a section with nothing in it says so in one line rather than being omitted.
 | **C** | What I built in mabl, and how I verified it | the entity table, the inline read-backs, the unverified-by-design items, the "no test authored, nothing has run" statement |
 | **D** | Footguns now written into `<file>` | at least three silent-wrong-result footguns with their consequence, plus the irreversibility record |
 | **E** | What got recorded as policy, and where | 3a real entities, 3b the per-row markers, the open questions, the secrets statement |
-| **F** | Persistence — handed off to the §8 skill, or not | **opens by naming that skill and its state in words** (present and used / present and not usable, with the branch / not installed) — which is also where the `Tooling` line's third clause lands if the card's budget evicts it — then probe, offer, gate, handoff block, independent verify, or branch D's ending. **Anything blocking is cited as "A item `<n>`" and not re-told**; F carries only mechanics A does not (see below) |
+| **F** | Persistence — handed off to the §8 skill, or not | **opens by naming that skill and its state in words** (present and used / present and not usable, with the branch / not installed) — which is also where the `Tooling` line's third clause lands if the card's budget evicts it — then probe, offer, gate, handoff block, independent verify, or branch D's ending. **Anything blocking is cited by section title and item number — *"item `<n>` of `What still needs you`"* — and not re-told**; F carries only mechanics A does not (see below) |
 | **G** | How we got here | the gates, the correction ledger verbatim, the depth sheet, one full write gate |
 
 **A–G replace the old numbered report sections, so the references made elsewhere
@@ -282,8 +282,11 @@ three are now **forbidden**:
 - The card's `State` line carries **the attendance fact and the count**, never a
   second copy of an item. A count is not a restatement (see "two in-card
   renderings", above).
-- **Section F cites A by item number and carries only mechanics A does not.** This
-  is the third rendering, and on branch D — this skill's headline path — it is the
+- **Section F cites A by item number and carries only mechanics A does not.** In
+  the report itself that citation is always spelled out — *"item `<n>` of "What
+  still needs you""* — never compressed to a bare letter-and-number address, which
+  is an internal shorthand for this file and means nothing to the person reading
+  the report. This is the third rendering, and on branch D — this skill's headline path — it is the
   one that actually bites: the thing that unblocks the run is already A item 1 (the
   application) and, in state 2, A item 3 (the MCP sign-in). So:
   - **The recovery and resume *steps* live in A**, as items, each with its where,
@@ -291,9 +294,9 @@ three are now **forbidden**:
     mabl → Authenticate), the two `/plugin` lines labelled operator-run, the web-app
     application step. A is where a reader is told to do them.
   - **F names them by A's item number and does not re-tell them** — *"persistence
-    stopped at branch D, blocked on **A item 1**; the sign-in that would have made it
-    mine is **A item 3**."* No second where, no second why-it-isn't-mine, no second
-    unblocks clause, no reprinted command that A already carries.
+    stopped at branch D, blocked on **item 1 of `What still needs you`**; the
+    sign-in that would have made it mine is **item 3** of the same list."* No
+    second where, no second why-it-isn't-mine, no second unblocks clause, no reprinted command that A already carries.
   - **What F *does* carry, because A does not:** the probe reading by state; the
     offer and the gate as it was shown; the handoff block with its pre-supplied
     facts; the fallback section's literal content including its `## mabl testing`
@@ -356,10 +359,10 @@ a must-hold in tier 2 is not a weaker requirement, only a lower-placed one.
 | The array-flag punctuation rule recorded **scoped to `[array]` flags**; `--instruction-text` named as `[string]` where commas are fine. The instruction text this run wrote reads as ordinary prose, punctuated normally — comma-avoidant instruction prose is itself the defect | **2** | E |
 | Secrets nowhere; credentials by name only; `--decrypt` never run; withheld `.env` values reported as withheld; **no other user's** name or email in any file — the operator's own email and role in the card is required and is not an exception to this | **2** | E |
 | The §8 persistence handoff shown by name with its pre-supplied facts enumerated | **2** | F |
-| MCP-not-reachable branch shows probe (by state), the offer, the gate as shown, and the literal fallback content with its `## mabl testing` heading and marker comment. The **recovery step itself is an item in A** — restoring the MCP server as well as the skill, the `/plugin` lines labelled operator-run and gated, a skills-only route labelled as installing no MCP server — and **F cites it as "A item `<n>`" rather than reprinting it** | **2** | F (the step in A) |
+| MCP-not-reachable branch shows probe (by state), the offer, the gate as shown, and the literal fallback content with its `## mabl testing` heading and marker comment. The **recovery step itself is an item in A** — restoring the MCP server as well as the skill, the `/plugin` lines labelled operator-run and gated, a skills-only route labelled as installing no MCP server — and **F cites it as *"item `<n>` of `What still needs you`"* rather than reprinting it** | **2** | F (the step in A) |
 | The branch-C marker comment claimed **only** by quoting the `grep -n 'written by mabl-onboarding without the mabl MCP server' <path>` hit with its line number. No grep hit, no claim — and `grep -c '^## mabl testing'` returning ≥2 reported as a cleanup task in D | **2** | F (cleanup in D) |
 | The committed-file gate's mode named as **CREATE / APPEND / REPLACE**, with the path annotation that mode requires; a CREATE'd file counted as untracked in `Writes` until the operator commits it | **2** | F (+ count in 1) |
-| Branch D shown in the sub-branch matching which count is zero — D1 wording only at 0 applications, D2 otherwise, no "0 applications" sentence on a D2 run — with the state stated, the application-independent writes applied, and the policy persisted with the `Application: …` line. The **blocked step is A's item**; F adds only the literal resume command and the A item number it resumes. A declined MCP route said as a choice, not an impossibility | **2** | F (the item in A) |
+| Branch D shown in the sub-branch matching which count is zero — D1 wording only at 0 applications, D2 otherwise, no "0 applications" sentence on a D2 run — with the state stated, the application-independent writes applied, and the policy persisted with the `Application: …` line. The **blocked step is A's item**; F adds only the literal resume command and the item number, cited by section title, that it resumes. A declined MCP route said as a choice, not an impossibility | **2** | F (the item in A) |
 | Every command shown exists in the verified surface, **including the non-mabl ones** (`npm install -g`, the plugin lines); `gh skill install` only with its `gh skill --help` version check and never as *the* recovery path | **2** | F |
 | Every committed-file write and every machine-level change shown as its own gate with its resolved path or scope; neither inherits the workspace gate | **2** | F (+ G's full gate) |
 | The correction ledger as it actually came out, each correction with its downstream effect; an honest zero stated in one line; nothing manufactured | **2** | G |
