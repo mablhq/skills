@@ -5,6 +5,77 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [Unreleased]
+### Added
+- `mabl-onboarding` skill — onboarding for a brand-new or empty workspace, the
+  step before `mabl-init` has anything to record. Interviews you about what you
+  ship and what needs verifying, discovers your repo — including related repos
+  elsewhere on the machine, which is where the full list of environments usually
+  lives — then builds out the parts of the workspace a command can build:
+  environments, deployment URL rows, in-product agent instructions, mabl
+  branches, a CI deployment trigger. Every write is drafted and applied only on
+  an explicit yes, and everything with no product surface is recorded as durable
+  team policy instead.
+  Tests, DataTables and plans are deliberately *not* built here — each is a
+  decision with an owner, so each gets a question instead: what is worth testing
+  before anything is authored, and how tests should be grouped before any plan
+  exists. Plans group by product module rather than test tier, adopt an existing
+  taxonomy (tracker components, an existing test-case folder layout) when the
+  team has one, and are never scheduled. Another workspace is never read without
+  asking.
+  States plainly what no agent can create (a workspace, a Link agent) and what
+  the CLI cannot create but the `mabl` MCP server can (applications,
+  credentials, plans), so a tooling gap is never reported as an impossibility.
+  Hands project-local persistence to `mabl-init` rather than writing memory
+  files itself, and can also be entered mid-workflow by another skill that finds
+  the workspace missing an application, environment or credential — it fills
+  only the gap and hands the ids back.
+
+### Changed
+- `mabl-onboarding`'s `allowed-tools` no longer pre-approves `authenticate` and
+  `complete_authentication`. The MCP sign-in it offers is an operator command
+  (`claude mcp login mabl`), never a tool this skill calls, so those two were
+  grants for calls that never happen.
+- `mabl-onboarding` bounds the `RATE_LIMITED` re-poll — an interval, a stop, and
+  what to do on reaching it — instead of saying "wait and re-poll" with no end.
+  Reaching the bound still isn't a licence to re-fire, because the status is
+  still not proven terminal.
+- `mabl-onboarding` drops two narrations of its own former state ("this is the
+  remedy the skill used to be missing", "it used to, and that repetition was one
+  of the four") for the durable rule and its reason. A reader who never saw the
+  old version gets nothing from the history.
+- `mabl-onboarding` datestamps its measured claims and names the file each
+  operative value is owned by, so a value that moves gets changed at its source
+  rather than drifting between the file that measured it and the two that
+  restate it.
+- `mabl-onboarding`'s closing report cites blocking items by section title and
+  number (*"item 1 of `What still needs you`"*) rather than the internal
+  letter-and-number shorthand, which means nothing to the person reading it.
+- `mabl-onboarding` now offers the Basic-vs-Cloud credential choice instead of
+  picking, in any workspace that allows both, and states the trade: Basic works for
+  local training and local runs, Cloud is stronger because the password can never
+  be read back. It also links straight to the credential create form rather than
+  naming a menu path, which is where the two MFA types no agent can create are made.
+- `mabl-onboarding`'s credential gate now reads `require_cloud_only_credentials`
+  off `mabl workspaces describe` instead of asking about it. The key is omitted
+  when the policy is off, so an absent key means off rather than unknown.
+- `mabl-onboarding`'s credential gate now settles the credential *type* rather than
+  just the name. mabl has four (Basic, Basic with MFA, Cloud, Cloud with MFA), the
+  type is fixed at creation, and cloud credentials cannot be used for local
+  training or local runs — so the gate asks about MFA and local execution, points
+  at `Configuration > Credentials`, and reads the stored type back because a
+  workspace-level "require cloud credentials" policy is enforced in the API and can
+  override what was asked for. It also no longer asks whether credentials are
+  per-environment: they cannot be, and environment variables are the answer.
+- `mabl-onboarding` now re-derives drafted content from the source before the gate
+  that writes it, scopes "I read this" claims to what was actually checked, and
+  verifies an intended absence rather than only a presence. A live run drafted an
+  agent instruction listing nine repo selectors as read; eight existed, and the
+  ninth was pattern-completed after a truncated grep.
+- `mabl-init` now routes to `mabl-onboarding` when the workspace it discovers has
+  no applications or environments, instead of ending on "this workspace isn't set
+  up for testing yet". Its description says the same, so the two skills no longer
+  compete for "set up mabl" on an empty workspace.
 ## [1.8.0] - 2026-09-03
 ### Added
 - `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
