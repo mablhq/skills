@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.10.0] - 2026-08-27
+## [Unreleased]
 ### Added
 - `mabl-onboarding` skill — onboarding for a brand-new or empty workspace, the
   step before `mabl-init` has anything to record. Interviews you about what you
@@ -57,6 +57,53 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   no applications or environments, instead of ending on "this workspace isn't set
   up for testing yet". Its description says the same, so the two skills no longer
   compete for "set up mabl" on an empty workspace.
+## [1.8.0] - 2026-09-03
+### Added
+- `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
+  test green, fix the behaviour or stop checking it, and a passing run cannot
+  tell them apart. This skill can: it diffs the test against the version before
+  the change first, and lost coverage, a loosened assertion, or a date literal
+  fails the verification whatever the run said.
+- The diff is delegated to `mabl-version-compare`, and its classes are read as
+  reported. A removal it could not resolve is its own verdict — not proof of
+  deletion and not proof against it — rather than being rounded into a pass or a
+  failure.
+- Picks the two versions by branch rather than by arithmetic. Version numbers are
+  global to a test, so `N-1` is very often somebody else's edit on an unrelated
+  branch, and a diff of the wrong pair comes back clean.
+- Runs are isolated by branch and identified by the ids the trigger returns
+  rather than by picking the most recent run in the workspace, which eventually
+  attributes someone else's execution to your change. A trigger that returns no
+  run ids started nothing: an environment binding more than one URL comes back
+  with candidate deployments instead, which is a question for the user, not a
+  choice to make.
+- One clean run settles a consistently failing test; an intermittent one needs
+  three, because a single pass is exactly what changing nothing would produce.
+- Three outcomes, and the middle one is the point: verified, not verified, and
+  verified-but-not-green — a change that demonstrably works but whose run still
+  dies somewhere it never touched. Collapsing that into failure is how a working
+  fix gets thrown away, and collapsing it into success is worse.
+- It never edits and never merges. It reports the state and the evidence; a
+  person reads the diff and decides — and it is granted only the four read-and-run
+  tools it calls, so the tools that could edit or merge are not on the table.
+
+### Changed
+- `mabl-test-authoring` routes its no-weakening gate to `mabl-test-edit-verify`
+  instead of diffing versions itself. The rule it enforced — any `Assert*` in
+  `removed` is a failed attempt — contradicted the fix it recommends two
+  paragraphs earlier, because moving an assertion into the right place renders as
+  a removal plus an addition. So did extracting steps into a reusable flow. Both
+  burned one of three heal attempts on a correct edit.
+- The gate is stated once. `references/validate-and-heal.md` carried a second
+  copy of the rule and its recipe; a reference that restates a decision
+  `SKILL.md` owns is the copy that goes stale.
+- `mabl-compare-versions` is renamed to **`mabl-version-compare`**, matching the
+  `mabl-<entity>-<verb>` shape the rest of the skills are moving to. The folder,
+  the frontmatter `name` and the README row all move with it. Anything that
+  invoked it by its old name, or declared it as a required sibling, has to be
+  updated: a skill name is how every surface addresses it, so the old name
+  resolves to nothing rather than falling back. The `.mabl/compare/` cache
+  path is deliberately unchanged, because other skills read artifacts from it.
 
 ## [1.7.0] - 2026-08-27
 ### Added
