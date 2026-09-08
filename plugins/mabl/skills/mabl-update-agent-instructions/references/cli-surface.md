@@ -1,6 +1,6 @@
 # `agent-instructions` CLI surface
 
-Verified against mabl CLI `2.129.2` (measured 2026-08-28). Every command here is real, every flag was taken from `--help`, and the field list came from live `-o json` output. Re-check with `mabl agent-instructions <command> --help` rather than guessing.
+Verified against mabl CLI `2.129.2` (measured 2026-08-28). Every command here is real, every flag was taken from `--help`, and the field list came from live `-o json` output. Treat this as a measured surface snapshot: re-check command and flag availability with `mabl agent-instructions <command> --help` before using them, and follow the live output if it differs.
 
 ## The commands
 
@@ -20,19 +20,19 @@ mabl agent-instructions delete    <id>          # exists; this skill never uses 
 - **`-o` exists only on `list` and `describe`.** `create` and `update` print the resulting row as JSON unconditionally, and passing `-o` to either fails with `Unknown argument: o` and a non-zero exit, writing nothing.
 - `--disabled` and `--enabled` conflict with each other on `update`; pass one.
 - `--capabilities`, `--application-ids` and `--environment-ids` are **arrays** — pass multiple values space-separated.
-- `list` accepts **no filters** beyond workspace and limit. Narrowing to one capability happens client-side, in the read script below.
+- `list` accepts **no filters** beyond workspace and limit. Narrowing to the chosen capabilities happens client-side, in the candidate-read recipe below.
 - **The `instruction_text` cap is stated in `SKILL.md`'s hard rules; this is how it was established.** Measured 2026-08-28 by bisection against the live server: the limit is exact, and one character over it fails with `instruction_text must be 2000 characters or less`, exits non-zero, and writes nothing. `create --help` prints a lower number and `update --help` prints none; the server is authoritative over both.
 
 ## The silent listing default
 
-`agent-instructions list`, `workspaces list`, `applications list` and `environments list` **all** default to returning 10 rows, silently. This is a shared default (`DEFAULT_LISTING_RESULT_LIMIT`), not a quirk of one command.
+Measured 2026-08-28: `agent-instructions list`, `workspaces list`, `applications list` and `environments list` **all** default to returning 10 rows, silently. The workflow does not rely on that default staying true; it passes an explicit limit every time.
 
 Pass an explicit high limit on every one of them. The consequences of not doing so are not cosmetic:
 
 - A workspace with 16 instructions returns 10, and a change reconciled against the truncated set proposes a duplicate of a rule that already exists — or misses the rule it contradicts.
 - A workspace with 15 applications resolves 10, and the eleventh silently cannot be found by name.
 
-**Completeness has no positive signal.** The response carries no total, and the CLI discards the API's pagination cursor (`.then(result => result.agent_instructions ?? [])`), so the only available evidence is that **the row count came back below the limit passed**. Do not look for a total or a next page; there is neither. If count equals limit, raise the limit and read again — never report an ambiguous read as complete.
+**Completeness has no positive signal.** The response carries no total, and the CLI discards the API's pagination cursor (`.then(result => result.agent_instructions ?? [])`), so the only available evidence is that **the row count came back below the limit passed**. Do not look for a total or a next page; there is neither.
 
 Use the same check for every CLI list in this skill:
 
@@ -63,7 +63,7 @@ What an omitted flag does on each command is the operative table in `SKILL.md`'s
 
 The two commands build their request bodies differently. `create` builds a full body, so an omitted or empty scope array goes out as `undefined` and the field is stored absent — which is why there is no way to create a row scoped to "nothing". `update` builds a sparse body and sends it as a `PATCH`, so only the flags actually passed appear in it at all.
 
-That single difference is what makes an omission a decision on one command and a no-op on the other. And a replacement that drops ids exits 0, so the only evidence of a scope written correctly is a `describe` afterwards.
+That single difference is what makes an omission a decision on one command and a no-op on the other. And a replacement that drops ids exits 0, so verify an `update` by describing the row afterwards.
 
 `--enabled` is not a separate field: it is stored as `disabled: false`. That is why enabling is a real write with its own approval, and why it can be combined with a text edit in one command — which this skill deliberately does not do, to keep the two decisions separable.
 
@@ -90,7 +90,7 @@ The table view renders the capability column as `capabilities?.join(', ') ?? 'Al
 ```bash
 # 1. Does the project record one? Search for the KEY, not the id's shape —
 #    then read the value out of whatever matched.
-grep -rIn --exclude-dir=.git --exclude='*.yml' --exclude='*.yaml' -Ei \
+grep -rIn --exclude-dir=.git -Ei \
   'MABL_WORKSPACE_ID|workspaceId|workspace[ _-]?id|workspace:' \
   CLAUDE.md AGENTS.md .github/ .mabl/ 2>/dev/null
 
@@ -102,7 +102,7 @@ mabl workspaces list -o json --limit 1000 | python3 -c \
   "import json,sys; [print(w['id'], '|', w['name']) for w in json.load(sys.stdin)]"
 ```
 
-**Search for workspace-id keys, never for an id pattern.** A regex built around the id's shape silently matches nothing when the id doesn't look the way the pattern assumed — and "no project record found" is then indistinguishable from "no search was possible", so the step falls through to the CLI default and targets the wrong workspace. Key-shaped matches find the id however it was written: `MABL_WORKSPACE_ID=`, `workspace:`, `workspaceId`, or a `.mabl/config.json` entry. Excluding workflow YAML avoids burying real project records under `${{ github.workspace }}`.
+**Search for workspace-id keys, never for an id pattern.** A regex built around the id's shape silently matches nothing when the id doesn't look the way the pattern assumed — and "no project record found" is then indistinguishable from "no search was possible", so the step falls through to the CLI default and targets the wrong workspace. Key-shaped matches find the id however it was written: `MABL_WORKSPACE_ID=`, `workspace:`, `workspaceId`, or a `.mabl/config.json` entry. Matching the key rather than the bare word is also what keeps `${{ github.workspace }}` out of the results, so workflow files stay searchable — a repo that records its id as a CI environment variable is a common case, and excluding that YAML would hide the answer entirely.
 
 ## Name ↔ id resolution
 

@@ -41,13 +41,13 @@ mabl auth info           # reading needs any key; applying needs a write-capable
 **Then probe for the commands, because a version number is not a capability.** Features ship together and a build can satisfy the pin without carrying the surface:
 
 ```bash
-mabl agent-instructions --help 2>&1 | grep -Eqw 'list' || echo "CLI has no agent-instructions surface — stop"
+mabl agent-instructions list --help 2>&1 | grep -Eqw -- '--limit' || echo "CLI has no agent-instructions list surface — stop"
 mabl agent-instructions update --help 2>&1 | grep -Eqw -- '--enabled' || echo "no --enabled flag — enabling is unavailable on this build"
 ```
 
 If the surface is absent, say so and stop. Do not fall back to editing instructions any other way.
 
-**Read `references/cli-surface.md` before running anything.** It holds the verified command and flag surface, the JSON row shape, the read script this procedure runs, name↔id resolution, the listing default, and the reason for the version pin.
+**Read `references/cli-surface.md` before running anything.** It holds the verified command and flag surface, the JSON row shape, the candidate-read recipe this procedure follows, name↔id resolution, the listing default, and the reason for the version pin.
 
 ## The capabilities
 
@@ -58,7 +58,7 @@ Getting the capability wrong is the most common way a change has no effect: the 
 | `authoring` | Test Authoring Agent **and Test Planning Agent** | planning, generating or editing test steps |
 | `results_analysis` | the test-run, plan-run, deployment and workspace analysis agents | explaining a run, a plan run or a failure |
 
-**`recovery` is retired — never place a change there.** No agent reads it. A row scoped only to `recovery` reaches nothing, steers no behavior, and cannot be a live conflict. The CLI accepts the value, and a real workspace holds rows carrying it (retired 2026-08-03), so expect it in a read. Report such a row as retired and leave it as it is. Never change a `recovery` row's capabilities as part of a live rescope; that promotes retired text into live agent prompts. To retire such a row, disable it and leave its capabilities alone.
+**`recovery` is retired — never place a change there.** Measured 2026-09-04: the mabl UI offers `authoring` and `results_analysis` only, while the CLI accepts `recovery` and existing workspace rows carry it. No agent in the capability table reads it. Treat a row scoped only to `recovery` as reaching nothing: it steers no behavior, cannot be a live conflict, and should be reported as a retired row left unchanged. Never change a `recovery` row's capabilities as part of a live rescope; that promotes retired text into live agent prompts. To retire such a row, disable it and leave its capabilities alone.
 
 ## Empty means ALL
 
@@ -70,7 +70,7 @@ So the *least*-populated row is the *most*-reaching one, and a broad policy ("al
 
 When authoring, prefer to be explicit — pass `--capabilities` rather than leaving a new rule unscoped, so the next reader can tell the scoping was a decision and not an omission.
 
-*(Absent vs empty in the JSON, and how `list` renders each: `references/cli-surface.md`.)*
+*(Absent vs empty in the JSON, and how `list` renders capabilities: `references/cli-surface.md`.)*
 
 ## Establish the workspace, and name it out loud
 
@@ -153,7 +153,7 @@ Write nothing outside `.mabl/`.
 
 **`--limit` is not optional — the CLI's listing default is far lower than a real workspace and truncates silently, with no signal** (`references/cli-surface.md`). The only evidence of a complete fetch is a row count *below* the limit passed; if they are equal, raise it and fetch again.
 
-Then run the **candidate read** from `references/cli-surface.md` for every capability chosen when placing the change. It prints in full only the rows those agents read — any chosen capability plus every unscoped row — with each one's `apps=` / `envs=` scope and a line accounting for what it set aside.
+Then make **one candidate read** using the full set of capabilities chosen when placing the change. Do not run one pass per capability. The recipe in `references/cli-surface.md` keeps rows whose capability set intersects the chosen set, plus every unscoped row, and prints each one's application and environment scope with a reconciliation line.
 
 **Read those candidates in full and no others.** A row scoped only to capabilities the change does not touch is not a candidate: the agents being changed never see it. Report how many rows were set aside and under which capabilities, so "narrowed deliberately" never looks like "read incompletely".
 
@@ -207,18 +207,7 @@ When a candidate already says what the change says, the topic is covered — but
 
 **A row scoped to `recovery` alone is never a conflict either.** Use the retired-capability rule above: say that it contradicts on paper and steers nothing, and do not halt on it.
 
-**Application and environment scope narrow a conflict; they do not excuse it.** Compare scopes as sets. Empty means all; two non-empty scopes conflict where their ids intersect.
-
-| The change | The contradicting row | Verdict |
-|---|---|---|
-| unscoped | unscoped | **conflict**, everywhere |
-| unscoped | scoped to app X | **conflict, but only for app X** — the change reaches into X, so tests there get both rules |
-| scoped to app X | unscoped | **conflict** for app X — the broad rule reaches in |
-| scoped to app X | scoped to app X | **conflict** for app X |
-| scoped to app X | scoped to app Y | **not a conflict when X and Y are different ids** — the scopes never meet |
-| scoped to apps X,Y | scoped to apps Y,Z | **conflict** for app Y only |
-
-Environments behave identically — substitute "environment" throughout. A rule that contradicts only in Prod is a Prod-only conflict, and reporting it as workspace-wide overstates it.
+**Application and environment scope narrow a conflict; they do not excuse it.** Compare each dimension as a set. Empty means all. If either side is empty, the overlap is the other side's set, or the whole workspace when both are empty. If both sides are non-empty, the overlap is their intersection. No intersection means no conflict in that dimension; any intersection is the blast radius to report. Environments use the same rule, so a rule that contradicts only in Prod is a Prod-only conflict, and reporting it as workspace-wide overstates it.
 
 A partial overlap is still a halt, but the resolution may be narrower than disabling the other rule — scoping the change to avoid the overlap is often better. **Name the specific applications and environments where the two actually meet**; "there is a contradiction" without a blast radius is not a decision anyone can make.
 
@@ -257,16 +246,16 @@ Commands and flags: `references/cli-surface.md`. Four rules govern this step.
 
 **Scope flags behave differently on `create` and `update`, and the difference is easy to get backwards.**
 
-| | Flag omitted | Flag passed |
-|---|---|---|
-| `create` | the field is stored absent → **every** application / environment | exactly what was passed |
-| `update` | the field is **left as it was** — omitting it does not widen anything | **replaces the whole list**, so pass every id the row should end up with, not just the additions |
+| | Flag omitted | Flag passed with values | Flag passed with **zero** values |
+|---|---|---|---|
+| `create` | the field is stored absent → **every** application / environment | exactly what was passed | same as omitted |
+| `update` | the field is **left as it was** — omitting it does not widen anything | **replaces the whole list**, so pass every id the row should end up with, not just the additions | measured for `--application-ids` only: clears the field to an empty array, which means all. For `--capabilities` and `--environment-ids`, probe a disposable row first |
 
 So a narrowly-placed change created without `--application-ids` silently ships workspace-wide, and a rescope that passes only the new ids silently drops the ones already there.
 
-**Confirm every id written, not just the first.** Echo each command and its result, then `describe` each affected instruction.
+**Confirm every id written, not just the first.** Echo each command and its result. For a `create`, the command's JSON result is the persisted row; read the id straight from it, never re-list and match on the name. For an `update`, also `describe` the affected instruction and compare the stored text, enabled state, and full scope against what was approved.
 
-`create` and `update` print the resulting row as JSON on their own and **reject `-o`** with `Unknown argument: o`, exiting non-zero without writing. Only `list` and `describe` take `-o json`. So read the id straight out of what `create` printed — never re-list and match on the name.
+`create` and `update` print the resulting row as JSON on their own and **reject `-o`** with `Unknown argument: o`, exiting non-zero without writing. Only `list` and `describe` take `-o json`.
 
 **Never `delete`.** The command exists; this skill does not use it. `update <id> --disabled` is reversible with `--enabled` and keeps the audit trail. Deleting is not undoable and takes the history with it.
 
