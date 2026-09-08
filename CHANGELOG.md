@@ -7,7 +7,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 
 ## [Unreleased]
 ### Added
-- `mabl-onboarding` skill — onboarding for a brand-new or empty workspace, the
+- `mabl-workspace-setup` skill — scaffolds a brand-new or empty workspace, the
   step before `mabl-init` has anything to record. Interviews you about what you
   ship and what needs verifying, discovers your repo — including related repos
   elsewhere on the machine, which is where the full list of environments usually
@@ -32,34 +32,34 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   only the gap and hands the ids back.
 
 ### Changed
-- `mabl-onboarding`'s `allowed-tools` no longer pre-approves `authenticate` and
+- `mabl-workspace-setup`'s `allowed-tools` no longer pre-approves `authenticate` and
   `complete_authentication`. The MCP sign-in it offers is an operator command
   (`claude mcp login mabl`), never a tool this skill calls, so those two were
   grants for calls that never happen.
-- `mabl-onboarding` bounds the `RATE_LIMITED` re-poll — an interval, a stop, and
+- `mabl-workspace-setup` bounds the `RATE_LIMITED` re-poll — an interval, a stop, and
   what to do on reaching it — instead of saying "wait and re-poll" with no end.
   Reaching the bound still isn't a licence to re-fire, because the status is
   still not proven terminal.
-- `mabl-onboarding` drops two narrations of its own former state ("this is the
+- `mabl-workspace-setup` drops two narrations of its own former state ("this is the
   remedy the skill used to be missing", "it used to, and that repetition was one
   of the four") for the durable rule and its reason. A reader who never saw the
   old version gets nothing from the history.
-- `mabl-onboarding` datestamps its measured claims and names the file each
+- `mabl-workspace-setup` datestamps its measured claims and names the file each
   operative value is owned by, so a value that moves gets changed at its source
   rather than drifting between the file that measured it and the two that
   restate it.
-- `mabl-onboarding`'s closing report cites blocking items by section title and
+- `mabl-workspace-setup`'s closing report cites blocking items by section title and
   number (*"item 1 of `What still needs you`"*) rather than the internal
   letter-and-number shorthand, which means nothing to the person reading it.
-- `mabl-onboarding` now offers the Basic-vs-Cloud credential choice instead of
+- `mabl-workspace-setup` now offers the Basic-vs-Cloud credential choice instead of
   picking, in any workspace that allows both, and states the trade: Basic works for
   local training and local runs, Cloud is stronger because the password can never
   be read back. It also links straight to the credential create form rather than
   naming a menu path, which is where the two MFA types no agent can create are made.
-- `mabl-onboarding`'s credential gate now reads `require_cloud_only_credentials`
+- `mabl-workspace-setup`'s credential gate now reads `require_cloud_only_credentials`
   off `mabl workspaces describe` instead of asking about it. The key is omitted
   when the policy is off, so an absent key means off rather than unknown.
-- `mabl-onboarding`'s credential gate now settles the credential *type* rather than
+- `mabl-workspace-setup`'s credential gate now settles the credential *type* rather than
   just the name. mabl has four (Basic, Basic with MFA, Cloud, Cloud with MFA), the
   type is fixed at creation, and cloud credentials cannot be used for local
   training or local runs — so the gate asks about MFA and local execution, points
@@ -67,12 +67,12 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   workspace-level "require cloud credentials" policy is enforced in the API and can
   override what was asked for. It also no longer asks whether credentials are
   per-environment: they cannot be, and environment variables are the answer.
-- `mabl-onboarding` now re-derives drafted content from the source before the gate
+- `mabl-workspace-setup` now re-derives drafted content from the source before the gate
   that writes it, scopes "I read this" claims to what was actually checked, and
   verifies an intended absence rather than only a presence. A live run drafted an
   agent instruction listing nine repo selectors as read; eight existed, and the
   ninth was pattern-completed after a truncated grep.
-- `mabl-init` now routes to `mabl-onboarding` when the workspace it discovers has
+- `mabl-init` now routes to `mabl-workspace-setup` when the workspace it discovers has
   no applications or environments, instead of ending on "this workspace isn't set
   up for testing yet". Its description says the same, so the two skills no longer
   compete for "set up mabl" on an empty workspace.

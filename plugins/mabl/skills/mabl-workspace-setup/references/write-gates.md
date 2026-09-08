@@ -20,7 +20,7 @@ State each up front, then repeat it verbatim in that gate's `caveats` block:
 `mabl datatables` is `create` / `describe` / `export` / `list` / `scenarios` /
 `update` — verify with `mabl datatables --help`, **there is no `delete`** —
 and `datatables update` deletes every row absent from the file. Neither is in
-scope: §6 defers test data to authoring, so an onboarding run creates no
+scope: §6 defers test data to authoring, so a workspace-setup run creates no
 DataTable at all. They are named here because the §0 probe covers them, because
 "never create one diagnostically" below is a rule rather than an omission, and
 because the report inherits both footguns for whoever authors the first test.

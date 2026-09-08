@@ -104,7 +104,7 @@ there for a long path or a long attribution, not for another sentence. Substitut
 real values everywhere; a bracket that survives into the report is a defect.
 
 ```
-## mabl onboarding — <build-out complete | BLOCKED on <the specific missing thing>>, <N> items still on you
+## mabl workspace setup — <build-out complete | BLOCKED on <the specific missing thing>>, <N> items still on you
 
 **Workspace** <name> · `<id>`
 **Repo** <path> (<shape>, branch <branch>)
@@ -360,7 +360,7 @@ a must-hold in tier 2 is not a weaker requirement, only a lower-placed one.
 | Secrets nowhere; credentials by name only; `--decrypt` never run; withheld `.env` values reported as withheld; **no other user's** name or email in any file — the operator's own email and role in the card is required and is not an exception to this | **2** | E |
 | The §8 persistence handoff shown by name with its pre-supplied facts enumerated | **2** | F |
 | MCP-not-reachable branch shows probe (by state), the offer, the gate as shown, and the literal fallback content with its `## mabl testing` heading and marker comment. The **recovery step itself is an item in A** — restoring the MCP server as well as the skill, the `/plugin` lines labelled operator-run and gated, a skills-only route labelled as installing no MCP server — and **F cites it as *"item `<n>` of `What still needs you`"* rather than reprinting it** | **2** | F (the step in A) |
-| The branch-C marker comment claimed **only** by quoting the `grep -n 'written by mabl-onboarding without the mabl MCP server' <path>` hit with its line number. No grep hit, no claim — and `grep -c '^## mabl testing'` returning ≥2 reported as a cleanup task in D | **2** | F (cleanup in D) |
+| The branch-C marker comment claimed **only** by quoting the `grep -n 'written by mabl-workspace-setup without the mabl MCP server' <path>` hit with its line number. No grep hit, no claim — and `grep -c '^## mabl testing'` returning ≥2 reported as a cleanup task in D | **2** | F (cleanup in D) |
 | The committed-file gate's mode named as **CREATE / APPEND / REPLACE**, with the path annotation that mode requires; a CREATE'd file counted as untracked in `Writes` until the operator commits it | **2** | F (+ count in 1) |
 | Branch D shown in the sub-branch matching which count is zero — D1 wording only at 0 applications, D2 otherwise, no "0 applications" sentence on a D2 run — with the state stated, the application-independent writes applied, and the policy persisted with the `Application: …` line. The **blocked step is A's item**; F adds only the literal resume command and the item number, cited by section title, that it resumes. A declined MCP route said as a choice, not an impossibility | **2** | F (the item in A) |
 | Every command shown exists in the verified surface, **including the non-mabl ones** (`npm install -g`, the plugin lines); `gh skill install` only with its `gh skill --help` version check and never as *the* recovery path | **2** | F |

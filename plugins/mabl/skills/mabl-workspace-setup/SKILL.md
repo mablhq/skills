@@ -1,15 +1,15 @@
 ---
-name: mabl-onboarding
+name: mabl-workspace-setup
 description: |
-  Onboard a NEW or EMPTY mabl WORKSPACE. Interview the human about what they
-  ship and what needs verifying, then build the parts of that workspace an agent
-  can — environments, deployment URL rows, in-product agent instructions, mabl
-  branches, CI deploy triggers — every write drafted and applied only on an
-  explicit yes. Tests, DataTables and plans are NOT built here.
+  Set up a NEW or EMPTY mabl WORKSPACE. Interview the human about what they ship
+  and what needs verifying, then build what an agent can — environments,
+  deployment URL rows, in-product agent instructions, mabl branches, CI deploy
+  triggers — every write drafted and applied only on an explicit yes. Tests,
+  DataTables and plans are NOT built here.
   Fire when the mabl side doesn't exist yet: "onboard my mabl workspace", "I
   just signed up for mabl", "my mabl workspace is empty", "we're new to mabl",
-  "roll mabl out to my team", or "/mabl-onboarding". Fire mid-workflow too when
-  another skill finds the workspace missing an application, environment or
+  "roll mabl out to my team", or "/mabl-workspace-setup". Fire mid-workflow too
+  when another skill finds the workspace missing an application, environment or
   credential: it fills only the gap and hands the ids back.
   If the workspace already HAS its applications and environments and the job is
   telling THIS PROJECT's agent which ids to use, that's mabl-init — this skill
@@ -19,7 +19,7 @@ description: |
 allowed-tools: Bash, Read, Write, Edit, Skill, mcp__mabl__create_mabl_application
 ---
 
-# mabl onboarding
+# mabl workspace setup
 
 Take a workspace someone just created and turn it into a workspace a team can
 test in. Interview the human about what they ship and what they need
@@ -45,23 +45,23 @@ returns.
 
 ## Two ways in, and they run different steps
 
-**Full onboarding** is the cold start: nothing exists on the mabl side, the
+**Full setup** is the cold start: nothing exists on the mabl side, the
 person in the session is the operator, and the run is the whole ordered procedure
 below, ending in the closing report.
 
 **Gap-fill** is the mid-workflow entry: another skill was doing something else,
 found this workspace missing an application, an environment or a credential, and
-called here for that one thing. It is not a shorter onboarding, it is a narrower
+called here for that one thing. It is not a shorter setup, it is a narrower
 job — and getting it wrong in either direction is expensive. Running the
 fifteen-row depth sheet against someone who wanted one environment spends a
 session they did not offer; running the interview's write gates without them
 spends an approval nobody gave.
 
 Take the gap-fill lane when **the caller names the workspace and the entities it
-needs**. Everything else is full onboarding — including a human who says "my
+needs**. Everything else is full setup — including a human who says "my
 workspace is empty", who has no caller and no return address.
 
-| | Full onboarding | Gap-fill |
+| | Full setup | Gap-fill |
 |---|---|---|
 | Steps run | 0 through 10 | 0, a shortened C1, C3, then the return block |
 | Workspace | gate C1 resolves it | the caller supplied it: confirm id **and** name against `workspaces list`, never re-pick |
@@ -184,7 +184,7 @@ never overstate one.
   deciding it, and during any evaluation of this skill it contaminates the run.
 - **This skill creates no test, no DataTable and no plan.** Each is a decision
   with an owner, and each has its own question in step 9. Building them here is
-  how an onboarding run quietly becomes someone else's test strategy.
+  how a workspace-setup run quietly becomes someone else's test strategy.
 
 ## Two rules that outrank convenience
 

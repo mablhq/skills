@@ -298,7 +298,7 @@ Write these into the durable file in §7 so the next agent inherits them.
 - Passing `--app-url` / `--api-url` to `environments create` **without**
   `--application-id` silently drops the URLs. The environment is created, the
   command succeeds, and no test can target it. This is the single most likely
-  way an onboarding run produces a useless environment.
+  way a workspace-setup run produces a useless environment.
 - **Space-delimited array flags reject `,` `;` and `|` with no escape
   mechanism.** A password containing `;` or a URL with a comma in its query
   string cannot be set through the CLI at all. **This applies to `[array]` flags

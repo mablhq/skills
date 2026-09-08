@@ -492,7 +492,7 @@ and add a marker comment that vanishes on that upgrade:
 
 ```markdown
 ## mabl testing
-<!-- written by mabl-onboarding without the mabl MCP server; run mabl-init to enrich -->
+<!-- written by mabl-workspace-setup without the mabl MCP server; run mabl-init to enrich -->
 
 Workspace: <name> `<workspace-id>`
 Application: <name> `<application-id>`
@@ -504,8 +504,8 @@ Canonical app URL: <url>
 ##### The marker is a mechanism, so emit it and then prove you emitted it
 
 **That comment line is not decoration and it is not prose about the write — it is
-the write.** It is how a later `mabl-init` run recognises this section as
-onboarding's own and **replaces it in place** rather than appending a second,
+the write.** It is how a later `mabl-init` run recognises this section as this
+skill's own and **replaces it in place** rather than appending a second,
 conflicting `## mabl testing` block to the same file. If the marker is missing,
 the upgrade path is silently broken and nobody finds out until there are two mabl
 sections disagreeing about which environment is the default.
@@ -525,7 +525,7 @@ mechanically:
    `datatables scenarios`:
 
    ```bash
-   grep -n 'written by mabl-onboarding without the mabl MCP server' <resolved-path>
+   grep -n 'written by mabl-workspace-setup without the mabl MCP server' <resolved-path>
    grep -c 'mabl-init' <resolved-path>          # expect ≥ 1
    grep -c '^## mabl testing' <resolved-path>   # expect exactly 1
    ```
