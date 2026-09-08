@@ -34,6 +34,12 @@ Pass an explicit high limit on every one of them. The consequences of not doing 
 
 **Completeness has no positive signal.** The response carries no total, and the CLI discards the API's pagination cursor (`.then(result => result.agent_instructions ?? [])`), so the only available evidence is that **the row count came back below the limit passed**. Do not look for a total or a next page; there is neither. If count equals limit, raise the limit and read again — never report an ambiguous read as complete.
 
+Use the same check for every CLI list in this skill:
+
+1. Pass an explicit limit larger than the workspace should need.
+2. Count the returned rows.
+3. If `count == limit`, repeat with a higher limit or report the read as incomplete.
+
 ## The row shape
 
 Each row from `list` / `describe` carries, among other fields:
@@ -61,7 +67,9 @@ That single difference is what makes an omission a decision on one command and a
 
 `--enabled` is not a separate field: it is stored as `disabled: false`. That is why enabling is a real write with its own approval, and why it can be combined with a text edit in one command — which this skill deliberately does not do, to keep the two decisions separable.
 
-**Passing a scope flag with no values clears it.** Measured 2026-08-28: `update <id> --application-ids` with nothing after it stores `application_ids: []` — an empty array, not an absent field. Empty means all, so the row does widen back to every application. But the two are not identical on screen: `list`'s table renders an absent field as `All` and an empty array as a **blank cell**, so a row cleared this way reads as scoped-to-nothing to the next person. Prefer it anyway over leaving a stale scope; just say in the report that the field is now empty rather than absent.
+**Passing `--application-ids` with no values clears it.** Measured 2026-08-28: `update <id> --application-ids` with nothing after it stores `application_ids: []` — an empty array, not an absent field. Empty means all, so the row does widen back to every application. But the two are not identical on screen: `list`'s table renders an absent field as `All` and an empty array as a **blank cell**, so a row cleared this way reads as scoped-to-nothing to the next person. Prefer it anyway over leaving a stale scope; just say in the report that the field is now empty rather than absent.
+
+The same empty-flag behavior has not been measured for `--capabilities` or `--environment-ids` in this reference. When clearing one of those fields matters, probe it on a disposable row first, describe the row after the write, and report the observed stored value before relying on it.
 
 ## How `list` renders scope — and why to read the JSON instead
 
@@ -82,7 +90,9 @@ The table view renders the capability column as `capabilities?.join(', ') ?? 'Al
 ```bash
 # 1. Does the project record one? Search for the KEY, not the id's shape —
 #    then read the value out of whatever matched.
-grep -rIn --exclude-dir=.git -i 'workspace' CLAUDE.md AGENTS.md .github/ .mabl/ 2>/dev/null
+grep -rIn --exclude-dir=.git --exclude='*.yml' --exclude='*.yaml' -Ei \
+  'MABL_WORKSPACE_ID|workspaceId|workspace[ _-]?id|workspace:' \
+  CLAUDE.md AGENTS.md .github/ .mabl/ 2>/dev/null
 
 # 2. Is there a CLI default? Prints the id AND the workspace name.
 mabl config get workspace
@@ -92,7 +102,7 @@ mabl workspaces list -o json --limit 1000 | python3 -c \
   "import json,sys; [print(w['id'], '|', w['name']) for w in json.load(sys.stdin)]"
 ```
 
-**Search for the key, never for an id pattern.** A regex built around the id's shape silently matches nothing when the id doesn't look the way the pattern assumed — and "no project record found" is then indistinguishable from "no search was possible", so the step falls through to the CLI default and targets the wrong workspace. Grepping for the word finds the id however it was written: `MABL_WORKSPACE_ID=`, `workspace:`, `workspaceId`, a `.mabl/config.json` entry, or a sentence in a memory file.
+**Search for workspace-id keys, never for an id pattern.** A regex built around the id's shape silently matches nothing when the id doesn't look the way the pattern assumed — and "no project record found" is then indistinguishable from "no search was possible", so the step falls through to the CLI default and targets the wrong workspace. Key-shaped matches find the id however it was written: `MABL_WORKSPACE_ID=`, `workspace:`, `workspaceId`, or a `.mabl/config.json` entry. Excluding workflow YAML avoids burying real project records under `${{ github.workspace }}`.
 
 ## Name ↔ id resolution
 
@@ -116,53 +126,36 @@ The whole `agent-instructions` CRUD surface — including `--enabled` — arrive
 
 ## The candidate read
 
-Reads `.mabl/agent-instructions.json`, written by the read step in `SKILL.md`. Set `CAP` to the capability chosen when placing the change.
+Reads `.mabl/agent-instructions.json`, written by the read step in `SKILL.md`, against the capabilities chosen when placing the change.
 
-**Fetch wide, review narrow.** This prints the full text of only the rows the target agent actually reads — the chosen capability, plus every unscoped row, because unscoped means every agent. Everything else is counted and set aside, never silently dropped: the closing reconciliation line is what makes "narrowed on purpose" distinguishable from "read incompletely".
+**Fetch wide, review narrow.** The fetch returns every row in the workspace; the candidate read keeps only the rows the target agents actually read. Put a row in the candidate set when either of these is true:
 
-```bash
-CAP="authoring"   # or results_analysis
-python3 - "$CAP" <<'EOF'
-import json, sys
-from collections import Counter
+- `capabilities` is absent or empty, because unscoped means every agent reads it.
+- `capabilities` intersects the chosen capability set. For a change placed on both `authoring` and `results_analysis`, a row scoped to either one is a candidate.
 
-cap = sys.argv[1]
-rows = json.load(open('.mabl/agent-instructions.json'))
+Everything else is set aside, never silently dropped.
 
-candidates, setaside = [], []
-for r in rows:
-    caps = r.get('capabilities') or []
-    (candidates if (cap in caps or not caps) else setaside).append(r)
+For every candidate, print enough to classify it without another lookup:
 
-for r in candidates:
-    caps = r.get('capabilities') or []
-    tag = (f"capabilities={','.join(caps)}" if caps
-           else "capabilities=ALL (unscoped - every agent reads this)")
-    apps = r.get('application_ids') or []
-    envs = r.get('environment_ids') or []
-    text = r.get('instruction_text') or ''
-    print(f"=== {r.get('name','(unnamed)')}  [{'disabled' if r.get('disabled') else 'ENABLED'}]")
-    print(f"    {tag}")
-    print(f"    apps={','.join(apps) if apps else 'ALL'}  "
-          f"envs={','.join(envs) if envs else 'ALL'}  "
-          f"{len(text)} chars  {r.get('instruction_id','(no id)')}")
-    print(text, "\n")
+- name and `instruction_id`
+- enabled vs disabled
+- capabilities, with an explicit `ALL` label when unscoped
+- application ids or `ALL`
+- environment ids or `ALL`
+- counted character length
+- full `instruction_text`
 
-unscoped = sum(1 for r in candidates if not (r.get('capabilities') or []))
-by_cap = Counter(c for r in setaside for c in (r.get('capabilities') or []))
-multi = sum(1 for r in setaside if len(r.get('capabilities') or []) > 1)
-print(f"{len(candidates)} candidates read in full ({unscoped} of them unscoped); "
-      f"{len(setaside)} set aside as out of scope for '{cap}'")
-if setaside:
-    print(f"  set-aside rows appear under (a row with two capabilities is counted "
-          f"under each, so these need not sum to {len(setaside)}): {dict(by_cap)}"
-          + (f"; {multi} row(s) carry more than one" if multi else ""))
-print(f"reconcile: {len(candidates)} + {len(setaside)} == {len(rows)} fetched")
-EOF
-```
+Then print the reconciliation:
 
-Two details in there are load-bearing:
+- candidate row count
+- unscoped candidate count
+- set-aside row count
+- set-aside breakdown by capability, with a note that rows scoped to two capabilities count under both
+- `candidates + set aside == fetched`
 
-- **`not caps` keeps unscoped rows in the candidate set.** Filtering on `cap in caps` alone drops exactly the broadest rows in the workspace — the ones most likely to contradict the change.
+Four details are load-bearing:
+
+- **Capability matching is set intersection.** Running a one-capability read for a two-capability change misses contradictions visible only to the other selected agent.
+- **Unscoped rows stay in the candidate set.** Filtering only on capability membership drops exactly the broadest rows in the workspace — the ones most likely to contradict the change.
 - **The set-aside tally counts capabilities, not rows.** A row scoped to two capabilities appears under both, so the per-capability numbers can exceed the row count. Report the row count as the total and the tally as a breakdown; presenting the tally as a partition makes the reconciliation look wrong when it is right.
-- **The `apps=` / `envs=` line** is what makes the overlap rules in the skill usable. Without it a conflict confined to one application or one environment is indistinguishable from a workspace-wide one, and every conflict gets reported at full blast radius.
+- **The application and environment lines make the overlap rules usable.** Without them a conflict confined to one application or one environment is indistinguishable from a workspace-wide one, and every conflict gets reported at full blast radius.

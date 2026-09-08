@@ -58,7 +58,7 @@ Getting the capability wrong is the most common way a change has no effect: the 
 | `authoring` | Test Authoring Agent **and Test Planning Agent** | planning, generating or editing test steps |
 | `results_analysis` | the test-run, plan-run, deployment and workspace analysis agents | explaining a run, a plan run or a failure |
 
-**`recovery` is retired — never place a change there.** No agent reads it. A row scoped to `recovery` alone reaches nothing, so it steers no behavior and it can never be a live conflict, whatever its text says. The mabl UI offers `authoring` and `results_analysis` only. The CLI accepts the value, and a real workspace holds rows carrying it (retired 2026-08-03), so expect it in a read. Report such a row as retired and leave it as it is.
+**`recovery` is retired — never place a change there.** No agent reads it. A row scoped only to `recovery` reaches nothing, steers no behavior, and cannot be a live conflict. The CLI accepts the value, and a real workspace holds rows carrying it (retired 2026-08-03), so expect it in a read. Report such a row as retired and leave it as it is. Never change a `recovery` row's capabilities as part of a live rescope; that promotes retired text into live agent prompts. To retire such a row, disable it and leave its capabilities alone.
 
 ## Empty means ALL
 
@@ -153,9 +153,9 @@ Write nothing outside `.mabl/`.
 
 **`--limit` is not optional — the CLI's listing default is far lower than a real workspace and truncates silently, with no signal** (`references/cli-surface.md`). The only evidence of a complete fetch is a row count *below* the limit passed; if they are equal, raise it and fetch again.
 
-Then run the **candidate read** from `references/cli-surface.md` for the capability chosen when placing the change. It prints in full only the rows that agent reads — the chosen capability plus every unscoped row — with each one's `apps=` / `envs=` scope and a line accounting for what it set aside.
+Then run the **candidate read** from `references/cli-surface.md` for every capability chosen when placing the change. It prints in full only the rows those agents read — any chosen capability plus every unscoped row — with each one's `apps=` / `envs=` scope and a line accounting for what it set aside.
 
-**Read those candidates in full and no others.** A row scoped only to a capability the change does not touch is not a candidate: the agent being changed never sees it. Report how many rows were set aside and under which capabilities, so "narrowed deliberately" never looks like "read incompletely".
+**Read those candidates in full and no others.** A row scoped only to capabilities the change does not touch is not a candidate: the agents being changed never see it. Report how many rows were set aside and under which capabilities, so "narrowed deliberately" never looks like "read incompletely".
 
 **Enabled and disabled are not interchangeable.** Only an enabled instruction steers an agent. A disabled row that covers the topic can still be the right row to amend, but amending it changes no behavior — enabling is a **separate decision and a separate command**, never a flag added to the text edit. Someone switched that row off on purpose.
 
@@ -175,6 +175,18 @@ Put each candidate in exactly one bucket:
 
 **Prefer update over create.** Two instructions on one topic give the agent no way to rank them, and the second is invisible to whoever reads the first.
 
+Use these proposal relationship labels:
+
+| Verdict | Proposal relationship |
+|---|---|
+| **update** | **owns-the-topic** |
+| **rescope** | **owns-the-topic** |
+| **skip** | **owns-the-topic** |
+| **conflict** | **contradicts** |
+| **create** | existing rows are **adjacent** or **unrelated**, because no candidate owns the topic |
+
+`adjacent` means the row touches the same area but not this rule. `unrelated` means it is in the candidate set only because the agent reads it.
+
 ### A duplicate is a configuration question, not a dead end
 
 When a candidate already says what the change says, the topic is covered — but **coverage is text *plus* configuration.** Compare that row's application and environment scope against where the change was placed:
@@ -191,18 +203,20 @@ When a candidate already says what the change says, the topic is covered — but
 
 ### A conflict, and how far it reaches
 
-**A rule under a different capability is not a conflict**, even when it reads like one: a contradiction only bites when the *same agent* holds both rules. An unscoped row is read by every agent in the capability table, so it is always live.
+**A rule under a different capability is not a conflict**, even when it reads like one: a contradiction only bites when at least one of the *same agents* holds both rules. An unscoped row is read by every agent in the capability table, so it is always live.
 
-**A row scoped to `recovery` alone is never a conflict either**, however flatly its text contradicts the change, because no agent reads it. Say that it contradicts on paper and steers nothing, and do not halt on it.
+**A row scoped to `recovery` alone is never a conflict either.** Use the retired-capability rule above: say that it contradicts on paper and steers nothing, and do not halt on it.
 
-**Application and environment scope narrow a conflict; they do not excuse it.** Because empty means all, the scopes overlap in one direction only:
+**Application and environment scope narrow a conflict; they do not excuse it.** Compare scopes as sets. Empty means all; two non-empty scopes conflict where their ids intersect.
 
 | The change | The contradicting row | Verdict |
 |---|---|---|
 | unscoped | unscoped | **conflict**, everywhere |
 | unscoped | scoped to app X | **conflict, but only for app X** — the change reaches into X, so tests there get both rules |
 | scoped to app X | unscoped | **conflict** for app X — the broad rule reaches in |
-| scoped to app X | scoped to app Y | **not a conflict** — the scopes never meet |
+| scoped to app X | scoped to app X | **conflict** for app X |
+| scoped to app X | scoped to app Y | **not a conflict when X and Y are different ids** — the scopes never meet |
+| scoped to apps X,Y | scoped to apps Y,Z | **conflict** for app Y only |
 
 Environments behave identically — substitute "environment" throughout. A rule that contradicts only in Prod is a Prod-only conflict, and reporting it as workspace-wide overstates it.
 
@@ -269,7 +283,7 @@ The echoed commands, the raw `describe` output, and the rows set aside during cl
 - **Never invent a rule.** Every word of proposed instruction text traces to what was actually requested. If the request is vague, ask — do not pad it with generic testing advice the team never asked for.
 - **Imperative and checkable.** "Wait for the spinner to disappear before asserting", not "handle timing properly." A reader must be able to tell whether the agent complied.
 - **2000 characters, hard.** The server enforces it and says so: `instruction_text must be 2000 characters or less`. Trust that over any number printed in `--help`. A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
-- **Never clear a `recovery` row's capabilities.** Emptying that array does not retire the row, it promotes it: unscoped means every agent in the capability table, so a rule that reaches nothing becomes one the authoring and analysis agents follow. `--capabilities` on `update` replaces the whole list, so a rescope that forgets to re-pass `recovery` empties it by accident. To retire such a row, `update <id> --disabled` and leave its capabilities alone.
+- **Never change a `recovery` row's capabilities as part of a live rescope.** Use the retired-capability rule above: disable it to retire it, and leave its capabilities alone.
 - **One change — but landing it may take two writes.** Resolving a contradiction, or enabling the row being amended, is part of landing the change. Improvements merely *noticed* get mentioned, not written.
 - **Reflect intent, but flag a footgun.** If the change looks like trouble (a blanket "always make the run pass", a rule far more specific than its scope, contradicting the team's own conventions), say so once, plainly, and let the human decide.
 
