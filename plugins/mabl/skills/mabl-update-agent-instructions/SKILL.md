@@ -235,6 +235,8 @@ Report in this shape. It leads with placement because that is the part most like
 5. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope, and any adjustment this read turned up that the request did not cover. Each states its consequence, and each is answerable on its own.
 6. **To apply** — the exact commands, in order, clearly not yet run.
 
+**Call an instruction an instruction, every time it appears.** Write *the instruction `Run completion policy`*, or *the `Run completion policy` row* — never the bare name on its own. These names are chosen to read like settings, so a bare one gives the reader no way to tell a rule somebody on their team authored from a feature mabl ships, and the ones that sound most like product configuration are exactly the broad rules worth noticing. The same goes for an id: an `-ain` id is an instruction id, so say so. This holds in the proposal, in the decisions, and in the closing reply.
+
 **The text in the proposal and the text in the command must be byte-identical.** No emphasis added for the write-up, no punctuation swapped. A human approves what they read, and what they read has to be what gets written — so write the proposed text once, plainly, and reuse that exact string.
 
 Then stop and wait for a decision.
