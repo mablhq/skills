@@ -152,7 +152,7 @@ Then print the reconciliation:
 - candidate row count
 - unscoped candidate count
 - set-aside row count
-- set-aside breakdown by capability, with a note that rows scoped to two capabilities count under both
+- set-aside breakdown by capability — a retired capability counted under `retired` rather than named — with a note that rows scoped to two capabilities count under both
 - `candidates + set aside == fetched`
 
 Four details are load-bearing:

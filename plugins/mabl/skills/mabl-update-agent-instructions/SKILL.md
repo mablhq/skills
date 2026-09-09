@@ -156,7 +156,7 @@ Write nothing outside `.mabl/`.
 
 Then make **one candidate read** using the full set of capabilities chosen when placing the change. Do not run one pass per capability. The recipe in `references/cli-surface.md` keeps rows whose capability set intersects the chosen set, plus every unscoped row, and prints each one's application and environment scope with a reconciliation line.
 
-**Read those candidates in full and no others.** A row scoped only to capabilities the change does not touch is not a candidate: the agents being changed never see it. Report how many rows were set aside and under which capabilities, so "narrowed deliberately" never looks like "read incompletely".
+**Read those candidates in full and no others.** A row scoped only to capabilities the change does not touch is not a candidate: the agents being changed never see it. Report how many rows were set aside and under which capabilities, so "narrowed deliberately" never looks like "read incompletely". **Count a retired capability under `retired`, never by name** — see The capabilities, above. Naming a dead capability beside the live ones presents it as a choice, and the count is what carries the reconciliation.
 
 **Enabled and disabled are not interchangeable.** Only an enabled instruction steers an agent. A disabled row that covers the topic can still be the right row to amend, but amending it changes no behavior — enabling is a **separate decision and a separate command**, never a flag added to the text edit. Someone switched that row off on purpose.
 
@@ -228,7 +228,7 @@ A disabled row steers nothing, so **nothing here halts** — there are no mixed 
 
 Report in this shape. It leads with placement because that is the part most likely to be wrong, and ends with commands that have not run.
 
-1. **Header** — the change verbatim; the workspace **name and id** and how it was resolved; rows fetched vs the limit passed (under it is the proof nothing truncated); how many reviewed as candidates and how many set aside, under which capabilities; CLI version; and that no writes happened.
+1. **Header** — the change verbatim; the workspace **name and id** and how it was resolved; rows fetched vs the limit passed (under it is the proof nothing truncated); how many reviewed as candidates and how many set aside, under which capabilities with retired ones counted as `retired`; CLI version; and that no writes happened.
 2. **Where this change belongs, and what it will match** — the placement dimensions and the specificity finding, exactly as confirmed with the requester before this read ran. Note only anything that changed since that confirmation.
 3. **What is already there that this touches** — **all** enabled candidates first, then disabled, never interleaved. One relationship per row from exactly this vocabulary: **owns-the-topic** / **adjacent** / **unrelated** / **contradicts**. Mark unscoped rows as such, and show application and environment scope **by name**.
 4. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the cap. For a rescope, the scope before and after, by name, and what newly gains the rule.
