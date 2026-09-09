@@ -122,16 +122,17 @@ State these, and ask for a yes or a correction on each:
 - **Applications.** Named by name, or "every application in this workspace" if left unscoped.
 - **Environments.** Named by name, or "every environment" if left unscoped.
 - **Enabled or disabled**, for a row this would create.
+- **The name**, for a row this would create — matched to the set's existing style, so say which style that is.
 - **What it will actually match**, the specificity finding above, in plain words.
 
-This is the whole configuration surface `agent-instructions create` and `update` expose, checked against `--help` on both: capabilities, application ids, environment ids, and the enabled/disabled state. Nothing else on a row is configurable from here.
+That covers every field `create` and `update` expose except the instruction text, which is the change itself and gets confirmed with the proposal, current text beside proposed.
 
-Three facts worth having in hand while answering:
+Two facts worth having in hand while answering:
 
 - Leaving applications or environments unscoped does not mean "neither," it means "every one." See Empty means ALL, above.
 - Instruction text is capped, and the server enforces it, regardless of what a draft is shaping up to need. The number is in Hard rules, below.
 
-**A dimension the request already settled is answered; one it never mentioned is not.** A request naming the capability, saying the rule applies everywhere, and saying to enable it has answered all four. Restate that configuration in one line as the answer it is, and carry on. Nothing here asks a second time for something already stated.
+**A dimension the request already settled is answered; one it never mentioned is not.** A request naming the capability, saying the rule applies everywhere, and saying to enable it has answered the capability, both scopes and the enabled state. Restate that configuration in one line as the answer it is, and carry on. Nothing here asks a second time for something already stated.
 
 **Anything still open ends the turn.** Send the confirmation and stop there: no fetch, no candidate read, no proposal, nothing below this section. Silence is not a yes, and neither is a plausible inference. A partial answer, "authoring's right, don't worry about the rest," settles that one dimension and leaves the others open, which is still open.
 
@@ -151,7 +152,7 @@ mabl agent-instructions list -w "$WS" -o json --limit 1000 > .mabl/agent-instruc
 
 Write nothing outside `.mabl/`.
 
-**`--limit` is not optional — the CLI's listing default is far lower than a real workspace and truncates silently, with no signal** (`references/cli-surface.md`). The only evidence of a complete fetch is a row count *below* the limit passed; if they are equal, raise it and fetch again.
+**`--limit` is not optional — the CLI's listing default is far lower than a real workspace and truncates silently, with no signal.** Run the completeness check in `references/cli-surface.md` on this fetch and on every other list this skill makes.
 
 Then make **one candidate read** using the full set of capabilities chosen when placing the change. Do not run one pass per capability. The recipe in `references/cli-surface.md` keeps rows whose capability set intersects the chosen set, plus every unscoped row, and prints each one's application and environment scope with a reconciliation line.
 
@@ -284,4 +285,4 @@ The echoed commands, the raw `describe` output, and the rows set aside during cl
 
 ## Additional resources
 
-- **`references/cli-surface.md`** — verified command and flag surface, the JSON row shape, the candidate read script, the silent listing default, why `create` and `update` treat the same flags differently, name↔id resolution (MCP preferred, CLI fallback), and the version pin rationale.
+- **`references/cli-surface.md`** — verified command and flag surface, the JSON row shape, the candidate-read recipe, the silent listing default, why `create` and `update` treat the same flags differently, name↔id resolution (MCP preferred, CLI fallback), and the version pin rationale.

@@ -8,7 +8,7 @@ Verified against mabl CLI `2.129.2` (measured 2026-08-28). Every command here is
 mabl agent-instructions list      -w <ws> -o json --limit <n>
 mabl agent-instructions describe  <id> -o json
 mabl agent-instructions create    -w <ws> --name <n> --instruction-text "<text>"
-                                  [--capabilities authoring recovery results_analysis]
+                                  [--capabilities authoring results_analysis]
                                   [--application-ids <a>...] [--environment-ids <e>...] [--disabled]
 mabl agent-instructions update    <id> [--name <n>] [--instruction-text "<...>"]
                                   [--capabilities ...] [--application-ids ...] [--environment-ids ...]
@@ -91,7 +91,7 @@ The table view renders the capability column as `capabilities?.join(', ') ?? 'Al
 # 1. Does the project record one? Search for the KEY, not the id's shape —
 #    then read the value out of whatever matched.
 grep -rIn --exclude-dir=.git -Ei \
-  'MABL_WORKSPACE_ID|workspaceId|workspace[ _-]?id|workspace:' \
+  'workspace[ _-]?id|workspace:' \
   CLAUDE.md AGENTS.md .github/ .mabl/ 2>/dev/null
 
 # 2. Is there a CLI default? Prints the id AND the workspace name.
@@ -110,9 +110,11 @@ Scoping is stored as ids; humans think in names. Resolve both directions before 
 
 | Need | MCP tool | CLI fallback |
 |---|---|---|
-| workspaces, id ↔ name | `list_mabl_workspaces` | `mabl workspaces list -o json --limit 1000` |
-| applications, id ↔ name | `list_mabl_applications` | `mabl applications list -w "$WS" -o json --limit 1000` |
-| environments, id ↔ name | `list_mabl_environments` | `mabl environments list -w "$WS" -o json --limit 1000` |
+| workspaces, id ↔ name | `list_mabl_workspaces` — takes no workspace argument | `mabl workspaces list -o json --limit 1000` |
+| applications, id ↔ name | `list_mabl_applications` — **workspace id required** | `mabl applications list -w "$WS" -o json --limit 1000` |
+| environments, id ↔ name | `list_mabl_environments` — **workspace id required** | `mabl environments list -w "$WS" -o json --limit 1000` |
+
+**Pass the workspace id to the application and environment tools.** Measured 2026-09-03, two runs: called without it, both fail with `workspaceId: Required` and the call has to be repeated. The workspace is already in hand by this point — it is resolved before anything gets read.
 
 **Detect, then degrade.** If the MCP server is not configured, use the CLI column and say once that you fell back. Nothing here is MCP-only.
 
