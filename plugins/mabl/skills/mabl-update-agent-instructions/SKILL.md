@@ -264,7 +264,11 @@ So a narrowly-placed change created without `--application-ids` silently ships w
 
 Verification above stays complete: every id gets confirmed, every affected instruction gets `describe`d. The reply that goes to the requester after the write is not that transcript.
 
-State, once per instruction touched: the name, one line of what changed (row created, text amended, scope widened, enabled), and where (workspace name, capability, applications and environments named or "all"). Carry forward, verbatim, any halt, footgun flag, or set-aside caveat from the proposal; a caveat never gets summarized away for length. Nothing else goes in the reply by default.
+State, once per instruction touched: the name, one line of what changed (row created, text amended, scope widened, enabled), and where (workspace name, capability, applications and environments named or "all"). Nothing else goes in the reply by default.
+
+**An addressed item is reported as landed. An open one is a recommendation, not a warning.** A footgun the requester approved a write for is part of what landed, so it belongs in the list of what changed — repeating it as though it were still open tells them their decision did not take.
+
+Anything genuinely still open is named for what it is: **an adjustment to the instructions that this change turned up, recommended and not made.** Give the row it would touch, what the adjustment is, and an explicit ask for a yes or a no. Never summarize one away for length and never drop one for tidiness — but never leave it reading as residue either. A reader cannot act on a caveat; they can act on a recommendation.
 
 The echoed commands, the raw `describe` output, and the rows set aside during classification stay available; hand them over when asked, not before.
 
@@ -274,7 +278,7 @@ The echoed commands, the raw `describe` output, and the rows set aside during cl
 - **Imperative and checkable.** "Wait for the spinner to disappear before asserting", not "handle timing properly." A reader must be able to tell whether the agent complied.
 - **2000 characters, hard.** The server enforces it and says so: `instruction_text must be 2000 characters or less`. Trust that over any number printed in `--help`. A rule that will not fit gets tightened, not truncated. If it genuinely needs more room it is more than one instruction — split it by topic and say so.
 - **Never change a `recovery` row's capabilities as part of a live rescope.** Use the retired-capability rule above: disable it to retire it, and leave its capabilities alone.
-- **One change — but landing it may take two writes.** Resolving a contradiction, or enabling the row being amended, is part of landing the change. Improvements merely *noticed* get mentioned, not written.
+- **One change — but landing it may take two writes.** Resolving a contradiction, or enabling the row being amended, is part of landing the change. An improvement merely *noticed* is never written on the skill's own initiative — but it is put to the requester as a recommendation with its own yes or no, not left as an observation they have to act on themselves.
 - **Reflect intent, but flag a footgun.** If the change looks like trouble (a blanket "always make the run pass", a rule far more specific than its scope, contradicting the team's own conventions), say so once, plainly, and let the human decide.
 
 ## Boundaries
