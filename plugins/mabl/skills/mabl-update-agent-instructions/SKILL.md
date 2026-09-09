@@ -232,7 +232,7 @@ Report in this shape. It leads with placement because that is the part most like
 2. **Where this change belongs, and what it will match** — the placement dimensions and the specificity finding, exactly as confirmed with the requester before this read ran. Note only anything that changed since that confirmation.
 3. **What is already there that this touches** — **all** enabled candidates first, then disabled, never interleaved. One relationship per row from exactly this vocabulary: **owns-the-topic** / **adjacent** / **unrelated** / **contradicts**. Mark unscoped rows as such, and show application and environment scope **by name**.
 4. **The proposal** — the verdict, the reasoning for update vs rescope vs create, and for a text change the **current and proposed text** with counted (not estimated) character counts against the cap. For a rescope, the scope before and after, by name, and what newly gains the rule.
-5. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope. Each states its consequence.
+5. **Decisions to make** — the numbered offers: any contradiction and its options, any enable, any rescope, and any adjustment this read turned up that the request did not cover. Each states its consequence, and each is answerable on its own.
 6. **To apply** — the exact commands, in order, clearly not yet run.
 
 **The text in the proposal and the text in the command must be byte-identical.** No emphasis added for the write-up, no punctuation swapped. A human approves what they read, and what they read has to be what gets written — so write the proposed text once, plainly, and reuse that exact string.
@@ -264,7 +264,7 @@ So a narrowly-placed change created without `--application-ids` silently ships w
 
 Verification above stays complete: every id gets confirmed, every affected instruction gets `describe`d. The reply that goes to the requester after the write is not that transcript.
 
-State, once per instruction touched: the name, one line of what changed (row created, text amended, scope widened, enabled), and where (workspace name, capability, applications and environments named or "all"). Nothing else goes in the reply by default.
+State, once per instruction touched: the name, one line of what changed (row created, text amended, scope widened, enabled), and where (workspace name, capability, applications and environments named or "all"). Two things join that list and nothing else does: an item the requester settled, and an item they did not.
 
 **An addressed item is reported as landed. An open one is a recommendation, not a warning.** A footgun the requester approved a write for is part of what landed, so it belongs in the list of what changed — repeating it as though it were still open tells them their decision did not take.
 
