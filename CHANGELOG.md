@@ -5,6 +5,26 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.0] - 2026-09-10
+### Added
+- `mabl-test-impact` — the step between green unit tests and opening a PR. Given a
+  product-code change, it asks mabl which existing end-to-end tests the change
+  reaches, screens each one before anything runs (a test that needs a credential
+  nobody granted, or that would start a plan run, waits for a human), runs the safe
+  ones with a single canary before fanning out, and hands back a run-plan report
+  someone else can read: validated, not run and why, and the coverage gaps it found.
+- Reads the analysis as judgment rather than a query result. Absence from the list
+  is not proof of coverage, and the report says so instead of implying the change
+  is fully covered.
+- Coverage gaps come with an offer to author against them through
+  `mabl-test-authoring`; it never authors unasked, never edits a test (that is
+  `mabl-test-edit`'s job), and never starts a plan run.
+- Workspaces without a knowledge graph get search-only results: candidate tests
+  from text and semantic search, without impact ranking, and the skill reads them
+  as such.
+- Needs test impact analysis enabled for the account. The first-run path checks
+  that and stops with what to ask mabl for when it is not.
+
 ## [1.8.0] - 2026-09-03
 ### Added
 - `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
