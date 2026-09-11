@@ -32,7 +32,7 @@ command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 
 `2.123.4` is the floor because screening uses `mabl tests get-runs`, which landed there. On an
 older CLI it fails as an unknown command, which reads like a broken recipe rather than a stale
-install. Authentication is separate and expires on its own schedule: `mabl auth login` once, and
+install. Authentication is separate and expires on its own schedule: `mabl auth login --auto` once, and
 `mabl auth info` when runs start failing while the MCP tools still work.
 
 **Deeper detail lives in six reference files.** Read the one that matches what you're doing:
@@ -41,7 +41,7 @@ install. Authentication is separate and expires on its own schedule: `mabl auth 
 |---|---|
 | `references/setup.md` | Two entries, and they behave differently. **The user asked you to set this up or check it** — walk its checklist and report each row. **Something failed mid-workflow** (`analyze_test_impact` absent, a `mabl` command not found, a debug session that can't reach the local app) — jump to the matching row only. Never open it to reassure yourself a working setup works |
 | `references/screening.md` | Screening more than a couple of candidates: quality-score bands, side-effect bands, what a bulk query's silence means, which target a run will resolve |
-| `references/local-run-dispatch.md` | Dispatching a wave: the canary that precedes any fan-out (cloud or local), then the local-CLI specifics — the defaults that mislead, a worked parallel script, reading its exit codes |
+| `references/local-run-dispatch.md` | Local CLI path only. Dispatching a wave: the canary that precedes any fan-out (cloud or local), then the local-CLI specifics — the defaults that mislead, a worked parallel script, reading its exit codes |
 | `references/local-debugging.md` | A local failure the console output didn't explain, sign-in that "passes" but leaves you logged out, or pointing at a local server for the first time |
 | `references/run-plan-report.md` | Writing the report, re-validating on a follow-up commit, or running this inside CI rather than beside a human |
 | `references/customizing.md` | Recording site notes after a first pass — what's worth pinning in project memory so the next pass doesn't re-ask, and the precedence rule those notes follow |

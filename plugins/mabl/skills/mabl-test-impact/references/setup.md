@@ -15,50 +15,43 @@ What neither case justifies is opening this file to confirm a working setup work
 to tell a first run from a hundredth, so absent a request or a failure, start the workflow and let
 it tell you.
 
+Keep `SKILL.md` and `references/` together: the body points into these files for procedure that
+only matters inside one phase, and flattening or splitting them breaks the routing.
+
 | Symptom | Row |
 |---|---|
-| The skill fired but `analyze_test_impact` isn't in the tool list | 2, then 3 |
-| The tool is there; calling it says not enabled | 3 |
-| `mabl: command not found`, or an unknown-command error | 4 |
-| "Login has expired" on a CLI command while MCP tools still work | 4 |
-| Debug session fails with `ERR_CERT_AUTHORITY_INVALID` | 7 |
-| Debug session starts but the agent can't see the page | 6 |
-| Sign-in steps pass, then the next step finds nothing | 8 |
+| The skill fired but `analyze_test_impact` isn't in the tool list | 1, then 2 |
+| The tool is there; calling it says not enabled | 2 |
+| `mabl: command not found`, or an unknown-command error | 3 |
+| "Login has expired" on a CLI command while MCP tools still work | 3 |
+| Debug session fails with `ERR_CERT_AUTHORITY_INVALID` | 6 |
+| Debug session starts but the agent can't see the page | 5 |
+| Sign-in steps pass, then the next step finds nothing | 7 |
 
 ---
 
 ## The checklist
 
-Rows 1–3 are everything you need to answer *"which tests does this change impact."* Rows 4–8 only
+Rows 1–2 are everything you need to answer *"which tests does this change impact."* Rows 3–7 only
 matter once you want to run one. **Don't verify rows you don't need** — if the user only wants the
 analysis, the CLI is irrelevant.
 
 | | Must be true | How to check |
 |---|---|---|
-| 1 | The TIA skill is on disk | It fired, or you wouldn't be reading this |
-| 2 | The `mabl` MCP server is reachable | `get_current_user` responds — it's ungated, so it answers whenever the server is up |
-| 3 | Enabled where it's needed — two gates, two workspaces | The tool is listed (default workspace) **and** a call against your real `applicationId` succeeds (that application's workspace) |
-| 4 | mabl CLI at the floor `SKILL.md`'s **Prerequisites** block pins, authenticated | `mabl --version`, `mabl auth info` |
-| 5 | The `mabl-debug` skill is installed | `/mabl-debug` resolves |
-| 6 | `chrome-for-mabl` points at the debug port | It's in the MCP server list, on `9222` |
-| 7 | Local dev server on HTTPS, cert trusted by the OS | `curl` succeeds **without** `-k` |
-| 8 | The local origin is registered with the identity provider | A preflight to the IdP accepts that exact scheme + host + port |
+| 1 | The `mabl` MCP server is reachable | `get_current_user` responds — it's ungated, so it answers whenever the server is up |
+| 2 | Test impact analysis is enabled for both workspaces it checks: the tool is *listed* based on your default workspace, and a *call* is checked against the workspace that owns the application | The tool is in the list **and** a call against your real `applicationId` succeeds |
+| 3 | mabl CLI at the floor `SKILL.md`'s **Prerequisites** block pins, authenticated | `mabl --version`, `mabl auth info` |
+| 4 | The `mabl-debug` skill is installed | `/mabl-debug` resolves |
+| 5 | `chrome-for-mabl` points at the debug port | It's in the MCP server list, on `9222` |
+| 6 | Local dev server on HTTPS, cert trusted by the OS | `curl` succeeds **without** `-k` |
+| 7 | The local origin is registered with the identity provider | A preflight to the IdP accepts that exact scheme + host + port |
 
 ---
 
-## 1 · The skill
-
-Already satisfied — you're reading this, so it's on disk. **This skill cannot install itself**; if
-it were missing, nothing would have fired. If it fires in one project but not another, the copy
-is scoped to the project it lives in.
-
-**Keep `SKILL.md` and `references/` together.** The body points into those files for procedure
-that only matters inside one phase. Flattening or splitting them breaks the routing.
-
-## 2 · Is the server reachable?
+## 1 · Is the server reachable?
 
 **This row is only about reachability.** Whether `analyze_test_impact` is in your tool list is
-row 3's question — it's feature-gated, so its absence says nothing about the connection.
+row 2's question — it's feature-gated, so its absence says nothing about the connection.
 
 Call **`get_current_user`**. It carries no feature gate, so it answers whenever the server is
 reachable.
@@ -66,18 +59,12 @@ reachable.
 - **No response, or the client reports the server as unauthenticated** — it never connected. Check
   `/mcp` in Claude Code or `claude mcp list` and look for *needs authentication*. The fix is OAuth
   in an interactive session; a headless one cannot complete it.
-- **It answers** — the server is fine. Go to row 3.
+- **It answers** — the server is fine. Go to row 2.
 
-Two things not to read into the response:
-
-**Under API-key auth, `userId` and `email` come back empty by design.** That's a correct
-response, not a broken one. Don't diagnose an identity problem from it.
-
-**`defaultWorkspaceId` in this response is the raw user preference, and it can be empty on a
-perfectly healthy account.** The server does *not* use this value directly for gating — when the
-preference is unset it falls back to your first accessible workspace. So an empty value here is
-not evidence of anything, and "set a default workspace" is not a fix you can conclude from it. It
-matters for a different reason — see row 3.
+Two fields not to read anything into: under API-key auth, `userId` and `email` come back empty,
+because a key isn't a person; and `defaultWorkspaceId` is a raw preference that can be empty on a
+healthy account, since the server falls back to your first accessible workspace when it is unset.
+Neither is evidence of a problem (row 2 covers why the default matters at all).
 
 The server is `https://mcp.mabl.com/mcp`, type http. The plugin ships the entry; otherwise add it
 the way your agent host configures MCP servers. Authentication is browser OAuth on the first call.
@@ -86,7 +73,7 @@ key — and **create a fresh key.** The permission scope
 this tool needs was added when the beta was enabled, so an older key passes the connection check
 and then fails partway through a real call.
 
-## 3 · Is test impact analysis enabled — and *where*?
+## 2 · Is test impact analysis enabled — and *where*?
 
 Two separate checks run against two possibly-different workspaces. Most confusion here comes from
 treating them as one.
@@ -155,7 +142,7 @@ naming one you can't identify.
 Meanwhile `search_mabl_tests` is the fallback, and everything downstream in this skill works on a
 set found that way.
 
-## 4 · The mabl CLI
+## 3 · The mabl CLI
 
 The Prerequisites block in `SKILL.md` installs or upgrades the CLI. What it can't check is
 authentication:
@@ -173,14 +160,14 @@ re-run the Prerequisites block before debugging the recipe.
 **CLI auth expires independently of MCP auth.** The MCP tools keep working while `mabl tests run`
 fails with "Login has expired." When runs fail but analysis works, check `mabl auth info` first.
 
-## 5 · The `mabl-debug` skill
+## 4 · The `mabl-debug` skill
 
 **Requires `mabl-debug`.** Without it, the CLI's own `mabl agent debug session --help` covers the
 same commands.
 
 Only needed to step through a failing test.
 
-## 6 · `chrome-for-mabl`
+## 5 · `chrome-for-mabl`
 
 An MCP entry named `chrome-for-mabl` that runs `chrome-devtools-mcp` against
 `http://127.0.0.1:9222`, the debug port. The plugin ships it; otherwise add it the way your agent
@@ -189,10 +176,10 @@ host configures MCP servers.
 **The port must match.** If you ever pass a non-default `--port` to `session start`, this entry
 silently fails to attach. Keep `9222` unless you have a reason.
 
-**This entry is inert without the CLI (row 4)** — it attaches to a session only the CLI can
+**This entry is inert without the CLI (row 3)** — it attaches to a session only the CLI can
 launch. An installer that wires it can leave setup looking complete when it isn't.
 
-## 7 · Local dev server and certificate trust
+## 6 · Local dev server and certificate trust
 
 Only for running a test against local code.
 
@@ -220,7 +207,7 @@ These take `sudo` — propose the command, don't run it unattended. Verify by su
 curl -s -o /dev/null -w '%{http_code}\n' "https://<host>:<port>/"
 ```
 
-## 8 · Registered sign-in origin
+## 7 · Registered sign-in origin
 
 **If any test signs in, the local origin must be allowlisted with the identity provider.**
 Sign-in posts cross-origin, and providers answer only for registered origins.

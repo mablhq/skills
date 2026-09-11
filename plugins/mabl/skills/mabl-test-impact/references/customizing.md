@@ -11,9 +11,9 @@ already reads (`CLAUDE.md`, `AGENTS.md`, or their equivalent), or a doc that fil
 
 ## What's worth recording
 
-**Requires `mabl-init`.** It writes the workspace, application, environment and credential block;
-this file covers only what test impact adds. Without it, the preflight resolves the same values
-every run, and you can ask the agent to record what it resolved.
+If your project setup already recorded the workspace, application, environment and credential
+values, this file covers only what test impact adds. Without that, the preflight resolves the same
+values every run, and you can ask the agent to record what it resolved.
 
 Only what your org knows and the tools can't tell the agent. Ten to twenty lines covers most
 teams:
