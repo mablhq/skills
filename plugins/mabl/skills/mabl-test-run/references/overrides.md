@@ -40,6 +40,11 @@ from this column.
 | Locale, timezone | `--locale`, `--timezone-id` | `--locale`, `--timezone-id` | no | no |
 | Browser size | `--width`, `--height` | no | no | no |
 | HTTP headers | `--http-headers` | no | `--http-headers` | no |
+| Inherit a prior run's whole target | `--run-id` | no | no | no |
+| Interaction speed | `--interaction-speed` | no | no | no |
+| User agent | `--user-agent` | no | no | no |
+| Artifacts directory | `--artifacts-dir` | no | no | no |
+| Browser extensions | `--enable-browser-extensions` | no | no | no |
 
 ## What an override does not do
 
@@ -71,6 +76,19 @@ this flag, so passing the branch alone costs nothing for the rest of a set.
 **A run started from `--run-id` inherits that run's whole target** — URL,
 environment and credentials together. Pin the target explicitly even then, or a
 run believed to be local ends up aimed wherever the source run pointed.
+
+## Choosing a surface by what it can bind
+
+Two overrides exist on one surface only, and between them they decide which
+surface a cloud run takes:
+
+- **Test labels are CLI-only.** `run_mabl_test_cloud` takes one test id; there is
+  no label parameter on any MCP run tool.
+- **A DataTable binding on a cloud run is MCP-only.** `mabl tests run-cloud` has
+  no DataTable flag, so the row can be bound locally or through the MCP tool, and
+  not through the cloud CLI command.
+
+Everything else overlaps closely enough that either surface serves.
 
 ## A set dispatched as one cloud run
 

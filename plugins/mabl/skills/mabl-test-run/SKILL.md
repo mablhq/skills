@@ -174,10 +174,13 @@ mabl tests run --headless --allow-billable-features \
 browser window per test. `--scenario-id` binds one DataTable row and
 `--data-table-id` binds every row.
 
-**`--from-plan-id` is not a plan run.** It takes the plan's test list and runs
-those tests sequentially against one base URL. Stages, browser settings, shared
-variables, and DataTable and credential overrides are not applied, so its result
-is not the plan's result and is never reported as one.
+**`--from-plan-id` is not a plan run.** It takes the plan's test list and its
+configuration, and runs those tests sequentially against one base URL. Stages,
+per-plan browser settings, shared variables, and DataTable and credential
+overrides are not applied, and there is no ordering or concurrency control, so its
+result is not the plan's result and is never reported as one. It is still the
+right lane when the caller wants a local sweep of a plan's tests; say which of the
+plan's settings did not apply.
 
 **Local results reach the app only with `--reporter mabl`.** Without it the CLI
 prints to the terminal and publishes nothing. Two consequences belong in the
@@ -235,8 +238,14 @@ mabl tests run-cloud --no-prompt --browsers chrome [-w <workspace-id>] \
 
 `--prompt` defaults to true, so an unattended launch passes `--no-prompt`.
 `--browsers` defaults to chrome. `--labels` matches **any** of the labels given,
-so two labels run the union and not the intersection. No DataTable flag here, and
-no flag that waits for the result.
+so two labels run the union and not the intersection. No flag here waits for the
+result.
+
+**The two surfaces are not interchangeable on this lane, and the difference
+decides which one to take.** Selecting tests by label is CLI-only. Binding a
+DataTable row to a cloud run is MCP-only — this command has no DataTable flag at
+all. So a label set goes to the CLI, and a data-driven test that needs its rows
+goes to the MCP tool.
 
 **Label selection is capped.** At the cap the CLI says so in two lines — that the
 maximum test search limit was hit, and that the most recently created tests will
@@ -313,9 +322,10 @@ ids in it carry a version suffix (`<*-j>:0`) that the poll does not return: reus
 the id as it was passed, and take run ids from the response as they came.
 
 **Hold the returned plan run id.** An identical repeat within 60 seconds is
-refused rather than re-run, and that refusal does not carry the id. The run has no
-plan id, so `list_mabl_plan_runs` cannot find it afterwards — losing the id means
-the run is unverifiable, not that it did not happen. Poll it per
+refused rather than re-run, and that refusal does not carry the id. The run is a
+plan run with no plan, and `list_mabl_plan_runs` requires a plan id, so no query
+can recover it afterwards — losing the id means the run is unverifiable, not that
+it did not happen. Poll it per
 [Poll and report](#poll-and-report).
 
 **Where the tool is absent from the tool list**, this account's server does not
@@ -335,6 +345,12 @@ run_mabl_plan({ planId: "<*-p>", workspaceId,
 
 One plan run, containing as many test runs as the plan holds. It returns the plan
 run id and links to the test runs. Poll the plan run id.
+
+**Read the plan before overriding it.** A plan already carries browsers, stages,
+credentials, DataTable bindings and retry behaviour that somebody chose. An
+override replaces that choice for the run rather than adding to it — passing
+`browsers` discards the plan's own list — so read the plan first and say in the
+reply which of its settings the run did not use.
 
 ## 5. A deployment event
 
@@ -367,6 +383,13 @@ a revision is reused** — a CI retry on the same commit — call
 `get_mabl_deployment_status` with the same filters once before the launch and hold
 any deployment id it returns, so a pre-existing event cannot be read back as this
 one.
+
+**What an event would run can be previewed before it is created**, but only on
+the public API: the deployment-event endpoint takes a preview parameter that
+reports what would run without creating anything. Neither the CLI nor the MCP tool
+exposes it. Where the caller needs to know before spending, say the preview exists
+and is reachable only from the API; never estimate the plan set from a plan
+listing, because matching happens on the server.
 
 **An event that matched nothing still succeeds.** The response carries an empty
 triggered-plan-runs list and, where the server fills them, a set of reasons. An
