@@ -199,8 +199,8 @@ change reaches and what nothing covers, while a separate suite runs the tests. F
 **Analysis** — 19 impacted, 2 gaps · `more_may_exist: false` · `run_context_incomplete: false`
 
 **Impacted (19)**
-- [App - Applications - Settings form persists](view_test_url) — validates · asserts the settings form save path the change edits
-- [App - Applications - Create](view_test_url) — uses · creates an application on the way to its own assertion
+- [<test>](<view_test_url>) — validates · asserts the settings form save path the change edits
+- [<test>](<view_test_url>) — uses · creates a record on the way to its own assertion
 
 **Gaps (2)**
 - Setting persists across save and reload — no test reloads after saving

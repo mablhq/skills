@@ -878,9 +878,9 @@ failing run prints each step with a dot-notation position, the failure text, and
 — the enclosing flow:
 
 ```
-3.1.16. Assert the 'Example Org' button ID is 'organization-dropdown'.
+3.1.16. Assert the 'Account' button ID is 'account-menu'.
 [ERROR] Test failed: Assertion failed: The assertion target was not found.
-[ERROR] Failure running Flow in 00:01:03: App - Login
+[ERROR] Failure running Flow in 00:01:03: Storefront - Sign in
 ```
 
 The third line names the enclosing flow, which is what turns a bare assertion failure into a
