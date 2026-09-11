@@ -5,7 +5,9 @@ everything after it is the local-CLI path — the defaults that mislead, a worke
 how to read the exit codes it produces.
 
 `SKILL.md`'s **Run it** carries the rules you must not break (canary before fan-out; pin the whole
-target; split the set by band; capture every status). This file is how to implement them.
+target; split the set by band; capture every status). This file is how to implement them. The
+commands are worked examples against the flags that exist today; `mabl tests run --help` on your
+installed CLI is authoritative over any of them.
 
 ## CLI defaults that will fool you
 
@@ -13,6 +15,11 @@ target; split the set by band; capture every status). This file is how to implem
   immediately; a wrapper's own last command can mask it.
 - **`--headless` defaults to `false`**, so a run you assumed was headless opens a visible browser
   window, once per test. Pass it explicitly.
+- **`--allow-billable-features` defaults to `false`**, so a test whose coverage lives in GenAI
+  assertions fails at that step with a message naming the flag — a red that means neither "wrong
+  target" nor "interesting test," and a terrible canary. Such a test is not in the unattended local
+  wave, and the flag is never yours to add (`SKILL.md`, **Hard gates**); a site note that permits
+  it goes on the `mabl` command lines below.
 - **Every test runs at its master version unless you say otherwise.** `tests run` takes
   `--mabl-branch`; without it a candidate authored on the branch for the change under review runs the
   version from before the change. The recipe carries the branch on every dispatch when `MABL_BRANCH`
@@ -71,6 +78,7 @@ mkdir -p "$RUN_DIR"                                  # before the canary, not af
 CANARY="${READ_ONLY[@]:0:1}"                         # slice, not [0]: zsh arrays start at 1
 READ_ONLY=( "${READ_ONLY[@]:1}" )                    # pop it so it can't run twice
 
+# Flags a site note permits go on this command line and the recipe's; the skill adds none itself.
 mabl tests run --id "$CANARY" --headless --url "$MABL_URL" \
   --credentials-id "$MABL_CRED" --environment-id "$MABL_ENV" \
   --workspace-id "$MABL_WS" ${MABL_BRANCH:+--mabl-branch "$MABL_BRANCH"} \
@@ -78,11 +86,6 @@ mabl tests run --id "$CANARY" --headless --url "$MABL_URL" \
 s=$?; echo "$CANARY exit=$s (canary)" >> "$RUN_DIR/results.txt"
 [ "$s" -ne 0 ] && { echo "canary failed — fix the target before fanning out" >&2; exit "$s"; }
 ```
-
-Note what the command does **not** pass: `--allow-billable-features`. A test whose coverage lives in
-GenAI assertions hard-fails without it, which makes it a terrible canary — a red result that means
-neither "wrong target" nor "interesting test." Those tests are screened out of the local automatic
-wave entirely, and the flag is never yours to add (`SKILL.md`, **Hard gates**).
 
 Read three things out of the canary before you continue:
 
