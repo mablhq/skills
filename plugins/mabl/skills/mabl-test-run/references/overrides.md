@@ -72,6 +72,22 @@ this flag, so passing the branch alone costs nothing for the rest of a set.
 environment and credentials together. Pin the target explicitly even then, or a
 run believed to be local ends up aimed wherever the source run pointed.
 
+## A set dispatched as one cloud run
+
+`run_mabl_test_batch_cloud` takes `workspaceId`, `environmentId`, `applicationId`
+and `browsers` as required, and `branch`, `credentialsId`, `deploymentId` and
+`urlOverride` as optional — the same overrides as a single cloud run, applied to
+every test in the set.
+
+It adds two of its own: `concurrency`, which is `parallel` or `sequential`, and
+`concurrencyLimit`, which caps how many run at once and is ignored when the
+concurrency is sequential.
+
+It takes none of these: test labels, a DataTable or scenario, basic auth
+credentials, a code revision. `urlOverride` here replaces the deployment's URL for
+every test in the set, as the web URL for browser and performance tests and as the
+API base URL for API tests.
+
 ## Ids the overrides take
 
 Each override takes the id of the entity it names, verbatim as the API returned

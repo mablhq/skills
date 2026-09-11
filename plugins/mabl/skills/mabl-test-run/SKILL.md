@@ -16,7 +16,7 @@ description: |
   finished run: one failed test run (`*-jr`) is mabl-debug. NOT for certifying
   an edit, which is mabl-test-edit-verify. A plan by id and re-running failures
   need the mabl MCP server.
-allowed-tools: Bash(command -v mabl:*), Bash(npm install -g:*), Bash(mabl --version:*), Bash(mabl auth login:*), Bash(mabl tests --help:*), Bash(mabl tests run --help:*), Bash(mabl tests run-cloud --help:*), Bash(mabl deployments --help:*), Bash(mabl tests run:*), Bash(mabl tests run-cloud:*), Bash(mabl tests get-runs:*), Bash(mabl deployments create:*), Bash(mabl deployments watch:*), Bash(mabl deployments describe:*), Bash(printf:*), Bash(sort:*), Bash(head:*), Bash(grep:*), Bash(jq:*), Bash(mkdir:*), Bash(date:*), Bash(xargs:*), Write, mcp__mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local, mcp__mabl__get_mabl_test, mcp__mabl__get_mabl_test_run, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_plan, mcp__mabl__get_mabl_plan_run, mcp__mabl__list_mabl_plan_runs, mcp__mabl__rerun_mabl_plan, mcp__mabl__trigger_mabl_deployment, mcp__mabl__get_mabl_deployment_status
+allowed-tools: Bash(command -v mabl:*), Bash(npm install -g:*), Bash(mabl --version:*), Bash(mabl auth login:*), Bash(mabl tests --help:*), Bash(mabl tests run --help:*), Bash(mabl tests run-cloud --help:*), Bash(mabl deployments --help:*), Bash(mabl tests run:*), Bash(mabl tests run-cloud:*), Bash(mabl tests get-runs:*), Bash(mabl deployments create:*), Bash(mabl deployments watch:*), Bash(mabl deployments describe:*), Bash(printf:*), Bash(sort:*), Bash(head:*), Bash(grep:*), Bash(jq:*), Bash(mkdir:*), Bash(date:*), Bash(xargs:*), Write, mcp__mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_batch_cloud, mcp__mabl__run_mabl_test_local, mcp__mabl__get_mabl_test, mcp__mabl__get_mabl_test_run, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_plan, mcp__mabl__get_mabl_plan_run, mcp__mabl__list_mabl_plan_runs, mcp__mabl__rerun_mabl_plan, mcp__mabl__trigger_mabl_deployment, mcp__mabl__get_mabl_deployment_status
 ---
 
 # mabl test run
@@ -91,7 +91,8 @@ by recent activity.
 |---|---|
 | One or more `*-j`, or test labels, and the run is to happen on this machine | [1. Local run](#1-local-run) |
 | `*-pr`, finished, and only its failures are wanted | [2. Re-run the failures of a plan run](#2-re-run-the-failures-of-a-plan-run) |
-| One or more `*-j`, or test labels, in the cloud | [3. Tests in the cloud](#3-tests-in-the-cloud) |
+| One `*-j`, or test labels, in the cloud | [3. Tests in the cloud](#3-tests-in-the-cloud) |
+| Several `*-j` wanted as one run with one results page | [A set as one run](#a-set-as-one-run) |
 | `*-p` | [4. A plan by id](#4-a-plan-by-id) |
 | An application id (`*-a`) and/or an environment id (`*-e`), optionally plan labels | [5. A deployment event](#5-a-deployment-event) |
 
@@ -220,7 +221,9 @@ links to the test runs it created. Poll that id per
 ## 3. Tests in the cloud
 
 Parallel execution in the mabl cloud, and the lane that collects the fullest
-diagnostics.
+diagnostics. **Several ids wanted as one run go to
+[a set as one run](#a-set-as-one-run)**; one test, or a label set, takes the
+commands here.
 
 ```bash
 mabl tests run-cloud --no-prompt --browsers chrome [-w <workspace-id>] \
@@ -270,6 +273,49 @@ is there, one row and every row are mutually exclusive choices. Where it is not,
 this lane runs whatever binding the test carries, and the reply says so.
 
 Then poll each returned id per [Poll and report](#poll-and-report).
+
+### A set as one run
+
+`run_mabl_test_batch_cloud` executes up to 50 test ids as **one ad-hoc plan run**
+with one results page, so one poll covers the set. It is the cloud path for a set:
+it returns a plan run id where the per-test calls return ids one at a time.
+
+```
+run_mabl_test_batch_cloud({
+  testIds: ["<*-j>", "<*-j>"], workspaceId, environmentId, applicationId,
+  browsers: ["chrome"],
+  concurrency: "sequential" | "parallel", concurrencyLimit,
+  branch, deploymentId, urlOverride, credentialsId   // as asked for
+})
+```
+
+**Concurrency is the caller's grouping, expressed to the server.** A set the
+caller says must not collide is `sequential`; anything else is `parallel`, and
+`concurrencyLimit` caps how many run at once. This skill picks neither on its own
+judgment about what a test writes.
+
+**Four things this lane does that a per-test call does not**, each of which
+belongs in the reply:
+
+- **A mixed set is refused and nothing dispatches.** Browser and performance
+  tests go in one call, API tests in another.
+- **A disabled test still runs**, because an ad-hoc run executes disabled tests.
+- **No DataTable row is bound to anything in the set.** A data-driven test runs
+  one unbound scenario, and its rows are not covered. The response names each
+  such test; those rows need `run_mabl_test_cloud` with a scenario or table id.
+- **Warnings are part of the result.** A mobile test, or a test from another
+  workspace, is reported in warnings while the rest dispatch, so the set that ran
+  is not the set that was asked for.
+
+**Hold the returned plan run id.** An identical repeat within 60 seconds is
+refused rather than re-run, and that refusal does not carry the id. The run has no
+plan id, so `list_mabl_plan_runs` cannot find it afterwards — losing the id means
+the run is unverifiable, not that it did not happen. Poll it per
+[Poll and report](#poll-and-report).
+
+**Where the tool is absent from the tool list**, this account's server does not
+expose it. Say so, and dispatch the set one `run_mabl_test_cloud` call per test
+instead, which is a run id per test and no single results page.
 
 ## 4. A plan by id
 
@@ -343,6 +389,10 @@ contained, approved-by-id, or whatever grouping the caller uses — are an
 **input**: run them in the order and grouping given. **This skill does not screen
 a target and does not rule on whether one is safe to run.** Where no bands come
 with the set, it is one wave.
+
+In the cloud, [a set as one run](#a-set-as-one-run) dispatches the whole set in
+one call and carries the caller's grouping as its concurrency setting. What
+follows is the local path, and the cloud fallback where that tool is absent.
 
 **Canary first.** Dispatch exactly one, read what comes back, and only then run
 the rest. Three things surface in that one run that otherwise cost the whole wave:
@@ -435,9 +485,11 @@ a run exist?
 What to list per lane, what makes "started after the launch" observable there, and
 when a single re-fire is licensed: `references/launch-mechanics.md`.
 
-**A refusal that says the call is already in progress is evidence the run
-started.** Poll for it. Never raise a repeat ordinal to get past that refusal:
-that starts a second run.
+**A refusal that says the call is already in progress, or that an identical call
+was made moments ago, is evidence the run started.** Poll for it. Never raise a
+repeat ordinal and never vary the arguments to get past that refusal: that starts
+a second run. A set dispatched as one run has no plan id, so where its plan run id
+was not held, no list call can find it: report unverified and do not re-fire.
 
 ## Signals that lie
 
@@ -453,6 +505,8 @@ that starts a second run.
 | A run's status read on its own | It sits beside a termination reason, and neither field implies the other | Both fields, quoted as returned. Any value that is not a plain completion is reported as its own state, never folded into pass or fail |
 | A local run's app record | Results publish only after every test in that invocation completes, and carry step results alone | The terminal output, whether the invocation completed, and what the lane collects |
 | One trigger, one run | A trigger creates a run per browser, and a plan run many | Every id terminal before the report says done. One green sibling is not a green result |
+| A set dispatched as one run covering its tests' DataTable rows | No row is bound to any test in the set, so each data-driven test runs one unbound scenario | The warnings the response names, and a separate per-test call for the rows |
+| A disabled test being skipped | An ad-hoc run executes disabled tests | The set the response says it dispatched |
 | A selector or element error early in a data-driven test | With no row bound, the test fails on an unresolved variable and reads as an element problem | Whether a row was bound at launch |
 | A version number | A version that passes the check can lack the subcommand | The `--help` probe |
 | A run tool being in the tool list | A present tool can still be missing a parameter | The tool's own input schema, read for the key |

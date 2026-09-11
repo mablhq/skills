@@ -10,6 +10,7 @@ come back with. Every rule, default and bound has its single home in `SKILL.md`.
 |---|---|---|
 | Local run | `mabl tests run` | `run_mabl_test_local` |
 | Tests in the cloud | `mabl tests run-cloud` | `run_mabl_test_cloud` |
+| A set of tests as one cloud run | none | `run_mabl_test_batch_cloud` |
 | A plan by id | none; `mabl plans` describes and lists | `run_mabl_plan` |
 | Failures of a plan run | none; no plan-run command | `rerun_mabl_plan` |
 | Deployment event | `mabl deployments create` | `trigger_mabl_deployment` |
@@ -90,6 +91,10 @@ exists for that check alone, never to find a target.
 time> })`. The since filter is what makes "started after the launch" observable
 here: no row inside the window, and no cursor left to read, licenses the single
 re-fire.
+
+**A set dispatched as one run.** There is no check. The run carries no plan id, so
+`list_mabl_plan_runs` has nothing to filter on, and an identical repeat inside the
+refusal window comes back without the id. Report unverified and do not re-fire.
 
 **A plan lane.** `list_mabl_plan_runs({ planId, workspaceId })`. The plan id comes
 from the caller when a plan was launched by id, and from `get_mabl_test_run` on
