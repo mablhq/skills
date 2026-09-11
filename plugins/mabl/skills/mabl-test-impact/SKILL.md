@@ -975,7 +975,7 @@ Scope:      <application> · <workspace> · <deployment> · <what ran: see below
 Analysis:   <N> candidates, <N> gaps · more_may_exist: <bool> · run_context_incomplete: <bool>
 Validated:  <test> — passed | failed (<cause>)
 Previously: <test> — passed · carried from <sha>   (follow-up commits only; never counted in Validated)
-Not run:    <test> — disabled | quality 3 across 92 runs | pending approval (shared-state) | out of scope (plan <name>)
+Not run:    <test> — disabled | quality <n> across <m> runs | pending approval (shared-state) | out of scope (plan <name>)
 Gaps:       <gap> — authored <test-id> | deferred
 ```
 

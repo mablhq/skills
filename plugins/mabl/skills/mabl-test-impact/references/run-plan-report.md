@@ -10,30 +10,36 @@ wasn't, and why, without re-deriving any of it from run history.
 
 ## The template
 
+Placeholders are in angle brackets. Each `Validated` and `Not run` row carries exactly one
+annotation, drawn from the shapes below; the one-line skeleton in `SKILL.md`'s **Report the
+validation** is this same report compressed.
+
 ````markdown
 ## Test impact analysis
 
-**Scope** — storefront web app · acme-qa workspace · app.qa.example.com · deployed build `9f4c1ab` (release 2026.09.02-3) · PR #482 @ `9f4c1ab` · scope: plan *Nightly regression* (15/19 in scope)
-**Analysis** — 19 candidates, 2 gaps · `more_may_exist: false` · `run_context_incomplete: false`
+**Scope** — <application> · <workspace> · <deployment or local URL> · <what ran: deployed build `<sha>` | local server @ `<sha>`> · PR #<n> @ `<sha>` · scope: <plan *<name>* | label `<label>` | all impacted> (<in-scope>/<impacted> in scope)
+**Analysis** — <N> candidates, <N> gaps · `more_may_exist: <bool>` · `run_context_incomplete: <bool>`
 
-**Validated (13)**
-- [App - Applications - Settings form persists](view_test_url) — passed
-- [App - Login - Shadow DOM host](view_test_url) — failed · pre-existing (quality 0 across 92 runs)
-- [App - Applications - Create](view_test_url) — failed · died in shared setup, never reached the change
-- [App - Login - Smoke](view_test_url) — passed · `[critical]` label `smoke`
+**Validated (<N>)**
+- [<test>](<view_test_url>) — passed
+- [<test>](<view_test_url>) — passed · `[critical]` label `<label>`
+- [<test>](<view_test_url>) — failed · pre-existing (quality <n> across <m> runs)
+- [<test>](<view_test_url>) — failed · died in shared setup, never reached the change
+- [<test>](<view_test_url>) — failed · <cause, from the failure-cause table>
 
-**Previously validated (1)** — not in this commit's impacted set, not counted above
-- [App - Workspaces - Switcher](view_test_url) — passed · carried from `a1b2c3d`
+**Previously validated (<N>)** — not in this commit's impacted set, not counted above
+- [<test>](<view_test_url>) — passed · carried from `<sha>`
 
-**Not run (7)**
-- [App - Mobile web - Create App](view_test_url) — disabled
-- [App - Workspaces - Bulk delete](view_test_url) — pending approval · shared-state
-- [App - Plans - Archive](view_test_url) — pending approval · cleanup unverified
-- [App - Insights - Trends](view_test_url) — out of scope · plan *Nightly regression*
+**Not run (<N>)**
+- [<test>](<view_test_url>) — disabled
+- [<test>](<view_test_url>) — quality <n> across <m> runs
+- [<test>](<view_test_url>) — pending approval · shared-state
+- [<test>](<view_test_url>) — pending approval · cleanup unverified
+- [<test>](<view_test_url>) — out of scope · plan *<name>*
 
-**Gaps (2)**
-- Setting persists across save and reload — authored [`<new-test-id>`](view_test_url)
-- Click failure logging when fallback is disabled — deferred
+**Gaps (<N>)**
+- <gap, one line> — authored [`<new-test-id>`](<view_test_url>)
+- <gap, one line> — deferred
 ````
 
 Keep it this short. The report competes for attention with the diff itself, and a reviewer who
