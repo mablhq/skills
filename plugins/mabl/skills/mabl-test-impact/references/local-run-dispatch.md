@@ -73,7 +73,7 @@ mkdir -p "$RUN_DIR"                                  # before the canary, not af
 CANARY="${READ_ONLY[@]:0:1}"                         # first of the read-only band
 READ_ONLY=( "${READ_ONLY[@]:1}" )                    # pop it so it can't run twice
 
-mabl tests run --id "$CANARY" --headless --url "$MABL_URL" \
+mabl tests run --id "$CANARY" --headless --allow-billable-features --url "$MABL_URL" \
   --credentials-id "$MABL_CRED" --environment-id "$MABL_ENV" \
   --workspace-id "$MABL_WS" ${MABL_BRANCH:+--mabl-branch "$MABL_BRANCH"} \
   > "$RUN_DIR/canary-$CANARY.log" 2>&1
@@ -81,12 +81,11 @@ s=$?; echo "$CANARY exit=$s (canary)" >> "$RUN_DIR/results.txt"
 [ "$s" -ne 0 ] && { echo "canary failed — fix the target before fanning out" >&2; exit "$s"; }
 ```
 
-Note what the command does **not** pass: `--allow-billable-features`. A test whose coverage lives
-in GenAI assertions hard-fails without it, which makes it a terrible canary — a red result that
-means neither "wrong target" nor "interesting test." Screen those out of this local automatic wave
-entirely (`SKILL.md`'s **Run it**): the flag bills, and spending is not inside the grant here. The
-cloud path makes the opposite call on purpose (`SKILL.md`'s **Run it**), so this is a rule about
-local dispatch, not a general one about GenAI assertions.
+The command passes `--allow-billable-features` on purpose. A GenAI assertion hard-fails without
+it, which would make a red canary mean tooling rather than target; with it the test runs as
+authored, and the assertion bills the same way a cloud run of the same test would. A team that
+wants local waves to stay free of that spend pins it in site notes (`references/customizing.md`),
+and then those candidates go in the ask instead of the wave.
 
 Read three things out of it before you continue:
 
@@ -162,7 +161,7 @@ agg=0                                        # not `status`: read-only in zsh
 # not save you from that -- and GNU xargs runs that blank line as an empty --id.
 if [ ${#READ_ONLY[@]} -gt 0 ]; then
   printf '%s\n' "${READ_ONLY[@]}" | xargs -P "${PARALLEL:-1}" -I{} sh -c \
-    'mabl tests run --id "$1" --headless --url "$MABL_URL" \
+    'mabl tests run --id "$1" --headless --allow-billable-features --url "$MABL_URL" \
        --credentials-id "$MABL_CRED" --environment-id "$MABL_ENV" \
        --workspace-id "$MABL_WS" ${MABL_BRANCH:+--mabl-branch "$MABL_BRANCH"} \
        > "$RUN_DIR/run-$1.log" 2>&1
@@ -173,7 +172,7 @@ fi
 # Everything that writes: one at a time, so they cannot collide with each other.
 # Note what is NOT in this loop — anything still awaiting approval.
 for t in "${CONTAINED[@]}" "${APPROVED[@]}"; do
-  mabl tests run --id "$t" --headless --url "$MABL_URL" \
+  mabl tests run --id "$t" --headless --allow-billable-features --url "$MABL_URL" \
     --credentials-id "$MABL_CRED" --environment-id "$MABL_ENV" \
     --workspace-id "$MABL_WS" ${MABL_BRANCH:+--mabl-branch "$MABL_BRANCH"} \
     > "$RUN_DIR/run-$t.log" 2>&1

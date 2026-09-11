@@ -423,7 +423,7 @@ whenever enrichment could run for that test at all:
 | `test_type` | `browser`, `api`, `performance`, `mobile` and the like — whether the run mechanisms in **Run it** apply at all |
 | `mobile_platform` | The platform recorded on a `mobile` test. Read it with `test_type`: which runner and which device the test needs, neither half deciding on its own |
 | `step_count` | Whether there is anything to execute. `0` means the test matched on its name or description and has no steps of its own; absent for a performance test by design |
-| `ai_assertions` | Whether any scanned step carries a GenAI assertion or condition — the billable-flag decision in **Run it** |
+| `ai_assertions` | Whether any scanned step carries a GenAI assertion or condition — why a local run needs `--allow-billable-features` (**Run it**) |
 | `run_history` | A sample of the newest 10 runs — `latest_status`, `latest_run_time`, `last_passed_time`, `runs_examined`. Workspace-wide, with no time, environment, plan, or branch filter, so it is not the runs your intended target would produce |
 | `run_history_note` | Why `run_history` is absent when the sample held runs but none could be reported: `no_started_runs_examined`, `skipped_runs_examined`, `terminated_before_start_runs_examined`, `unreportable_runs_examined` |
 | `quality` | `score`, `total_plan_runs`, `runs_capped`, and the flake fields, over the response's `quality_window` |
@@ -802,24 +802,13 @@ deployment, credential, link-agent, per run); a CLI run prints the `URL:`/`Envir
 `Credentials:` header instead. Same purpose, two different artifacts — don't go looking for one
 in the other's output.
 
-**A GenAI assertion needs a flag that bills, so it is not auto-dispatchable locally.**
-`run_context.ai_assertions` is how you know which candidates have one, without reading steps.
-`tests run` hard-fails a GenAI assertion without `--allow-billable-features`,
-which means a test whose real coverage lives in those assertions fails on tooling rather than on
-your change. Don't paper over that by adding the flag to the local automatic wave: spending
-credits is not inside the grant there. Keep those tests out of the local auto-dispatch and put
-them in the ask with the reason — *needs `--allow-billable-features`* — so the decision to spend
-is someone's, and made once rather than discovered through a red canary.
-
-**The cloud path is deliberately different, and this is not an oversight.** A cloud run executes a
-GenAI assertion normally and bills for it, and that cost is assumed: running a test the way it was
-authored is the point, and gating it would add friction to every cloud wave to re-decide something
-already decided. So `ai_assertions` does *not* hold a test back from a cloud dispatch, in CI or
-out of it — it only tells you why the local mechanism will refuse the same test, and what the ask
-has to say when you route it to a human instead.
-
-**Absent `ai_assertions` means the steps weren't scanned, not that there are none** — for the
-local wave, a candidate you couldn't check is one you haven't cleared.
+**GenAI assertions run, and bill, on both paths.** A cloud run executes them as authored. A CLI
+run hard-fails one unless `--allow-billable-features` is passed, so the local recipe passes it: a
+test whose coverage lives in those assertions should pass or fail on your change, not on tooling.
+`run_context.ai_assertions` tells you which candidates carry one without reading steps; absent
+means the steps weren't scanned, not that there are none. A team that wants local waves to stay
+free of that spend pins it in site notes, and then those candidates go in the ask with the reason
+rather than in the wave.
 
 ### When a run runs long
 
@@ -923,8 +912,8 @@ report and stop; don't edit the test yourself.
 
 Three traps land at exactly this moment:
 
-- A **GenAI assertion fails locally by default** — that's the tooling, not your code, so re-run
-  with `--allow-billable-features` before diagnosing further.
+- A **GenAI assertion fails locally when `--allow-billable-features` was dropped** from the
+  command — that's the tooling, not your code, so check the command before diagnosing further.
 - **Re-read the resolved-target header** from the failing run: Kind B is a pre-flight check, but a
   target you got wrong surfaces later as a mystery failure, not as an error.
 - **"The login steps passed" is not "I am logged in."** Entering credentials and clicking *Log in*
