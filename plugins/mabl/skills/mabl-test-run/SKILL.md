@@ -307,6 +307,11 @@ belongs in the reply:
   workspace, is reported in warnings while the rest dispatch, so the set that ran
   is not the set that was asked for.
 
+**The returned test-run list is a first page**, and the response says so in a
+warning. Count what was dispatched from the poll, never from that array. The test
+ids in it carry a version suffix (`<*-j>:0`) that the poll does not return: reuse
+the id as it was passed, and take run ids from the response as they came.
+
 **Hold the returned plan run id.** An identical repeat within 60 seconds is
 refused rather than re-run, and that refusal does not carry the id. The run has no
 plan id, so `list_mabl_plan_runs` cannot find it afterwards — losing the id means
@@ -460,7 +465,10 @@ Read the poll like this:
 - `get_mabl_test_run`: poll while the terminal flag is false. The success flag and
   the failure summary are trustworthy only once it is true. An error field on a
   non-terminal run is a retry in flight, not a verdict.
-- `get_mabl_plan_run`: one call returns every test run in the plan run.
+- `get_mabl_plan_run`: one call returns every test run in the plan run, and it is
+  the authority on what the set contains. Its own status lags the test runs it
+  carries, so read the per-test statuses for progress and the plan run's terminal
+  flag for the whole.
 - `get_mabl_deployment_status`: a snapshot; it does not block.
 - `mabl tests get-runs <*-j> --limit N -o json`: rows carry the run id, status,
   outcome, start and completion times in epoch milliseconds, duration,
@@ -507,7 +515,9 @@ was not held, no list call can find it: report unverified and do not re-fire.
 | One trigger, one run | A trigger creates a run per browser, and a plan run many | Every id terminal before the report says done. One green sibling is not a green result |
 | A set dispatched as one run covering its tests' DataTable rows | No row is bound to any test in the set, so each data-driven test runs one unbound scenario | The warnings the response names, and a separate per-test call for the rows |
 | A disabled test being skipped | An ad-hoc run executes disabled tests | The set the response says it dispatched |
-| A selector or element error early in a data-driven test | With no row bound, the test fails on an unresolved variable and reads as an element problem | Whether a row was bound at launch |
+| A data-driven test's outcome on an unbound run | The run exercises none of its rows, so passing or failing says nothing about them | Whether a row was bound at launch, and the rows run separately |
+| A plan run's own status | It lags the tests beneath it: a plan run reads `scheduled` with three of its four tests already terminal | Each test run's status, and the plan run's terminal flag for the whole |
+| A failure categorization on a run | It is the server's own generated analysis, and repeating it makes this skill look like it diagnosed the failure | Report the outcome and the run id. Where the text is passed on, pass it as the server's words |
 | A version number | A version that passes the check can lack the subcommand | The `--help` probe |
 | A run tool being in the tool list | A present tool can still be missing a parameter | The tool's own input schema, read for the key |
 
