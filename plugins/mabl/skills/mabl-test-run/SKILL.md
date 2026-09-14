@@ -1,17 +1,18 @@
 ---
 name: mabl-test-run
 description: |
-  START a mabl run of a target the caller already chose, then report the ids,
-  outcomes and cost. Takes a test id (`*-j`), test labels, a set of test
-  ids, a plan id (`*-p`), an application (`*-a`) and/or environment (`*-e`) for
-  a deployment event, or a finished plan run (`*-pr`) to re-run its failures.
+  START a mabl run, then report the ids, outcomes and cost. Takes a test id
+  (`*-j`), test labels, a set of test ids, a plan id (`*-p`), an application
+  (`*-a`) and/or environment (`*-e`) for a deployment, or a finished plan
+  run (`*-pr`) to re-run its failures.
   Applies the overrides asked for — application, environment,
-  deployment, URL, credentials, DataTable scenario, mabl branch, browsers —
+  deployment, URL, credentials, DataTable row, mabl branch, browsers —
   locally or in the cloud, with billable features on.
-  Fire on "run this test", "run these tests", "run the smoke plan", "kick off
-  the nightly", "trigger a deployment for <app> in <env>", "rerun the failures
-  from that plan run", "run it locally", "/mabl-test-run".
-  Never picks which tests to run, never judges whether one is safe, never prices
+  Fire on "run this test", "run these tests", "run my tests", "run the smoke
+  plan", "kick off the nightly", "trigger a deployment for <app> in <env>",
+  "rerun the failures from that plan run", "run it locally", "/mabl-test-run".
+  Asks when no target is named. Never picks which tests to run,
+  never judges whether one is safe, never prices
   a run beforehand, never rules on the result. NOT for explaining a
   finished run: one failed test run (`*-jr`) is mabl-debug. NOT for certifying
   an edit, which is mabl-test-edit-verify. A plan by id and re-running failures
