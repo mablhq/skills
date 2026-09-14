@@ -28,7 +28,7 @@ matters once you want to run one, so **don't verify rows you don't need**.
 | | Must be true | How to check |
 |---|---|---|
 | 2 | The `mabl` MCP server is reachable | `get_current_user` responds — it's ungated, so it answers whenever the server is up |
-| 3 | Enabled where it's needed — two gates, two workspaces | The tool is listed (default workspace) **and** a call against your real `applicationId` succeeds (that application's workspace) |
+| 3 | Test impact analysis is enabled for both workspaces it checks: the tool is *listed* based on your default workspace, and a *call* is checked against the workspace that owns the application | The tool is in the list **and** a call against your real `applicationId` succeeds |
 | 4 | mabl CLI at the floor `SKILL.md`'s **Prerequisites** block pins, authenticated | `mabl --version`, `mabl auth info` |
 
 ## 2 · Is the server reachable?
@@ -125,7 +125,7 @@ The Prerequisites block in `SKILL.md` installs or upgrades the CLI. What it can'
 authentication:
 
 ```bash
-mabl auth login   # browser OAuth — the user completes this
+mabl auth login --auto   # browser OAuth — the user completes this; --auto captures the code for agents
 mabl auth info    # confirm it took
 ```
 

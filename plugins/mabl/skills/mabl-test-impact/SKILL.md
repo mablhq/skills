@@ -34,7 +34,7 @@ widening the standing allowlist.
 That floor serves one path: the CLI screening fallback (`references/screening.md`) uses `mabl
 tests get-runs`, which shipped in that release; the analysis itself needs no CLI. On an older CLI
 it fails as an unknown command, which reads like a broken recipe rather than a stale install.
-Authentication is separate: `mabl auth login` once, and `mabl auth info` when runs start failing
+Authentication is separate: `mabl auth login --auto` once, and `mabl auth info` when runs start failing
 while the MCP tools still work.
 
 **Procedure lives here; detail lives in the references.** Open the one that matches what you are
@@ -134,10 +134,9 @@ would otherwise re-derive — which application maps to which repo, which enviro
 a run uses, which label marks a critical set, local-server quirks — so read them first and confirm
 anything load-bearing the usual way. Notes refine scope resolution and add local pitfalls; **they
 never demote a safety gate**: the ask-first bands, the canary, and the plan-run prohibition hold
-even when a note says otherwise. To record your own, **→ `references/customizing.md`**; to have
-the workspace, application, environment and credential written once for every mabl skill to read,
-that is `mabl-init`'s job. **Requires `mabl-init`.** If it isn't there, resolve those values the
-usual way and say you did — don't guess how to install it.
+even when a note says otherwise. If your project setup already recorded the workspace, application,
+environment and credential once for every mabl skill to read, use those values; if not, resolve
+them the usual way and say you did. The analysis itself needs only an `applicationId`.
 
 **Don't preflight the install.** Start the workflow; a broken setup announces itself within a step
 or two, and only then is `references/setup.md` worth opening. Checking first costs every
