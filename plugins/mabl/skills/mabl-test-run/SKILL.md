@@ -41,11 +41,20 @@ deployment event. Install and version-check it only when one of those is the
 lane being taken:
 
 ```bash
-# Check the mabl CLI is installed and recent enough; install/upgrade if not
-MIN_MABL_CLI_VERSION=2.129.0
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
+command -v mabl      # no output: not installed
+mabl --version       # 2.129.0 or newer
 ```
+
+Read those two, and install only when one of them says to:
+
+```bash
+npm install -g @mablhq/mabl-cli@latest
+```
+
+One command per line, because a host that gates commands cannot statically
+analyse a compound one, and prompts for approval instead — which reads as a hang
+before the skill has done anything. Keeping the install on its own line also
+stops a version *check* from installing a global package as a side effect.
 
 An installed CLI still has to be signed in. `mabl auth login --auto` is the
 variant that completes without anyone at the terminal; plain `mabl auth login`
