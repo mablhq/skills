@@ -40,9 +40,16 @@ The **mabl CLI** serves three lanes: a local run, tests in the cloud, and a
 deployment event. Install and version-check it only when one of those is the
 lane being taken:
 
+Is it installed — no output means no:
+
 ```bash
-command -v mabl      # no output: not installed
-mabl --version       # 2.129.0 or newer
+command -v mabl
+```
+
+Is it recent enough — 2.129.0 or newer:
+
+```bash
+mabl --version
 ```
 
 Read those two, and install only when one of them says to:
@@ -51,10 +58,12 @@ Read those two, and install only when one of them says to:
 npm install -g @mablhq/mabl-cli@latest
 ```
 
-One command per line, because a host that gates commands cannot statically
-analyse a compound one, and prompts for approval instead — which reads as a hang
-before the skill has done anything. Keeping the install on its own line also
-stops a version *check* from installing a global package as a side effect.
+**One command per call, never joined.** A host that gates commands cannot
+statically analyse `a; b`, `a && b`, or `a || b`, so it stops and asks — which
+reads as a hang before the skill has done anything. That is why each command
+above sits in its own block: a block holding two of them gets run as one.
+Keeping the install separate also stops a version *check* from installing a
+global package as a side effect.
 
 An installed CLI still has to be signed in. `mabl auth login --auto` is the
 variant that completes without anyone at the terminal; plain `mabl auth login`
@@ -63,16 +72,28 @@ waits for a person and reads as a hang.
 **Probe for the command, never trust the number.** Features ship together, so a
 version that passes the check can still lack the subcommand or the flag:
 
+Reading a test run's outcome:
+
 ```bash
-mabl tests --help | grep -w get-runs            # reading a test run's outcome
-mabl deployments --help | grep -w describe      # reading a deployment event
-mabl tests run --help | grep -- --reporter      # publishing local results
+mabl tests --help | grep -w get-runs
 ```
 
-Each prints the matching line, and prints nothing when the feature is absent.
-Not `grep -q`: a silent probe reports only through an exit status nobody can
-read, so the next thing anyone writes is `… && echo ok` — and a host that gates
-commands cannot statically analyse that `&&`, so it prompts and the run stalls.
+Reading a deployment event:
+
+```bash
+mabl deployments --help | grep -w describe
+```
+
+Publishing local results:
+
+```bash
+mabl tests run --help | grep -- --reporter
+```
+
+Each prints the matching line, and prints nothing when the feature is absent —
+one probe per call, for the reason above. Not `grep -q`: a silent probe reports
+only through an exit status nobody can read, so the next thing anyone writes is
+`… && echo ok`, and that compound is what stalls the run.
 
 **The MCP server fails three ways, and they need different handling.**
 
