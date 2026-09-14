@@ -17,7 +17,7 @@ description: |
   finished run: one failed test run (`*-jr`) is mabl-debug. NOT for certifying
   an edit, which is mabl-test-edit-verify. A plan by id and re-running failures
   need the mabl MCP server.
-allowed-tools: Bash(command -v mabl:*), Bash(npm install -g:*), Bash(mabl --version:*), Bash(mabl auth login:*), Bash(mabl tests --help:*), Bash(mabl tests run --help:*), Bash(mabl tests run-cloud --help:*), Bash(mabl deployments --help:*), Bash(mabl tests run:*), Bash(mabl tests run-cloud:*), Bash(mabl tests get-runs:*), Bash(mabl deployments create:*), Bash(mabl deployments watch:*), Bash(mabl deployments describe:*), Bash(printf:*), Bash(sort:*), Bash(head:*), Bash(grep:*), Bash(jq:*), Bash(mkdir:*), Bash(date:*), Bash(xargs:*), Write, mcp__mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_batch_cloud, mcp__mabl__run_mabl_test_local, mcp__mabl__get_mabl_test, mcp__mabl__get_mabl_test_run, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_plan, mcp__mabl__get_mabl_plan_run, mcp__mabl__list_mabl_plan_runs, mcp__mabl__rerun_mabl_plan, mcp__mabl__trigger_mabl_deployment, mcp__mabl__get_mabl_deployment_status
+allowed-tools: Bash(command -v mabl:*), Bash(npm install -g:*), Bash(mabl --version:*), Bash(mabl auth login:*), Bash(mabl tests --help:*), Bash(mabl tests run --help:*), Bash(mabl tests run-cloud --help:*), Bash(mabl deployments --help:*), Bash(mabl tests run:*), Bash(mabl tests run-cloud:*), Bash(mabl tests list:*), Bash(mabl plans list:*), Bash(mabl tests get-runs:*), Bash(mabl deployments create:*), Bash(mabl deployments watch:*), Bash(mabl deployments describe:*), Bash(printf:*), Bash(sort:*), Bash(head:*), Bash(grep:*), Bash(jq:*), Bash(mkdir:*), Bash(date:*), Bash(xargs:*), Write, mcp__mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__mabl__list_mabl_plans, mcp__mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_batch_cloud, mcp__mabl__run_mabl_test_local, mcp__mabl__get_mabl_test, mcp__mabl__get_mabl_test_run, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_plan, mcp__mabl__get_mabl_plan_run, mcp__mabl__list_mabl_plan_runs, mcp__mabl__rerun_mabl_plan, mcp__mabl__trigger_mabl_deployment, mcp__mabl__get_mabl_deployment_status
 ---
 
 # mabl test run
@@ -87,15 +87,33 @@ one configured, read each server's tool list before calling a lane closed, and
 never launch through another server without the caller's explicit yes.
 
 Workspace id, and the environment and application ids the cloud lanes need, come
-from the caller or from the project's saved mabl setup. This skill resolves
-properties of the entity it was handed, and nothing else.
+from the caller or from the project's saved mabl setup.
+
+Where the target arrived as a name rather than an id, resolve it first — a test
+by name through `search_mabl_tests` or `list_mabl_tests`, a plan by name through
+`list_mabl_plans`, each scoped to the workspace. Read
+[Router](#router) for what to do with one match, several, or none. Beyond that
+one lookup, this skill resolves properties of the entity it was handed and
+nothing else.
 
 ## Router
 
 **Take the target as given.** It resolves only from what the caller supplied or
-from the project's saved mabl setup. A name with no id is the no-target empty
-state below: ask. Never list to turn a name into an id, and never pick a target
-by recent activity.
+from the project's saved mabl setup. Never pick a target by recent activity, and
+never widen one: a caller who named a test gets that test, not the plan it sits in.
+
+**A name is a reference, not a choice.** Where the caller names a test or plan
+instead of giving its id, look the name up and match on it.
+
+- **Exactly one match** — say which entity the name resolved to, with its id, and
+  run it. Naming the thing you resolved to is what lets the caller stop you.
+- **Several matches** — list them with their ids and ask which. Do not run the
+  newest, the first, or the closest.
+- **No match** — say the name matched nothing, and ask. Do not fall back to a
+  fuzzier search and quietly run whatever it returns.
+
+Looking a name up is not choosing what to run. Choosing is still out of scope:
+where the caller named no target at all, the first empty state below applies.
 
 | What the caller gave | Lane |
 |---|---|
