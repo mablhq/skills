@@ -64,10 +64,15 @@ waits for a person and reads as a hang.
 version that passes the check can still lack the subcommand or the flag:
 
 ```bash
-mabl tests --help | grep -qw get-runs            # reading a test run's outcome
-mabl deployments --help | grep -qw describe      # reading a deployment event
-mabl tests run --help | grep -qw -- --reporter   # publishing local results
+mabl tests --help | grep -w get-runs            # reading a test run's outcome
+mabl deployments --help | grep -w describe      # reading a deployment event
+mabl tests run --help | grep -- --reporter      # publishing local results
 ```
+
+Each prints the matching line, and prints nothing when the feature is absent.
+Not `grep -q`: a silent probe reports only through an exit status nobody can
+read, so the next thing anyone writes is `… && echo ok` — and a host that gates
+commands cannot statically analyse that `&&`, so it prompts and the run stalls.
 
 **The MCP server fails three ways, and they need different handling.**
 
