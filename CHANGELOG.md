@@ -5,6 +5,13 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.0] - 2026-09-15
+### Added
+- `mabl-test-impact` — finds the existing mabl tests a code change or product area reaches, with a link each.
+- Each test comes with why it surfaced, and the coverage gaps are reported beside them.
+- A test missing from the results is not proof the change is covered, and the report says so.
+- It runs nothing, in CI too: an advisory mode puts the analysis in the job output or a PR comment.
+
 ## [1.8.0] - 2026-09-03
 ### Added
 - `mabl-test-edit-verify` — the step after a fix. There are two ways to turn a red
