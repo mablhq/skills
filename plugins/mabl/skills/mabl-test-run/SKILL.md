@@ -298,8 +298,14 @@ result.
 **The two surfaces are not interchangeable on this lane, and the difference
 decides which one to take.** Selecting tests by label is CLI-only. Binding a
 DataTable row to a cloud run is MCP-only — this command has no DataTable flag at
-all. So a label set goes to the CLI, and a data-driven test that needs its rows
-goes to the MCP tool.
+all. Custom HTTP headers on a cloud run are MCP-only for the same reason: the CLI
+carries `--http-headers` on a local run and on a deployment event, not here. So a
+label set goes to the CLI, and a data-driven test that needs its rows, or a target
+that will not admit the traffic without a header, goes to the MCP tool.
+
+Header values are not stored on the test and are kept out of the run output log;
+the result echoes back the header names only. Report the names. Never echo a
+value back to the caller and never write one into a run record.
 
 **Label selection is capped.** At the cap the CLI says so in two lines — that the
 maximum test search limit was hit, and that the most recently created tests will
