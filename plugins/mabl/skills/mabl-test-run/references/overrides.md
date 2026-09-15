@@ -39,7 +39,7 @@ from this column.
 | Block until done | the command blocks | no | `--await-completion` | no; poll |
 | Locale, timezone | `--locale`, `--timezone-id` | `--locale`, `--timezone-id` | no | no |
 | Browser size | `--width`, `--height` | no | no | no |
-| HTTP headers | `--http-headers` | no | `--http-headers` | `httpHeaders`, cloud run only |
+| HTTP headers | `--http-headers` | `--http-headers` | `--http-headers` | `httpHeaders`, single cloud run only |
 | Inherit a prior run's whole target | `--run-id` | no | no | no |
 | Interaction speed | `--interaction-speed` | no | no | no |
 | User agent | `--user-agent` | no | no | no |
@@ -87,18 +87,25 @@ surface a cloud run takes:
 - **A DataTable binding on a cloud run is MCP-only.** `mabl tests run-cloud` has
   no DataTable flag, so the row can be bound locally or through the MCP tool, and
   not through the cloud CLI command.
-- **HTTP headers on a cloud run are MCP-only.** `run_mabl_test_cloud` takes
-  `httpHeaders` as `{name, value}` pairs. The CLI carries `--http-headers` on a
-  local run and on a deployment event, but not on `run-cloud`, so a cloud run that
-  needs a header to be admitted at all has to go through the MCP tool. Among the
-  MCP run tools only that one takes it: a set, a plan, a re-run and a deployment
-  event do not.
+Everything else overlaps closely enough that either surface serves.
+
+## Custom HTTP headers
+
+Both surfaces carry them for a single run: `--http-headers` on the CLI as
+space-delimited `name:value` pairs, `httpHeaders` on `run_mabl_test_cloud` as
+`{name, value}` objects. What differs is reach. The CLI has the flag on a local
+run, a cloud run and a deployment event; on MCP only the single-test cloud run
+takes it, so a set, a plan, a re-run and a deployment event through MCP cannot
+carry one.
+
+`--http-headers` reached `run-cloud` recently, so an older CLI has it on
+`tests run` and `deployments create` but not there. That is the whole reason this
+file says to read a flag's availability from `--help`: probe the CLI actually
+installed, because the version on the machine is not the version that shipped.
 
 Header values are run-scoped and are not stored on the test. They are kept out of
 the run output log, and the result echoes back the header *names* only. Report the
 names; never echo a value back to the caller, and never put one in a run record.
-
-Everything else overlaps closely enough that either surface serves.
 
 ## A set dispatched as one cloud run
 
