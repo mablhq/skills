@@ -244,7 +244,7 @@ thing being read is still the thing that ran. A version that changes part way
 through the window being examined invalidates a flaky or a broken reading
 silently: the history describes two different tests.
 
-**Requires `mabl-compare-versions`.** When the version moves inside the window,
+**Requires `mabl-version-compare`.** When the version moves inside the window,
 that skill says what actually changed between the two. If it is not there, stop
 at reporting the version change with both version ids and say which skill is
 missing, rather than inspecting the versions here or guessing how to install it,
