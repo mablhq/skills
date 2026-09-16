@@ -49,7 +49,7 @@ Every edit starts by reading the test so you know what you're changing and
 which lane can change it:
 
 ```
-mcp__mabl__get_mabl_test_steps({ test_id: "<*-j>" })
+mcp__mabl__get_mabl_test_steps({ testId: "<*-j>" })
 ```
 
 That returns the test's `flows[]`, and **each flow is tagged with a `kind`** —
@@ -58,7 +58,7 @@ this tag is the whole routing decision for step edits:
 | `kind` | What it is | Step edits go to |
 |--------|------------|------------------|
 | `structural` | steps that live directly in this test | `edit_mabl_test_steps` |
-| `reusable` | a shared flow reused by other tests (carries a `used_by` sample) | `edit_mabl_flow_steps` |
+| `reusable` | a shared flow reused by other tests (carries a `usedBy` sample) | `edit_mabl_flow_steps` |
 | `legacy_unsupported` | old mablscript flow | neither — see [Legacy flows](#legacy-and-unsupported-flows) |
 
 Pick the lane by the *kind of change*, then confirm the target:
@@ -126,42 +126,42 @@ persisted, and rebinds the test to the new flow variant.
 
 If you send a reusable-flow step through `edit_mabl_test_steps`, it refuses
 with `reason: "wrong_authoring_boundary"` and hands you the redirect (the
-flow id + `acknowledge_shared: true`) — that's a routing correction, not a
+flow id + `acknowledgeShared: true`) — that's a routing correction, not a
 failure. Follow it.
 
 ### The four step operations
 
-Same four verbs in both tools; only the field names differ (test-level ops
-carry a `flow_id` and `step_index`; flow-level ops are already scoped to one
-flow, so they use a bare `index`).
+Same four verbs and the same field names in both tools. The only difference is
+routing: a test-level op takes an optional `flowId` to say which flow it targets,
+while a flow-level op is already scoped to one flow.
 
 `edit_mabl_test_steps` — `mode: "edits"`, indices into each flow's **original**
 step array:
 
 ```
 mcp__mabl__edit_mabl_test_steps({
-  test_id: "<*-j>",
+  testId: "<*-j>",
   mode: "edits",
   edits: [
-    { op: "replace",      flow_id: "<*-f>", step_index: 3, step: { /* new step */ } },
-    { op: "insert_after", flow_id: "<*-f>", step_index: 3, step: { /* step */ } },   // step_index -1 prepends
-    { op: "delete",       flow_id: "<*-f>", step_index: 5 },
-    { op: "move",         flow_id: "<*-f>", from_step_index: 5, to_step_index: 2 }
+    { op: "replace",      flowId: "<*-f>", index: 3, step: { /* new step */ } },
+    { op: "insert_after", flowId: "<*-f>", index: 3, step: { /* step */ } },   // index -1 prepends
+    { op: "delete",       flowId: "<*-f>", index: 5 },
+    { op: "move",         flowId: "<*-f>", from: 5, to: 2 }
   ]
 })
 ```
 
-`flow_id` is optional only when the test has exactly one editable flow (the
+`flowId` is optional only when the test has exactly one editable flow (the
 tool infers it); otherwise omitting it returns `reason: "no_editable_flow"` or
 `"ambiguous_flow"` — pass the id from the router read. Use `mode: "whole"` with
-`flows: [{ flow_id, steps: [...] }]` to replace a flow's steps wholesale (and
+`flows: [{ flowId, steps: [...] }]` to replace a flow's steps wholesale (and
 to seed the first flow of an empty test).
 
 `edit_mabl_flow_steps` — same verbs, `index` / `from` / `to`:
 
 ```
 mcp__mabl__edit_mabl_flow_steps({
-  flow_id: "<*-f>",
+  flowId: "<*-f>",
   mode: "edits",
   edits: [
     { op: "replace", index: 2, step: { /* new step */ } },
@@ -171,7 +171,7 @@ mcp__mabl__edit_mabl_flow_steps({
 ```
 
 This tool only edits **reusable** (shared) flows, so a behavior-changing save
-needs `acknowledge_shared: true` — but **don't** add it to the first call. Send
+needs `acknowledgeShared: true` — but **don't** add it to the first call. Send
 the edit without it, read the blast radius the tool hands back, confirm with the
 user, then resend with the flag (see [Reusable flows](#reusable-flows)).
 
@@ -201,14 +201,14 @@ A `reusable` flow is shared — editing it changes **every** test that uses it.
 Before you write, know the blast radius:
 
 ```
-mcp__mabl__list_mabl_tests_using_flow({ flow_id: "<*-f>" })
+mcp__mabl__list_mabl_tests_using_flow({ flowId: "<*-f>" })
 ```
 
 Then acknowledge it explicitly. `edit_mabl_flow_steps` refuses a
-behavior-changing save without `acknowledge_shared: true`, returning
-`reason: "shared_flow_requires_acknowledgement"` and a `used_by_sample[]` of
+behavior-changing save without `acknowledgeShared: true`, returning
+`reason: "shared_flow_requires_acknowledgement"` and a `usedBySample[]` of
 impacted tests. **Surface that list to the user and get their OK before
-re-sending with `acknowledge_shared: true`.** Don't silently acknowledge on
+re-sending with `acknowledgeShared: true`.** Don't silently acknowledge on
 the user's behalf — the point of the gate is that the user sees who else is
 affected.
 
@@ -216,9 +216,9 @@ Two more reusable-flow guards worth knowing:
 
 - **New required parameter** — adding a parameter with no default to a flow
   that already has callers returns `reason: "new_required_parameter"` +
-  `blocked_parameters[]`. This is *not* bypassable with `acknowledge_shared`;
+  `blockedParameters[]`. This is *not* bypassable with `acknowledgeShared`;
   give the parameter a default, or make the change in the agent lane.
-- **Concurrent edit** — pass `if_match: "<version_token>"` (the token from
+- **Concurrent edit** — pass `ifMatch: "<versionToken>"` (the token from
   `get_mabl_flow_steps`) for optimistic concurrency. If the flow changed since
   you read it, the save is rejected with `reason: "version_conflict"` and the
   current steps + a fresh token, instead of forking a variant. Re-read, reapply,
@@ -232,7 +232,7 @@ list).
 
 Both step tools take an optional `branch` **name** and default to `master`
 (mabl's default branch; `main` is accepted as an alias). List branches with
-`mcp__mabl__list_mabl_branches({ test_id: "<*-j>" })`.
+`mcp__mabl__list_mabl_branches({ testId: "<*-j>" })`.
 
 **Confirm with the user before writing to the default branch.** When `branch`
 is omitted, `master`, or `main`, the edit lands on the shared mainline that
@@ -247,7 +247,7 @@ touches several flows, each flow is PATCHed independently, so a mid-batch
 failure can leave some flows saved and others not. The response is built for
 recovery, not silence:
 
-- `reason: "partial_save"` with `flows_persisted[]` **and** `flows_failed[]`
+- `reason: "partial_save"` with `flowsPersisted[]` **and** `flowsFailed[]`
 - `reason: "all_flows_failed"` when nothing landed
 
 Report exactly which flows saved and which didn't, then retry only the failed
@@ -269,9 +269,9 @@ it the way a person would.
 mcp__mabl__mabl_authoring_edit({
   workspaceId: "<workspace id>",
   testInformation: {
-    test_id: "<*-j>",
-    test_case: "On the search page, after step 4, wait until the results spinner disappears before asserting the row count.",
-    deployment_id: "<optional — resolves url/app/env>",
+    testId: "<*-j>",
+    testCase: "On the search page, after step 4, wait until the results spinner disappears before asserting the row count.",
+    deploymentId: "<optional — resolves url/app/env>",
     branch: "<optional — defaults to the workspace default>"
   }
 })

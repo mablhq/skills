@@ -5,6 +5,19 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.6.1] - 2026-09-16
+### Fixed
+- `mabl-test-edit` now shows the parameter and response field names the MCP
+  server actually uses. Every documented step-edit call passed `test_id`,
+  `flow_id`, `step_index`, `from_step_index`, `to_step_index`, `if_match` or
+  `acknowledge_shared` — names the server renamed to camelCase and now rejects
+  — and read `used_by`, `used_by_sample`, `version_token`,
+  `blocked_parameters`, `flows_persisted` and `flows_failed` off responses that
+  spell them `usedBy`, `usedBySample`, `versionToken`, `blockedParameters`,
+  `flowsPersisted` and `flowsFailed`. The two edit tools also take the same four
+  step-operation fields now; only the optional `flowId` that routes a
+  test-level op differs.
+
 ## [1.6.0] - 2026-08-19
 ### Changed
 - `mabl-test-coverage-design` now schedules the fan-out itself instead of
