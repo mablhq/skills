@@ -1,6 +1,6 @@
 # Validating an authored test, and healing it
 
-Mechanics for step 4 of `SKILL.md`. Read that first — this is the detail
+Mechanics for the Validate step of `SKILL.md`. Read that first — this is the detail
 behind it, not a separate workflow.
 
 ## Why a completed session isn't enough
@@ -11,12 +11,12 @@ catching are all "green but wrong":
 
 | Failure | What you see | What catches it |
 |---|---|---|
-| Assertion the intent asked for is missing | Session completed, run passed | Step export (4.1) |
+| Assertion the intent asked for is missing | Session completed, run passed | Step export |
 | Test asserts something adjacent (page title instead of the order number) | Everything green | Step export read against the intent |
-| Assertion exists but never ran | Run passed, coverage is zero | `status: skipped` in the trace (4.2) |
-| Test passed against the wrong screen | Green, plausible step names | Screenshot for that step (4.2) |
+| Assertion exists but never ran | Run passed, coverage is zero | `status: skipped` in the trace |
+| Test passed against the wrong screen | Green, plausible step names | Screenshot for that step |
 | Nothing proved the test works at all | `completed`, no run | `reportedTestRunId` absent |
-| A heal attempt "fixed" it by deleting the assertion | Green, smaller test | Version diff (4.3) |
+| A heal attempt "fixed" it by deleting the assertion | Green, smaller test | Version diff |
 
 The last one is the one to design against. An agent asked to make a failing
 test pass has an easy move available: remove whatever fails. That produces a
@@ -62,7 +62,7 @@ missing before you look at any run.
 
 `export` refuses performance tests and mabl's own default tests
 ("Default mabl tests can not be exported"). That is a real limit, not an error
-to work around — skip 4.1 and say the structure was not checked.
+to work around — skip the export check and say the structure was not checked.
 
 ## Reading the reported validation run
 
@@ -95,7 +95,7 @@ Notes on what is and isn't there:
   assertion failure from an exception.
 - **Assertion steps are not identifiable from the trace.** Every step's
   category is the same, and only the description hints at what it does. Take
-  assertion facts from the export (4.1), and join the two on the
+  assertion facts from the export, and join the two on the
   **description**, not on position.
 
   The join matters more than it looks. `index` counts **leaf steps only** — the
@@ -160,7 +160,8 @@ snapshot. So a descriptor for an element the test never touched has to come from
 a live session — that is the case the agent lane exists for.
 
 When the edit is nameable, hand it to the structured-step lane
-(`insert_after` / `replace` / `move`) the way step 4.3 describes — that step owns
+(`insert_after` / `replace` / `move`) the way `SKILL.md`'s fixing-a-mismatch
+step describes — that step owns
 the routing, including checking the skill it routes to is there. Keep the
 decision — what is missing, and whether a fix weakened the test — in this loop.
 
@@ -187,29 +188,10 @@ Always include the "edit in place; do not remove existing steps" instruction.
 The default strategy leans toward delete-and-rebuild, which on a bounded time
 budget can delete the broken part and run out of time before rebuilding it.
 
-Bound at **3 attempts**. Between attempts, re-validate from 4.1 — including
-the version diff below. If the workspace doesn't have agentic test editing,
-the initiate call fails; stop and report rather than retrying.
-
-## The no-weakening gate
-
-```bash
-mabl tests versions <testId>
-mabl tests compare <testId>:<before> <testId>:<after> --output json
-```
-
-`compare` only accepts `--output json`. You get
-`summary {added, removed, changed, unchanged}` and per-step `from` / `to`
-descriptors, so you can see exactly which steps a heal attempt touched.
-
-The rule: **any `Assert*` step in `removed` that you did not explicitly ask to
-remove means the attempt failed**, regardless of the run result. Same for a
-drop in total assertion count. Re-prompt with an explicit "add the assertion;
-do not remove any steps" and count the attempt.
-
-Deleting steps is legitimate in exactly one case: the intent asked for it —
-the behavior under test genuinely went away. That has to come from the intent,
-not from the agent's judgment about what was blocking a green run.
+Bound at **3 attempts**. Between attempts, re-validate the export and the trace, then run the
+no-weakening gate `SKILL.md` describes before accepting any attempt. If the
+workspace doesn't have agentic test editing, the initiate call fails; stop and
+report rather than retrying.
 
 ## What not to do
 
