@@ -18,8 +18,15 @@ mabl tests import playwright \
   --project chromium \
   --tests-path e2e \
   --grep "the one test title" \
-  --workspace-id "$WORKSPACE_ID"
+  --workspace-id "$WORKSPACE_ID" \
+  --auto-save
 ```
+
+`--auto-save` is not optional for an agent. Without it the CLI stops on an
+interactive four-way prompt — Run test to activate auto-heal, View, Save,
+Discard — which needs a TTY, so an unattended run hangs there rather than
+failing. A4 explains what that prompt's auto-heal path would have done and why
+this skill cannot reach it.
 
 The CLI runs `npx playwright test --trace on` for the selected tests, then
 converts the traces. Before running it:
@@ -51,7 +58,7 @@ npx playwright test e2e/favorites.spec.js --trace on
 cp -R test-results /tmp/mabl-import-traces        # not optional — see below
 mabl tests import playwright --traces-path /tmp/mabl-import-traces \
   --path "$PROJECT_ROOT" --project chromium --tests-path e2e \
-  --workspace-id "$WORKSPACE_ID"
+  --workspace-id "$WORKSPACE_ID" --auto-save
 ```
 
 Two traps live here, and both fail quietly:
