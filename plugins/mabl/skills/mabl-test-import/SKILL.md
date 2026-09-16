@@ -13,7 +13,12 @@ description: |
   There is no importer for Cypress, Cucumber, or a spreadsheet of test cases;
   to build tests from written cases use mabl-test-authoring, and to design NEW
   coverage by exploring a running app use mabl-test-coverage-design.
-allowed-tools: Bash, Read, Write, Glob, Grep, mcp__mabl__get_current_user,
+allowed-tools: Bash(mabl tests import:*), Bash(mabl tests export:*),
+  Bash(mabl tests get-runs:*), Bash(mabl auth login:*), Bash(mabl --version),
+  Bash(mabl tests import --help), Bash(mabl agent authoring status:*),
+  Bash(npx playwright test:*), Bash(npm install -g @mablhq/mabl-cli*),
+  Bash(find:*), Bash(grep:*), Bash(cp:*),
+  Read, Write, Glob, Grep, mcp__mabl__get_current_user,
   mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications,
   mcp__mabl__list_mabl_environments, mcp__mabl__create_mabl_environment,
   mcp__mabl__create_mabl_application, mcp__mabl__mabl_authoring_initiate,
@@ -95,9 +100,21 @@ not run, say which piece is missing **and** that lane C is still open.
 2. `list_mabl_applications` and `list_mabl_environments`.
 3. Match the application by URL against the host the source tests drive.
 
-If the workspace has no application or environment yet, create them —
-`create_mabl_environment` first, then `create_mabl_application` (it needs an
-environment id and returns a `deploymentId`). Say which URL was used.
+If the workspace has no application or environment to bind to, **do not create
+one silently.** These are workspace-wide entities that everyone in the workspace
+then sees, and the URL they carry decides what every later run points at. Show
+the user the exact environment name, application name and URL you would create,
+and create them only on an explicit yes — `create_mabl_environment` first, then
+`create_mabl_application`, which needs an environment id and returns a
+`deploymentId`. Report the ids and the URL that was used.
+
+**Requires `mabl-workspace-setup`.** A workspace with nothing in it is that
+skill's job, not this one's: it interviews for what the environments and URLs
+should be rather than inferring them from a test suite's hostname, and it can be
+entered for one missing entity and hand the ids back. Route there when it is
+installed. When it isn't, do the gated create above and say which skill would
+have done it better — don't guess how to install it, because that depends on how
+this skill was installed.
 
 Pass `--workspace-id` on every import command. Both import commands accept it;
 without it they use the CLI's active workspace, which is often not this one.
@@ -265,6 +282,13 @@ renaming, relabelling, and disabling an imported test. If that skill isn't
 installed, say which skill is missing and hand the user the test URL — don't
 guess at the edit here, and don't guess how to install it, because that depends
 on how this skill was installed.
+
+Say the second consequence out loud when it is missing, because it is the one
+that does damage quietly: disabling an unrepaired lane A import is that skill's
+job too, so without it those tests stay **enabled**. A test whose finds are in
+the legacy raw-CSS shape then sits in plans and counts against the workspace's
+quality metrics while failing for a reason nobody has looked at. Name the tests
+you could not disable, by id.
 
 **Requires `mabl-debug`.** When a verification run fails and the cause is not
 obvious from the diff, that skill owns the investigation. If it isn't
