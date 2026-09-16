@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.11.0] - 2026-08-27
+## [1.11.0] - 2026-09-15
 ### Added
 - `mabl-test-import` — migrate an existing Playwright or Selenium suite into
   mabl. The skill sorts the suite first, per test, because the right route is
