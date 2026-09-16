@@ -144,13 +144,12 @@ test to see what survives, and create the binding once the user has decided the
 import is worth keeping. In a workspace that already holds dozens of
 applications, an extra one nobody chose is litter that cannot be tidied later.
 
-**Requires `mabl-workspace-setup`.** A workspace with nothing in it is that
-skill's job, not this one's: it interviews for what the environments and URLs
-should be rather than inferring them from a test suite's hostname, and it can be
-entered for one missing entity and hand the ids back. Route there when it is
-installed. When it isn't, do the gated create above and say which skill would
-have done it better — don't guess how to install it, because that depends on how
-this skill was installed.
+If `mabl-workspace-setup` is installed, hand the create to it. A workspace with
+nothing in it is that skill's job: it interviews for what the environments and
+URLs should be rather than inferring them from a test suite's hostname, and it
+can be entered for a single missing entity and hand the ids back. Otherwise do
+the gated create above. Either way the import continues — this is a better route
+when it exists, not something the import waits on.
 
 Pass `--workspace-id` on every import command. Both import commands accept it;
 without it they use the CLI's active workspace, which is often not this one.
