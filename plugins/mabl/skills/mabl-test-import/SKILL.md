@@ -62,8 +62,11 @@ mabl tests import selenium --help 2>&1 | grep -qw -- --credentialsId    # lane B
 If a probe fails after the upgrade, say which command is missing — and offer
 lane C, which does not go through the CLI at all, before stopping.
 
-For lanes A and B the CLI must be logged in (`mabl auth login --auto`). That
-opens a browser and needs a human; never attempt it unattended.
+For lanes A and B the CLI must be logged in. `mabl auth login --auto` captures
+the authorization code itself, which is what makes it usable where the terminal
+is not visible — its own help names agents and IDEs as the case it exists for.
+Run it rather than stopping to ask for a human. It still opens a browser, so on
+a machine with no browser at all, say that is what is missing.
 
 ## Step 1 — Decide how each test comes across
 
