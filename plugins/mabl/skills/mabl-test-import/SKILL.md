@@ -14,7 +14,10 @@ description: |
   to build tests from written cases use mabl-test-authoring, and to design NEW
   coverage by exploring a running app use mabl-test-coverage-design.
 allowed-tools: Bash(mabl tests import:*), Bash(mabl tests export:*),
-  Bash(mabl tests get-runs:*), Bash(mabl auth login:*), Bash(mabl --version),
+  Bash(mabl tests get-runs:*), Bash(mabl tests run-cloud:*),
+  Bash(mabl workspaces list:*), Bash(mabl applications list:*),
+  Bash(mabl applications describe:*), Bash(mabl environments list:*),
+  Bash(mabl auth login:*), Bash(mabl --version),
   Bash(mabl tests import --help), Bash(mabl agent authoring status:*),
   Bash(npx playwright test:*), Bash(npm install -g @mablhq/mabl-cli*),
   Bash(find:*), Bash(grep:*), Bash(cp:*),
@@ -100,6 +103,24 @@ not run, say which piece is missing **and** that lane C is still open.
 2. `list_mabl_applications` and `list_mabl_environments`.
 3. Match the application by URL against the host the source tests drive.
 
+**The CLI does this too, and sometimes it is the only route.** The MCP server a
+reader has connected is bound to one mabl instance; a reader working against a
+different one has the tools listed and unusable. Don't stop — the same reads are
+CLI commands:
+
+```bash
+mabl workspaces list
+mabl applications list --workspace-id "$WORKSPACE_ID" --limit 100 -o json
+mabl environments list  --workspace-id "$WORKSPACE_ID" --limit 100 -o json
+```
+
+Two things to know before relying on them. The URL is on neither list: it lives
+on the application/environment deployment pairing, so read it from
+`applications describe` rather than expecting a `url` field. And **`mabl
+applications` has no `create`** — environments can be created from the CLI,
+applications cannot. That asymmetry is the one place this step genuinely needs
+MCP or the web app, and it is worth saying to the user rather than looping.
+
 If the workspace has no application or environment to bind to, **do not create
 one silently.** These are workspace-wide entities that everyone in the workspace
 then sees, and the URL they carry decides what every later run points at. Show
@@ -107,6 +128,21 @@ the user the exact environment name, application name and URL you would create,
 and create them only on an explicit yes — `create_mabl_environment` first, then
 `create_mabl_application`, which needs an environment id and returns a
 `deploymentId`. Report the ids and the URL that was used.
+
+**Before creating anything, consider not needing a binding at all.** A one-test
+trial run does not have to leave a permanent application behind: bind the URL
+directly instead, and verify the same way.
+
+```bash
+mabl tests run-cloud --id "$TEST_ID" --workspace-id "$WORKSPACE_ID" \
+  --url "https://the-host-the-source-tests-drive"
+```
+
+`mabl_authoring_initiate` takes the same shape — `url_override` with an
+`application_id`, in place of `deployment_id`. Prefer this while importing one
+test to see what survives, and create the binding once the user has decided the
+import is worth keeping. In a workspace that already holds dozens of
+applications, an extra one nobody chose is litter that cannot be tidied later.
 
 **Requires `mabl-workspace-setup`.** A workspace with nothing in it is that
 skill's job, not this one's: it interviews for what the environments and URLs
