@@ -9,6 +9,16 @@ BSD `xargs`; the GNU version differs in the two places the script is careful
 about — GNU runs once on empty input where BSD does not, and the two report a
 failed child with different exit values.
 
+**It is for a person to read and adapt, and an agent cannot run it as it
+stands.** The blocks below are compound — `;`, `&&`, a `for` loop, a braced
+group — and they use `export`, `echo`, `[`, `exit` and `for`, none of which this
+skill grants. `SKILL.md`'s **Prerequisites** says why that shape stalls: a host
+that gates commands cannot statically analyse `a; b` or `a && b`, so it stops and
+asks, which reads as a hang. That rule governs the commands the skill issues; this
+file is deliberately the other thing, a script to lift and adapt. An agent
+dispatching a set unattended follows the rules in **Dispatching a set** and
+issues one command per call, rather than pasting what follows.
+
 ## Check the userland before trusting the script
 
 Check which one is installed rather than inferring it from the operating system.
