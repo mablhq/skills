@@ -14,7 +14,7 @@ description: |
   Asks when no target is named. Never picks which tests to run,
   never judges whether one is safe, never prices
   a run beforehand, never rules on the result. NOT for explaining a
-  finished run: one failed test run (`*-jr`) is mabl-debug. NOT for certifying
+  finished run (`*-jr` or `*-pr`): that is mabl-debug. NOT for certifying
   an edit, which is mabl-test-edit-verify. A plan by id and re-running failures
   need the mabl MCP server.
 allowed-tools: Bash(command -v mabl:*), Bash(npm install -g:*), Bash(mabl --version:*), Bash(mabl auth login:*), Bash(mabl tests --help:*), Bash(mabl tests run --help:*), Bash(mabl tests run-cloud --help:*), Bash(mabl deployments --help:*), Bash(mabl tests run:*), Bash(mabl tests run-cloud:*), Bash(mabl tests get-runs:*), Bash(mabl deployments create:*), Bash(mabl deployments watch:*), Bash(mabl deployments describe:*), Bash(printf:*), Bash(grep:*), Bash(jq:*), Bash(mkdir:*), Bash(date:*), Bash(xargs:*), Read, Write, mcp__mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__mabl__list_mabl_plans, mcp__mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_batch_cloud, mcp__mabl__run_mabl_test_local, mcp__mabl__get_mabl_test, mcp__mabl__get_mabl_test_run, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_plan, mcp__mabl__get_mabl_plan_run, mcp__mabl__list_mabl_plan_runs, mcp__mabl__rerun_mabl_plan, mcp__mabl__trigger_mabl_deployment, mcp__mabl__get_mabl_deployment_status
