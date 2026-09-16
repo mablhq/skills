@@ -98,10 +98,11 @@ run, a cloud run and a deployment event; on MCP only the single-test cloud run
 takes it, so a set, a plan, a re-run and a deployment event through MCP cannot
 carry one.
 
-`--http-headers` reached `run-cloud` recently, so an older CLI has it on
-`tests run` and `deployments create` but not there. That is the whole reason this
-file says to read a flag's availability from `--help`: probe the CLI actually
-installed, because the version on the machine is not the version that shipped.
+`--http-headers` is the one cell in this table that differs between builds that
+all meet the floor: `tests run` and `deployments create` carry it, `run-cloud`
+carries it on some builds and not others. SKILL.md's cloud lane ships the probe.
+It is also why this file's availability column is read from `--help` rather than
+trusted: the version on the machine is not the version that shipped.
 
 Header values are run-scoped and are not stored on the test. They are kept out of
 the run output log, and the result echoes back the header *names* only. Report the

@@ -302,9 +302,17 @@ all. So a label set goes to the CLI, and a data-driven test that needs its rows
 goes to the MCP tool.
 
 Custom HTTP headers are on both, for a target that will not admit test traffic
-without one: `--http-headers` here, `httpHeaders` on the MCP tool. The flag
-reached this command recently, so probe it rather than assuming the installed CLI
-has it.
+without one: `--http-headers` here, `httpHeaders` on the MCP tool. On the CLI the
+flag is carried by `tests run` and `deployments create` on every build that meets
+the floor, and by `run-cloud` on some builds and not others. Probe before using
+it here:
+
+```bash
+mabl tests run-cloud --help | grep -- --http-headers
+```
+
+It prints the flag's line, and prints nothing when this build lacks it. Where it
+prints nothing, the MCP tool is the only route to a header on a cloud run.
 
 Header values are not stored on the test and are kept out of the run output log;
 the result echoes back the header names only. Report the names. Never echo a
