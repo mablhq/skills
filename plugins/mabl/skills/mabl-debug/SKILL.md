@@ -74,30 +74,30 @@ a real browser the agent drives directly.
 > shape that this CLI surface doesn't cover.
 
 ```bash
-# Step trace, default. Output is the failed steps and the steps that
-# Runtime recovery recovered (plus the summary block). Pass --all if
-# you need to see passed / skipped steps as well.
+# Step trace, default. Output is the steps that didn't pass, plus the
+# summary block. Pass --all to see passed / skipped steps too.
 mabl agent debug steps <jr-id>
 mabl agent debug steps <jr-id> --all   # full trace
 ```
 
 When the default trace hides entries, it tells you so via a top-level
-`note` field — the exact string is `"Filtered to failed/recovered
-steps (N hidden). Pass --all to see the full trace."`. Treat that as
-"the run executed more than the failed step, you just don't need to
-see the noise yet."
+`note` field saying how many it hid and that `--all` shows them. Treat
+that as "the run executed more than the failed step, you just don't
+need to see the noise yet."
 
 Each entry has `index` (1-based), `step_run_id`, `flow`, `action`,
-`description`, `status` (`passed` / `failed` / `skipped` /
-`recovered`), `duration_ms`, `step_id` (per-flow — feed to live-session
-commands), and `step_id_in_test` (per-test). The trace also carries a
-top-level `summary` block on any failed-or-recovered run; on those it
-also includes `summary.step_id` — that's the value to copy straight
-into `debug session run-step` / `run-to-step` after triage. The
-top-level summary is the one to scan first; the API-side
-`failure_summary` payload (where `step_id_in_test` originates) is only
-present on hard failures, not on TRA-recovered runs. `step_run_id` is
-what every `artifact` call below takes.
+`description`, `status` (usually `passed` / `failed` / `skipped` —
+match it as *not* `passed` and *not* `skipped` rather than comparing to
+`failed`, the way the recipe below does), `duration_ms`, `step_id`
+(per-flow — feed to live-session commands),
+and `step_id_in_test` (per-test). The trace also carries a top-level
+`summary` block on any run with a step that didn't pass; on those it
+also includes
+`summary.step_id` — that's the value to copy straight into
+`debug session run-step` / `run-to-step` after triage. The top-level
+summary is the one to scan first; the API-side `failure_summary`
+payload (where `step_id_in_test` originates) is only present on hard
+failures. `step_run_id` is what every `artifact` call below takes.
 
 ```bash
 # Drill into one artifact for the failing step.
@@ -149,7 +149,8 @@ Example — full triage of a failing click:
 
 ```bash
 SID=$(mabl agent debug steps abc123-jr --output json \
-  | jq -r '.steps[] | select(.status == "failed" or .status == "recovered") | .step_run_id' | head -1)
+  | jq -r '.steps[] | select(.status != "passed" and .status != "skipped") | .step_run_id' | head -1)
+[ -n "$SID" ] || { echo "no non-passing step in the trace — read the summary block first"; exit 1; }
 
 # What did the network look like at the failing step?
 mabl agent debug artifact network abc123-jr --step-run-id "$SID" \
@@ -165,22 +166,6 @@ mabl agent debug artifact console abc123-jr --step-run-id "$SID" \
 
 Artifacts cache to `.mabl/debug/<jr-id>/` (gitignored) and are reused
 across calls.
-
-### Recovered steps
-
-A step with `status: "recovered"` is a step that **failed**, then was
-salvaged by Runtime recovery so the run could continue. Runtime
-recovery is sunset, so no new run produces this status, but the default
-trace still surfaces it on older runs. The status is `recovered` rather
-than `passed` precisely because it marked a real bug: recovery papered
-over it for that run, but the underlying cause stayed.
-
-Debug a recovered step the same way as a failed one: the step's own
-find/assert failure is the signal, and the fix is either the test (a
-stale selector, a missing wait, a wrong assertion) or the app (a
-regressed precondition).
-
----
 
 ## 2. Hypothesize — map the failure to code
 
@@ -207,7 +192,7 @@ heuristic:
 | Signal | Likely owner |
 |---|---|
 | Stack trace points into product source; failed network call to an app endpoint; new uncaught JS error after a recent deploy | **App** — `git log <last_passing_deploy>..HEAD` on the relevant repo, then file/fix in product code |
-| `status: "recovered"`; stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
+| Stale `data-testid`; assertion expects a value the app never produced | **Test** — update the step / selector / assertion in the mabl test |
 | Test flakes on retry but app code, DOM, and network all look healthy | **Test** — usually a missing wait or a timing assumption |
 
 When in doubt, run the live session (§3) and step through — a real
@@ -261,8 +246,8 @@ The `stepCount` field on the session-start envelope is the size of the
 fully-expanded runtime step list (top-level + every nested
 EvaluateFlow / StepGroup child). The forensic `debug steps` trace
 reports `total_steps` for the steps the run actually executed — which
-is normally smaller because branches, recovered shortcuts, or early
-failures stop the walk before every nested step runs. The two numbers
+is normally smaller because a branch or an early failure stops the
+walk before every nested step runs. The two numbers
 describing the same test will disagree by design; don't try to
 reconcile them.
 
@@ -407,16 +392,15 @@ stdout) is your green check.
 **Reuse vs. restart.** Keep using the same `<sid>` while iterating —
 the session holds the browser, cookies, and state from earlier steps,
 which is what you want. Start a fresh `session start --run-id <jr-id>`
-only when (a) the fix changed code the runtime loads at startup (a CLI
-rebuild, an executor change), (b) the browser is in a bad state you
-can't unstick, or (c) you want a clean reproduction to attach to the
-PR.
+only when (a) you upgraded the mabl CLI, since the runtime is loaded
+at startup, (b) the browser is in a bad state you can't unstick, or
+(c) you want a clean reproduction to attach to the PR.
 
-For app-code fixes, the productive cycle is: edit → rebuild CLI (see
-`build:local` in CLAUDE.md) → fresh `session start` → `run-to-step` →
-`run-step` on the failing id. For test-only fixes (selector, wait,
-assertion), no rebuild is needed — update the test definition and
-`run-step` directly.
+For app-code fixes, the productive cycle is: edit → rebuild the app
+under test → fresh `session start` → `run-to-step` → `run-step` on
+the failing id. For test-only fixes (selector, wait, assertion), no
+rebuild is needed — update the test definition and `run-step`
+directly.
 
 ---
 
@@ -445,19 +429,19 @@ from triage to a `run-to-step`, copy `step_id` (not `step_id_in_test`).
 `debug session list-steps` shows `step_id` under the `id` field.
 
 **`step_id` is *usually* stable across the two surfaces — but not
-always.** When flows have persisted `json_steps` ids, the `step_id`
-string `debug steps` prints is the same one `list-steps` shows under
-`id` and the same one `run-step` / `run-to-step` / `set-current-step`
-accept. Direct copy, no translation.
+always.** Most of the time the `step_id` string `debug steps` prints
+is the same one `list-steps` shows under `id` and the same one
+`run-step` / `run-to-step` / `set-current-step` accept. Direct copy,
+no translation.
 
-For flows whose `json_steps` lack ids (older tests, freshly imported
-flows, some training paths), the two surfaces address the same step
-through different ids: `debug steps` prints whatever runtime stepId
-the trace recorded, and `list-steps` falls back to a synthetic
-`<flow-id>:<flat-index>` shape. Those strings won't match each other.
-**When you can't copy `step_id` straight through, address the live
-step by `position` instead** — `list-steps` always emits one
-(`"3"`, `"3.2"`) and every live command accepts it.
+On some tests — older ones, and freshly imported flows — the two
+surfaces address the same step through different ids: `debug steps`
+prints whatever runtime stepId the trace recorded, and `list-steps`
+falls back to a synthetic `<flow-id>:<flat-index>` shape. Those
+strings won't match each other, so **compare them before you copy.**
+If the `id` in `list-steps` isn't the `step_id` the trace gave you,
+address the live step by `position` instead — `list-steps` always
+emits one (`"3"`, `"3.2"`) and every live command accepts it.
 
 `set-current-step`'s JSON response includes a `stepId` field that's
 always the addressable form (canonical or synthetic) — safe to feed

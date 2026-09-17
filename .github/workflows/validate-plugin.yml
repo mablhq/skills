@@ -5,9 +5,16 @@ on:
   push:
     branches: [main]
 
+# Every step only reads the checkout, so read-only is the whole grant.
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: 'ubuntu-latest'
+    # Seconds-long checks over PR-author-controlled files. A bound means a
+    # pathological input costs a minute, not the six-hour default.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 #v6.0.9
@@ -44,3 +51,16 @@ jobs:
       # in parity with the Claude manifest and the marketplace points at it.
       - name: Validate Codex cross-surface parity
         run: node .github/scripts/validate-codex-parity.mjs
+      # The frontmatter folding rules are what the description budget is
+      # measured against, so they get direct tests — and they run before the
+      # validator, so a broken reader can't green-light a PR.
+      - name: Test the frontmatter reader
+        run: node --test .github/scripts/lib/frontmatter.test.mjs
+
+      # No validator checks the skills themselves against what the install
+      # surfaces require, so check that here: frontmatter name == folder name,
+      # a description short enough that Codex won't truncate it, only the keys
+      # the Agent Skills spec allows, and a declared dependency for every
+      # sibling skill a body routes to.
+      - name: Validate skills
+        run: node .github/scripts/validate-skills.mjs
