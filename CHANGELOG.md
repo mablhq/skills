@@ -5,6 +5,21 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.1] - 2026-09-17
+### Fixed
+- `mabl-test-edit` now uses the parameter and response field names the mabl MCP
+  server actually accepts. Every step-edit example passed `test_id`, `flow_id`,
+  `step_index`, `if_match` or `acknowledge_shared`, which the server renamed to
+  camelCase and now rejects, so an agent following the skill got an error back
+  instead of an edit. Responses moved the same way: `used_by`, `used_by_sample`,
+  `version_token`, `blocked_parameters`, `flows_persisted` and `flows_failed`
+  are `usedBy`, `usedBySample`, `versionToken`, `blockedParameters`,
+  `flowsPersisted` and `flowsFailed`. The concurrency example is the one that
+  mattered most — `ifMatch` is optional, so a call written the old way saved
+  unconditionally instead of failing. The two edit tools also take the same
+  step-operation fields now; only the optional `flowId` that routes a
+  test-level edit differs.
+
 ## [1.9.0] - 2026-09-10
 ### Added
 - `mabl-test-impact` — the step between green unit tests and opening a PR. Given a
