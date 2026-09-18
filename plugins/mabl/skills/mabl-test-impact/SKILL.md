@@ -43,7 +43,7 @@ doing, and not the others.
 | File | Read it when |
 |---|---|
 | `references/setup.md` | The user asked you to set this up or check it — walk its checklist and report every row. Or something failed mid-workflow — jump to the matching symptom row only. Never to reassure yourself a working setup works |
-| `references/screening.md` | Screening more than a couple of candidates: quality bands, the `run_context` field table, what a bulk query's silence means, which target a run resolves, the local target gates, banding and the cleanup contract |
+| `references/screening.md` | Screening more than a couple of candidates: quality bands, the `runContext` field table, what a bulk query's silence means, which target a run resolves, the local target gates, banding and the cleanup contract |
 | `references/local-run-dispatch.md` | Dispatching a wave: the canary command, then the local-CLI specifics — the defaults that mislead, a worked parallel script, reading its exit codes |
 | `references/report.md` | Writing the report, or re-validating on a follow-up commit |
 | `references/ci-advisory.md` | Running the analysis inside CI, with nothing dispatched |
@@ -62,7 +62,7 @@ Use these words, in these spellings, in the run plan and the report alike.
 | **Impacted set** | Every test the analysis returned. The **run set** is that set after scope, screening, and approvals |
 | **Run plan** | What you intend to run, written before the wave. The **report** is what happened, written after (**Report the validation**) |
 | **Account** | The tenant inside the application under test. **Workspace** always means the mabl workspace, never the tenant |
-| **GenAI assertions** | mabl's model-backed assertions and conditions — `run_context.ai_assertions` (**Hard gates**) |
+| **GenAI assertions** | mabl's model-backed assertions and conditions — `runContext.aiAssertions` (**Hard gates**) |
 | **Site notes** | Your project's pins, policy, and recipes for this skill. **Project memory** — `CLAUDE.md`, `AGENTS.md`, or a doc one of them points to — is where they live (`references/customizing.md`) |
 
 ## 1. The default workflow
@@ -156,7 +156,7 @@ cache (`references/setup.md` row 3). Then keep going — except in CI advisory m
 the change finds candidates, and everything downstream works the same on a set found that way.
 
 **Report the fallback as a fallback.** A searched set has no `role`, no per-test `context`, no
-`coverage_gaps`, no `more_may_exist`, and no `run_context`: omit the `Analysis` line, record
+`coverageGaps`, no `moreMayExist`, and no `runContext`: omit the `Analysis` line, record
 `Gaps: not analyzed (impact analysis unavailable)`, and screen by explicit lookups instead
 (`references/screening.md`). An invented gap list is worse than an absent one, because a reader
 can act on it.
@@ -202,7 +202,7 @@ preference, not the workspace your API key was created for, and no switcher or C
 set-workspace`. Your default workspace decides whether the tool is *visible* (**Preflight**),
 never which workspace it analyzes. **You still need that workspace id in hand**, because the
 dispatch in **Run it** and the fallback search in **Honest limits** both take one explicitly — and
-every `view_test_url` is `/workspaces/<workspace-id>/train/tests/<test-id>/current`, so reading
+every `viewTestUrl` is `/workspaces/<workspace-id>/train/tests/<test-id>/current`, so reading
 one confirms the workspace the analysis actually resolved. If it isn't the one you passed, fix the
 application, not the workspace.
 
@@ -214,7 +214,7 @@ results look shallow, check which application you passed before rewriting the de
 depth that was never on offer.
 
 **Pin the target per group, not globally, and pin it from run history.** A candidate's *runnable*
-target is the triple its recent **passing** plan runs used, while `run_context.defaults` carries
+target is the triple its recent **passing** plan runs used, while `runContext.defaults` carries
 what was recorded on the test at authoring time; the two routinely disagree, and run history
 decides. Read `defaults` first, because it is free and it groups the set, then confirm the triple
 you dispatch against `list_mabl_test_runs`. The credential decides which account receives writes
@@ -261,27 +261,27 @@ look tidy; read the fields and act:
   relationship — not a mark against the test.
 - **`context`** — the per-test reason it surfaced, with provenance and caveats. This is what makes
   your run plan reviewable by someone else; carry it through rather than re-describing the test.
-- **`coverage_gaps`** — surface these as candidate targets for new tests, each with an offer to
+- **`coverageGaps`** — surface these as candidate targets for new tests, each with an offer to
   author it (**Report the validation**). Absence from the list is not proof of coverage (**Honest
-  limits**), and **an empty `coverage_gaps` on a brand-new surface is the expected reading, not a
+  limits**), and **an empty `coverageGaps` on a brand-new surface is the expected reading, not a
   clean bill:** the tool cannot index a surface no test could have touched yet, so reason about that
   gap yourself.
-- **`more_may_exist`** true means the set hit the result ceiling, not that nothing else is
-  relevant. Don't present it as exhaustive; `more_may_exist_note` hints at how to narrow a
+- **`moreMayExist`** true means the set hit the result ceiling, not that nothing else is
+  relevant. Don't present it as exhaustive; `moreMayExistNote` hints at how to narrow a
   follow-up call.
-- **`run_context`** — the screening facts for that test: most of **Screen before you run**,
+- **`runContext`** — the screening facts for that test: most of **Screen before you run**,
   arriving with the analysis instead of after it.
 
 The result as a whole also names the scope it ran in and the session behind it:
-**`workspace_id`** and **`application_id`** are the workspace and application the analysis
+**`workspaceId`** and **`applicationId`** are the workspace and application the analysis
 actually ran against, as the server validated them — not necessarily what you thought you passed,
-which is what makes them worth recording. **`session_id`** is the agent session that recorded the
+which is what makes them worth recording. **`sessionId`** is the agent session that recorded the
 analysis, and the join key for its trace; it is optional, and absent when no session was opened.
-`workspace_id` is the direct answer to the question **Scope the call** has you read off a
-`view_test_url` — the workspace the analysis actually resolved — so confirm the scope against it
+`workspaceId` is the direct answer to the question **Scope the call** has you read off a
+`viewTestUrl` — the workspace the analysis actually resolved — so confirm the scope against it
 rather than by parsing a URL.
 
-Each result also carries **`test_invariant_id`** and **`view_test_url`**. Include the url when you
+Each result also carries **`testId`** and **`viewTestUrl`**. Include the url when you
 surface a test or a gap so the reader can open it; carry the id through, because it is what every
 screening and run mechanism downstream takes as its key. A very large set is itself a signal your
 change is broad — group and order it (**Run it**) rather than trimming keep-worthy tests.
@@ -307,7 +307,7 @@ survives. The default, `all impacted`, resolves to everything and changes nothin
 | Scope | Resolve it with |
 |---|---|
 | **All impacted** (default) | Nothing to resolve; the impacted set is the scope |
-| **Plan(s), by id or name** | A name resolves first: page `list_mabl_plans` and match the exact name; zero or more than one match is a question for the user, not a guess. Then `get_mabl_plan` per id — the union of `execution_stages[].tests[].journey_id`, with any trailing `:N` version suffix stripped so the ids compare with `test_invariant_id`. Pass `includePlans: true` on the analysis too, so the run plan can show membership |
+| **Plan(s), by id or name** | A name resolves first: page `list_mabl_plans` and match the exact name; zero or more than one match is a question for the user, not a guess. Then `get_mabl_plan` per id — the union of `execution_stages[].tests[].journey_id`, with any trailing `:N` version suffix stripped so the ids compare with `testId`. Pass `includePlans: true` on the analysis too, so the run plan can show membership |
 | **Label set** | `list_mabl_tests` with `labels`, `applicationId`, and `limit: 200`. **A label or application filter never returns `nextCursor`**, so a page that filled the limit comes back `truncated: true` with nothing to continue it — an incomplete scope, not a finished one (`references/screening.md`). When the change under review names a mabl branch, call it once with that `branch` too and union the results, or a test authored on the branch for this change is wrongly reported out of scope |
 | **Explicit ids** | Includes narrow: the scope set is the impacted set ∩ the ids named. Excludes subtract, and they subtract **last** — after the scope, the default, and any critical set — with each excluded test reported `not run · out of scope · excluded` |
 
@@ -330,19 +330,19 @@ is the one addition to the run set, and it buys those tests a place in the wave,
 screen below — band them like everything else, and keep an explicitly excluded test out even when
 it carries the label.
 
-### run_context
+### runContext
 
-Each result carries **`run_context`** — the facts you would otherwise have fetched, whenever
-enrichment could run for that test at all: `enabled`, `test_type`, `mobile_platform`,
-`step_count`, `ai_assertions`, `run_history`, `quality`, `defaults`, optional `plans`, and
-`incomplete_reasons` naming whatever didn't resolve. Two result-level fields go with them:
-**`quality_window`**, the window every `quality` was computed over, and
-**`run_context_incomplete`**, true when enrichment failed anywhere in the set. **→
+Each result carries **`runContext`** — the facts you would otherwise have fetched, whenever
+enrichment could run for that test at all: `enabled`, `testType`, `mobilePlatform`,
+`stepCount`, `aiAssertions`, `runHistory`, `quality`, `defaults`, optional `plans`, and
+`incompleteReasons` naming whatever didn't resolve. Two result-level fields go with them:
+**`qualityWindow`**, the window every `quality` was computed over, and
+**`runContextIncomplete`**, true when enrichment failed anywhere in the set. **→
 `references/screening.md`** for the field-by-field table and the absence tokens.
 
 **So screening starts by reading, not by fetching.** Reach for `get_test_quality_report`,
 `list_mabl_tests`, `get_mabl_test`, `list_mabl_test_runs`, or the credential and environment lists
-for a field that is *absent*, or for something `run_context` doesn't carry at all — a test's
+for a field that is *absent*, or for something `runContext` doesn't carry at all — a test's
 steps, the dominant failure category — not to re-confirm what it already answered. **`plans` is
 the opt-in one**, costing a lookup per returned test: pass `includePlans: true` only when plan
 membership is part of the question, such as recommending an existing plan over N ad-hoc runs
@@ -350,26 +350,26 @@ membership is part of the question, such as recommending an existing plan over N
 
 ### Absent fields
 
-**An absent field is never "fine," and this is the rule the rest of it rests on.** `run_context`
+**An absent field is never "fine," and this is the rule the rest of it rests on.** `runContext`
 omits a field rather than sending `null` or `false`, so an absence is silence — and silence looks
 identical whether the answer would have been good news or bad. A missing `enabled` does not mean
-enabled. A missing `quality` does not mean a clean history. A missing `credentials_id` does not
+enabled. A missing `quality` does not mean a clean history. A missing `credentialsId` does not
 mean the test runs without credentials.
 
 Absences come in three flavours. Only the last is nothing to worry about, and none of them is
 "fine":
 
 - **Not resolved.** The lookup behind the field failed, was capped, or ran out of time — the case
-  for `enabled`, `test_type`, `quality`, `ai_assertions`, `step_count` on a test that isn't a
-  performance test, and for everything at once when `defaults` or `run_context` is missing
+  for `enabled`, `testType`, `quality`, `aiAssertions`, `stepCount` on a test that isn't a
+  performance test, and for everything at once when `defaults` or `runContext` is missing
   wholesale. Read these as **unknown**: screen them another way, or say you couldn't.
-- **Not recorded.** `environment_id`, `credentials_id`, and `datatable_ids` come straight off the
+- **Not recorded.** `environmentId`, `credentialsId`, and `dataTableIds` come straight off the
   test, so when `defaults` is present their absence is a fact: the test's authoring-time
   configuration names none. That is still not a statement about the run — a plan carries its own
   environment and credentials, and a cloud run given none proceeds on a warning — so it changes
   what you go and read (the run history in **Scope the call**), not whether you have to.
-- **Not applicable, or not asked for.** `step_count` on a `performance` test and `plans` on a call
-  that didn't set `includePlans` are absent by design — `test_type` is what distinguishes the first
+- **Not applicable, or not asked for.** `stepCount` on a `performance` test and `plans` on a call
+  that didn't set `includePlans` are absent by design — `testType` is what distinguishes the first
   from a failed step scan. Nothing failed and there is nothing to chase, but they are also not
   answers, so don't report them as ones.
 
@@ -377,7 +377,7 @@ Carry every unresolved field into the run plan and the report as *unknown*.
 
 The same rule governs every list you still consult: **each is bounded — by a row cap, a page size,
 or a minimum-runs filter — so something's absence from a response never means "fine," only "not
-answered."** Diff your impacted `test_invariant_id` values against whatever came back and carry
+answered."** Diff your impacted `testId` values against whatever came back and carry
 anything missing as *unknown* rather than screened. Screening a set where some of the data didn't
 resolve is a legitimate outcome; presenting it as screened is not. **→ `references/screening.md`**
 for the tokens that name each flavour and the bounds of each tool.
@@ -385,30 +385,30 @@ for the tokens that name each flavour and the bounds of each tool.
 ### Hard gates
 
 **Check always; skip and alert.** Conditions where a run gives you no signal about your change, in
-any workflow. Each reads off `run_context`:
+any workflow. Each reads off `runContext`:
 
 - **Disabled?** `enabled: false` — skip it, but alert on it: a disabled test sitting in the
   impacted set is itself a coverage signal. Absent is unknown, and `get_mabl_test` settles one
   test's `enabled`.
-- **Nothing to execute?** `step_count: 0` — the test matched on its name or description and has no
+- **Nothing to execute?** `stepCount: 0` — the test matched on its name or description and has no
   steps of its own, so there is nothing to break (**Honest limits**). Don't run it and don't let
-  it headline the plan, but give it a row, *not run · no executable steps*. When `step_count` is
-  *absent*, `test_type` says which absence you have: `performance` means absent by design, any
+  it headline the plan, but give it a row, *not run · no executable steps*. When `stepCount` is
+  *absent*, `testType` says which absence you have: `performance` means absent by design, any
   other type means the steps couldn't be scanned — unknown, not zero.
-- **Runnable by the mechanisms in the run step?** `test_type` tells you: mobile tests can't be
+- **Runnable by the mechanisms in the run step?** `testType` tells you: mobile tests can't be
   dispatched through the ad-hoc run tools at all, and api and performance tests run through their
   own runners rather than the browser path in **Run it**. Report those as impacted and outside
   what this workflow can dispatch, which keeps them out of a wave that will never take them.
 - **Already failing, or just unreliable?** Cite mabl's own `quality.score`, gated by
-  `quality.total_plan_runs` as a second axis, rather than binarizing on the last run or inventing
+  `quality.totalPlanRuns` as a second axis, rather than binarizing on the last run or inventing
   a pass-rate band. **Never quote a bare rate:** "0% pass rate" is not a finding until it carries
   score, sample count, window, latest run, latest *pass*, and dominant failure category, because a
   0% over three runs last quarter and a 0% over ninety runs this week justify opposite decisions.
-  Five ride along with the result — score, sample, window (`quality_window`), and the latest run
-  and latest pass from `run_history` (`latest_status`/`latest_run_time`, `last_passed_time`; a
-  workspace-wide 10-run sample, so a missing `last_passed_time` means no pass *in that sample*) —
+  Five ride along with the result — score, sample, window (`qualityWindow`), and the latest run
+  and latest pass from `runHistory` (`latestStatus`/`latestRunTime`, `lastPassedTime`; a
+  workspace-wide 10-run sample, so a missing `lastPassedTime` means no pass *in that sample*) —
   and only the dominant failure category still costs a `list_mabl_test_runs` call.
-- **Billable GenAI assertion?** `run_context.ai_assertions: true`. Cloud: dispatch normally — the
+- **Billable GenAI assertion?** `runContext.aiAssertions: true`. Cloud: dispatch normally — the
   cost is assumed. Local: `tests run` hard-fails without `--allow-billable-features`, and that
   flag spends credits, which is not inside your grant — so the test leaves the local automatic
   wave and joins the ask with the reason *needs `--allow-billable-features`*. Absent means the
@@ -416,7 +416,7 @@ any workflow. Each reads off `run_context`:
   failure.** A site note may record a team policy that permits it (`references/customizing.md`);
   nothing else does.
 - **No baseline and no history are reasons to read the test, not to skip it.**
-  `quality_note: no_plan_runs_in_window` says the test had no plan runs inside `quality_window`,
+  `qualityNote: no_plan_runs_in_window` says the test had no plan runs inside `qualityWindow`,
   **not** that it never ran, so check `list_mabl_test_runs` before calling a test new. Either way it
   runs, flagged `no quality baseline in window` — or `no run history` when nothing recent came back
   at all — because a failure there needs interpreting rather than assuming it is yours, and a
@@ -433,7 +433,7 @@ any workflow. Each reads off `run_context`:
   a test authored on the branch predates the change: the reverse of what you meant to validate.
 
 **Local runs have two more gates** — does step 1 navigate, and, when neither `--url` nor `--run-id`
-supplies the url, is `defaults.url_set` true — with the certificate a local target needs:
+supplies the url, is `defaults.urlSet` true — with the certificate a local target needs:
 `references/screening.md`, **Local target gates**.
 
 ### Target confirmation
@@ -513,15 +513,15 @@ rather than a guess:
   start yourself**, because a plan contains whatever its author put in it: tests you never
   screened, never banded, and may never have seen. The same goes for `run_mabl_plan`,
   `rerun_mabl_plan`, and re-running a failed test with `rerun_mabl_test` to test for flake. **This
-  is the case `includePlans` exists for** (**run_context**): it names the plans already covering
-  your candidates, with the `enabled`, `browser_types`, `retry_on_failure`, and `has_triggers` a
+  is the case `includePlans` exists for** (**runContext**): it names the plans already covering
+  your candidates, with the `enabled`, `browserTypes`, `retryOnFailure`, and `hasTriggers` a
   reader needs to judge the recommendation. **A plan run scope is not permission either:** *"only
   run the tests in plan X"* narrows what you dispatch one call at a time to that plan's members.
 - **Environment honesty:** mabl tests run against a **deployed** app, so a cloud run exercises
   deployed code, not your uncommitted working tree. Validating local changes needs a local run
   path or a preview deploy; say which applies, and **don't imply a cloud run tests your branch.**
 - **Data-driven tests cover less ad hoc than the DataTable suggests.** A non-empty
-  `run_context.defaults.datatable_ids` means the test is parameterized, so one ad-hoc run
+  `runContext.defaults.dataTableIds` means the test is parameterized, so one ad-hoc run
   exercises one scenario out of a set — and that is all `defaults` proves, being the
   authoring-time configuration rather than what any plan does at run time (**Scope the call**).
 
@@ -530,12 +530,12 @@ Shape it like this:
 > **Scope** — plan *Nightly regression* · N of M impacted tests in scope
 >
 > **Running now** — read-only · contained — N tests
-> - `[validates]` **Checkout - Shipping address validation** — one-line context · [view test](view_test_url)
-> - `[uses]` **Catalog - Search results** — one-line context · [view test](view_test_url)
-> - `[critical]` **Account - Sign in** — always-run label `smoke` · [view test](view_test_url)
+> - `[validates]` **Checkout - Shipping address validation** — one-line context · [view test](viewTestUrl)
+> - `[uses]` **Catalog - Search results** — one-line context · [view test](viewTestUrl)
+> - `[critical]` **Account - Sign in** — always-run label `smoke` · [view test](viewTestUrl)
 >
 > **Needs your approval** — shared-state · unverified — N tests
-> - **Account - Saved addresses - Bulk delete** — what it writes and where · [view test](view_test_url)
+> - **Account - Saved addresses - Bulk delete** — what it writes and where · [view test](viewTestUrl)
 >
 > **Not running** — N tests
 > - **Checkout - Guest express pay** — disabled · quality `<score>` across `<n>` runs
@@ -557,7 +557,7 @@ to run" is the *unless the request says otherwise* that **The default workflow**
 
 **Ask about the second group, and don't start it until someone answers.** Shared-state and
 unverified runs write data in real accounts other people see, and no amount of screening makes
-that your call. Surface the exact calls for both groups — `test_invariant_id` is what an id-based
+that your call. Surface the exact calls for both groups — `testId` is what an id-based
 run mechanism takes, and **display names are not unique**, so a name-keyed reference can silently
 collapse two distinct tests into one.
 
@@ -668,11 +668,11 @@ report and stop; don't edit the test yourself.
 
 **The flake row needs evidence, not a shrug** — it is last in the table and catches everything the
 other four didn't claim, which is how a regression gets written off as flaky. The evidence came back
-with the analysis: `run_context.quality` carries `flake_rate`, `flaky_plan_runs`, and
-`last_flaky_time` beside the score, over `quality_window`, and weighed against `total_plan_runs`
+with the analysis: `runContext.quality` carries `flakeRate`, `flakyPlanRuns`, and
+`lastFlakyTime` beside the score, over `qualityWindow`, and weighed against `totalPlanRuns`
 they calibrate how much one failure is worth, not what it means — a chronically flaky test can still
 be broken by your diff. A zero flake count rules out prior intermittent behavior inside that window,
-and `runs_capped: true` says the score was computed over a truncated sample of it, so read it as
+and `runsCapped: true` says the score was computed over a truncated sample of it, so read it as
 directional. **An absent `quality` is unknown, not zero** (**Absent fields**), so check
 `list_mabl_test_runs` and `get_mabl_test_run_failure_reason` rather than reading silence as clean. A
 rerun that doesn't reproduce is strong flake evidence; one that does only narrows the field.
@@ -730,7 +730,7 @@ the report says nothing ran (`references/ci-advisory.md`).
 ```
 ## Test impact analysis
 Scope:      <application> · <workspace> · <deployment> · <what ran: see below> · <PR @ commit sha> · scope: <plan names | labels | all impacted> (<in-scope>/<impacted> in scope)
-Analysis:   <N> candidates, <N> gaps · more_may_exist: <bool> · run_context_incomplete: <bool>
+Analysis:   <N> candidates, <N> gaps · moreMayExist: <bool> · runContextIncomplete: <bool>
 Validated:  <test> — passed | failed · <cause>
 Previously: <test> — passed · carried from <sha>   (follow-up commits only; never counted in Validated)
 Not run:    <test> — disabled | quality <score> across <n> runs | pending approval · shared-state | out of scope · plan <name>
@@ -745,7 +745,7 @@ was started from, or a grep of the served bundle for something your change intro
 confirmation**). The commit field says what you *meant* to validate; this field is the only one
 that says what was *there*.
 
-Every row carries its `view_test_url`; the compressed form above elides them only to show the
+Every row carries its `viewTestUrl`; the compressed form above elides them only to show the
 shape. **→ `references/report.md`** for the full template, what each field is load-bearing for,
 and how a previous report changes what a follow-up commit has to re-run.
 
@@ -763,7 +763,7 @@ the gap in the report, say what authoring it needs, and stop there.
 
 ## 9. Honest limits
 
-- **Absence is inconclusive.** A test not in the results — or an area not in `coverage_gaps` — is
+- **Absence is inconclusive.** A test not in the results — or an area not in `coverageGaps` — is
   **not** proof the change is covered. It may simply be unmodeled or unmatched; coverage gaps and
   tool misses look identical here.
 - **API and performance tests may not rank.** Text and semantic search are tuned for browser-flow
@@ -771,7 +771,7 @@ the gap in the report, say what authoring it needs, and stop there.
   missing from the set rather than assuming they were considered.
 - **A result can match on prose rather than on steps.** Retrieval reads descriptions and authoring
   notes too, so a test with no executable steps can surface — and rank well — because its
-  *write-up* describes your area. `run_context.step_count` is the check.
+  *write-up* describes your area. `runContext.stepCount` is the check.
 - **The analysis is scoped to one application.** Near-duplicate tests covering the same surface can
   live in a different one, where a single call cannot see them, so when a change hits shared UI ask
   whether another application covers the same ground before calling the set complete. If a shared

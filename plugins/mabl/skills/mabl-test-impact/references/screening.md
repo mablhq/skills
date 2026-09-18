@@ -10,26 +10,26 @@ the call you make when it didn't. Both are here, and the interpretation is the s
 
 ## Scoring reliability: quality score, not a pass rate
 
-Each impact result carries its own `run_context.quality` — `score` (0–100), `total_plan_runs`,
-`runs_capped`, and the flake fields — computed over the response's `quality_window`, so for the
+Each impact result carries its own `runContext.quality` — `score` (0–100), `totalPlanRuns`,
+`runsCapped`, and the flake fields — computed over the response's `qualityWindow`, so for the
 candidates the analysis returned this is a reading exercise, not a fetch. `get_test_quality_report`
 is the same server-computed number, and the tool you fall back to when a lookup left `quality`
 absent, when you're screening tests the analysis didn't return, or when you need a different window.
-It won't help against `quality_note: no_plan_runs_in_window` — a test with no runs in the window is
+It won't help against `qualityNote: no_plan_runs_in_window` — a test with no runs in the window is
 excluded from the report too, so that call comes back just as empty.
 
 The score is a composite of pass rate, reliability rate, stability rate, and breakage/transition
 history — the quality-report tool contract says it is *"computed server-side using the product's
 canonical formula; do not re-derive it from raw test runs."* Cite that score; don't invent your own
-bands. Read it against `total_plan_runs` as an **independent second axis**: one tells you whether
+bands. Read it against `totalPlanRuns` as an **independent second axis**: one tells you whether
 there is enough data for the score to mean anything, the other whether the news is good or bad.
 Collapsing them into one number downgrades confident bad news to a shrug — a low score at high
-`total_plan_runs` is confident bad news, not ambiguity.
+`totalPlanRuns` is confident bad news, not ambiguity.
 
-| `total_plan_runs` | `score` | Verdict |
+| `totalPlanRuns` | `score` | Verdict |
 |---|---|---|
-| 0, or `quality` absent **for a stated reason** — a `quality_note`, with neither `quality_source_unavailable` nor `enrichment_timeout` in `incomplete_reasons` | *(none)* | Run it, flagged `no quality baseline in window`; only when `run_history` is also absent with no `incomplete_reasons` token has the test not run recently, and the flag is `no run history`. Either way read its steps and band it — the read replaces the score rather than the skip doing it |
-| `quality` absent **because the lookup failed** — `quality_source_unavailable` or `enrichment_timeout` in `incomplete_reasons` | *(unknown)* | Not a baseline, a gap: the test may have ninety runs at score 3 and you just can't see them. Recover it with `get_test_quality_report` before you band, and apply whichever row it lands in. If it stays unresolved, say **unknown** on the row — steps tell you what the test does, not how it has been doing |
+| 0, or `quality` absent **for a stated reason** — a `qualityNote`, with neither `quality_source_unavailable` nor `enrichment_timeout` in `incompleteReasons` | *(none)* | Run it, flagged `no quality baseline in window`; only when `runHistory` is also absent with no `incompleteReasons` token has the test not run recently, and the flag is `no run history`. Either way read its steps and band it — the read replaces the score rather than the skip doing it |
+| `quality` absent **because the lookup failed** — `quality_source_unavailable` or `enrichment_timeout` in `incompleteReasons` | *(unknown)* | Not a baseline, a gap: the test may have ninety runs at score 3 and you just can't see them. Recover it with `get_test_quality_report` before you band, and apply whichever row it lands in. If it stays unresolved, say **unknown** on the row — steps tell you what the test does, not how it has been doing |
 | < 5 | *(any)* | Not enough data for the score to mean anything — read the actual runs via `list_mabl_test_runs`, don't quote a percentage |
 | ≥ 5 | ≥ 90 | Trust the result |
 | ≥ 5 | 40–89 | Run it, but treat a single failure as inconclusive — look at the trend, not the latest run |
@@ -39,71 +39,71 @@ Why the score and not a raw pass rate: a test that alternates between pass and f
 run has a middling pass rate and a near-zero score, because the score sees the pass/fail
 *transitions* a rate cannot. A rate-only rule ranks that noise above genuinely better tests.
 
-**The two responses spell the score differently.** `run_context.quality.score` and the quality
-report's `quality_score` are the same number under two names; `total_plan_runs` is spelled the same
-in both. Don't go hunting for `quality_score` inside an impact result and conclude it is missing.
+**The two responses spell the score differently.** `runContext.quality.score` and the quality
+report's `qualityScore` are the same number under two names; `totalPlanRuns` is spelled the same
+in both. Don't go hunting for `qualityScore` inside an impact result and conclude it is missing.
 
 **Quote the score with its context, never on its own.** Six fields make a reliability claim
-readable, and five of them arrive with the impact result: the score, `total_plan_runs`, the window
-(`quality_window`, or the range you passed the quality report), and the latest run and latest pass
-from `run_history` (`latest_status`/`latest_run_time` and `last_passed_time` — a workspace-wide
-10-run sample, so a missing `last_passed_time` means no pass *in that sample*, not never). Only the
+readable, and five of them arrive with the impact result: the score, `totalPlanRuns`, the window
+(`qualityWindow`, or the range you passed the quality report), and the latest run and latest pass
+from `runHistory` (`latestStatus`/`latestRunTime` and `lastPassedTime` — a workspace-wide
+10-run sample, so a missing `lastPassedTime` means no pass *in that sample*, not never). Only the
 dominant failure category still costs a `list_mabl_test_runs` call. A bare "0% pass rate" hides
 which situation you're in, and the latest-pass date is the one people forget and the one that most
 often settles it.
 
-Keep the whole `quality` object, not just the score: `flake_rate`, `flaky_plan_runs`, and
-`last_flaky_time` ride along with it and sit unused during screening, but `SKILL.md`'s **Diagnosing
-a failure** needs them to back a flake verdict. `runs_capped: true` means the score was computed
+Keep the whole `quality` object, not just the score: `flakeRate`, `flakyPlanRuns`, and
+`lastFlakyTime` ride along with it and sit unused during screening, but `SKILL.md`'s **Diagnosing
+a failure** needs them to back a flake verdict. `runsCapped: true` means the score was computed
 over a truncated sample of the window, so a capped score is directional.
 
-## The `run_context` fields
+## The `runContext` fields
 
 | Field | What it settles |
 |---|---|
 | `enabled` | The disabled gate, read live |
-| `test_type` | `browser`, `api`, `performance`, `mobile` and the like — whether the run mechanisms in `SKILL.md`'s **Run it** apply at all |
-| `mobile_platform` | The platform recorded on a `mobile` test. Read it with `test_type`: which runner and which device the test needs, neither half deciding on its own |
-| `step_count` | Whether there is anything to execute. `0` means the test matched on its name or description and has no steps of its own; absent for a performance test by design |
-| `ai_assertions` | Whether any scanned step carries a GenAI assertion or condition — the billable-flag decision in `SKILL.md`'s **Hard gates**, which is the one home for that rule |
-| `run_history` | A sample of the newest 10 runs — `latest_status`, `latest_run_time`, `last_passed_time`, `runs_examined`. Workspace-wide, with no time, environment, plan, or branch filter, so it is not the runs your intended target would produce |
-| `run_history_note` | Why `run_history` is absent when the sample held runs but none could be reported: `no_started_runs_examined`, `skipped_runs_examined`, `terminated_before_start_runs_examined`, `unreportable_runs_examined` |
-| `quality` | `score`, `total_plan_runs`, `runs_capped`, and the flake fields, over the response's `quality_window` |
-| `quality_note` | Why `quality` is missing for a real reason rather than a failed lookup |
-| `defaults` | `url_set`, `environment_id`, `credentials_id`, `credential_cloud_only`, `datatable_ids` — the run configuration recorded on the test at authoring time |
-| `plans` | Plan membership, and only when you asked for it with `includePlans` — capped at 5 per test, with `plans_truncated` in `incomplete_reasons` when a test belongs to more. Each entry carries `plan_id`, `name`, `enabled`, `browser_types`, `retry_on_failure`, `has_triggers` |
-| `incomplete_reasons` | Which of the above did not resolve for this test, by name |
+| `testType` | `browser`, `api`, `performance`, `mobile` and the like — whether the run mechanisms in `SKILL.md`'s **Run it** apply at all |
+| `mobilePlatform` | The platform recorded on a `mobile` test. Read it with `testType`: which runner and which device the test needs, neither half deciding on its own |
+| `stepCount` | Whether there is anything to execute. `0` means the test matched on its name or description and has no steps of its own; absent for a performance test by design |
+| `aiAssertions` | Whether any scanned step carries a GenAI assertion or condition — the billable-flag decision in `SKILL.md`'s **Hard gates**, which is the one home for that rule |
+| `runHistory` | A sample of the newest 10 runs — `latestStatus`, `latestRunTime`, `lastPassedTime`, `runsExamined`. Workspace-wide, with no time, environment, plan, or branch filter, so it is not the runs your intended target would produce |
+| `runHistoryNote` | Why `runHistory` is absent when the sample held runs but none could be reported: `no_started_runs_examined`, `skipped_runs_examined`, `terminated_before_start_runs_examined`, `unreportable_runs_examined` |
+| `quality` | `score`, `totalPlanRuns`, `runsCapped`, and the flake fields, over the response's `qualityWindow` |
+| `qualityNote` | Why `quality` is missing for a real reason rather than a failed lookup |
+| `defaults` | `urlSet`, `environmentId`, `credentialsId`, `credentialCloudOnly`, `dataTableIds` — the run configuration recorded on the test at authoring time |
+| `plans` | Plan membership, and only when you asked for it with `includePlans` — capped at 5 per test, with `plans_truncated` in `incompleteReasons` when a test belongs to more. Each entry carries `planId`, `name`, `enabled`, `browserTypes`, `retryOnFailure`, `hasTriggers` |
+| `incompleteReasons` | Which of the above did not resolve for this test, by name |
 
-**`run_history` is absent three different ways, and only one of them is a failure.** With
-`run_history_note`, the sample held runs none of which could be reported, and the note says which
+**`runHistory` is absent three different ways, and only one of them is a failure.** With
+`runHistoryNote`, the sample held runs none of which could be reported, and the note says which
 way. With neither the note nor a token, no recent runs came back — a test that has not run recently.
-With `run_history_source_unavailable` in `incomplete_reasons`, the lookup failed and the answer is
+With `run_history_source_unavailable` in `incompleteReasons`, the lookup failed and the answer is
 unknown.
 
 Three things tell you which flavour of absence you are looking at (`SKILL.md`, **Absent fields**):
 
-1. **`incomplete_reasons`** names what went wrong for *this* test — `test_fetch_failed`,
+1. **`incompleteReasons`** names what went wrong for *this* test — `test_fetch_failed`,
    `steps_not_scanned`, `quality_source_unavailable`, `credentials_source_unavailable`,
    `plans_fetch_failed`, `plans_truncated`, `enrichment_timeout`. A field one of those accounts for
    is unresolved, full stop. **The converse doesn't hold:** not every unresolved field gets a token —
-   a credential the caller simply can't see leaves `credential_cloud_only` absent and silent — so no
-   token is not a clearance either. (That flag is also absent and moot when `defaults.credentials_id`
+   a credential the caller simply can't see leaves `credentialCloudOnly` absent and silent — so no
+   token is not a clearance either. (That flag is also absent and moot when `defaults.credentialsId`
    is itself absent: no recorded credential, nothing to classify.)
-2. **`quality_note`** is the one absence with a stated benign explanation: `no_plan_runs_in_window`
-   means the lookup ran and found no plan runs inside `quality_window`. That is the no-baseline case,
+2. **`qualityNote`** is the one absence with a stated benign explanation: `no_plan_runs_in_window`
+   means the lookup ran and found no plan runs inside `qualityWindow`. That is the no-baseline case,
    not a failure — and not, by itself, a new test.
-3. **`run_context` missing entirely** means enrichment couldn't run for that test at all; nothing
+3. **`runContext` missing entirely** means enrichment couldn't run for that test at all; nothing
    about it has been screened.
 
 ## Every bulk query is bounded, so absence never means "fine"
 
 One rule governs every list you consult: **each is bounded — by a row cap, a page size, or a
 minimum-runs filter — so a candidate's absence from a response never means "fine," only "not
-answered."** Diff your impacted `test_invariant_id` values against whatever came back, and carry
-anything missing as *unknown* rather than screened. `run_context` closes that hole for the candidates
+answered."** Diff your impacted `testId` values against whatever came back, and carry
+anything missing as *unknown* rather than screened. `runContext` closes that hole for the candidates
 the analysis returned — every returned test gets its own row, and one that couldn't be resolved says
-so in `incomplete_reasons` instead of vanishing from a bulk response. The tools below are the
-fallback path, for a field `run_context` left absent, for a set you found through `search_mabl_tests`
+so in `incompleteReasons` instead of vanishing from a bulk response. The tools below are the
+fallback path, for a field `runContext` left absent, for a set you found through `search_mabl_tests`
 instead, or for a window the response didn't use. Their bounds are what the rule is about:
 
 - `list_mabl_tests(applicationId, limit:200)` gets enabled status for a whole application group in
@@ -113,7 +113,7 @@ instead, or for a window the response didn't use. Their bounds are what the rule
   no cursor to continue it. Results come most-recently-created-first, so past 200 tests that wall
   silently un-screens your oldest candidates. When `truncated` is set, split the query by `testType`
   or `branch`, or page the unfiltered catalog with `cursor` and apply the filters yourself. Then diff
-  here too: any impacted `test_invariant_id` missing from the response is *unscreened*, not enabled.
+  here too: any impacted `testId` missing from the response is *unscreened*, not enabled.
   Resolve each with `get_mabl_test`, and if you can't, label it **unknown**. It also filters on
   `labels` (any-of), `excludeLabels`, `branch`, and `testType`, which is what makes a label run scope
   resolvable in this same call, under the same truncation rule.
@@ -127,11 +127,11 @@ instead, or for a window the response didn't use. Their bounds are what the rule
 - **Tests with no runs in the window are handled differently by the two responses.** In the quality
   report they are simply invisible — even at `minPlanRuns: 1` — so you only find them by paging the
   report fully and diffing its ids against your impacted set. In an impact result they are stated:
-  `quality` absent with `quality_note: no_plan_runs_in_window`. Either way, run them, flag the
+  `quality` absent with `qualityNote: no_plan_runs_in_window`. Either way, run them, flag the
   missing baseline, and use `list_mabl_test_runs` (or `mabl tests get-runs`) to confirm a test is
   genuinely new rather than merely idle for the window you chose.
 - `list_mabl_test_runs` and `get_mabl_test_run_failure_reason` get you the dominant failure category
-  to quote. `run_history` already carries the latest run and the latest pass; the failure category is
+  to quote. `runHistory` already carries the latest run and the latest pass; the failure category is
   the part it does not.
 - `list_mabl_test_run_summaries` **looks like a shortcut and is not**: it returns one row per *run*,
   not per test, so a handful of chronically-failing tests crowd out everything else and can miss your
@@ -152,7 +152,7 @@ Two things the CLI can't give you. The **aggregate** — server-computed quality
 without looping per test — so bulk screening still wants the MCP tools. And **the test's own recorded
 target**: `tests list -o json` returns id, name, enabled, and timestamps but no url, and `tests
 export --format json` carries metadata plus steps but no `url`, `environmentId`, or `credentialsId`.
-An impact result covers most of that gap through `run_context.defaults`, but **not the url itself**,
+An impact result covers most of that gap through `runContext.defaults`, but **not the url itself**,
 so confirming the host a test points at still needs `get_mabl_test`.
 
 One trap has no CLI fallback at all: **`tests run --id <test>` bypasses the enabled check**
@@ -160,18 +160,18 @@ One trap has no CLI fallback at all: **`tests run --id <test>` bypasses the enab
 
 ## Which target a run will actually resolve
 
-**A candidate's runnable target lives in run history, not in test metadata.** `run_context.defaults`
+**A candidate's runnable target lives in run history, not in test metadata.** `runContext.defaults`
 carries what was recorded on the test at authoring time — what a bare run would resolve, which is not
 what the test's plans necessarily use. When the two disagree, run history decides
-(`SKILL.md`, **Scope the call**). `defaults.credentials_id` gives you the first cut for free:
+(`SKILL.md`, **Scope the call**). `defaults.credentialsId` gives you the first cut for free:
 candidates recording different credentials are different targets, visible before you fetch anything.
-An absent `credentials_id` means the test records none of its own, which is not the same as running
+An absent `credentialsId` means the test records none of its own, which is not the same as running
 without one — its plans can supply theirs, so run history still decides.
 
 **A candidate with no run history has no triple to read.** For those, the target is the one the
 preflight stated for the change, checked against the test's `defaults`: a `defaults` triple matching a
-group already pinned from history puts the test in that group; a recorded `environment_id` or
-`credentials_id` naming something *other* than the stated target is a question for the user, not a
+group already pinned from history puts the test in that group; a recorded `environmentId` or
+`credentialsId` naming something *other* than the stated target is a question for the user, not a
 tie-break; and `defaults` that record nothing leave the stated target standing. A test authored on
 the branch for the change under review has the clearest target of all — the deployment that serves
 the change. Either way the row says the target came from intent and `defaults`, not from history.
@@ -200,7 +200,7 @@ print at all for a mobile test. The rest of this list is what can make those lin
   (the CLI's own help says so: *"Setting the environment does not override the default URL. Please
   use the (—url) command to override the URL."*). If that field is unset the CLI **fails loudly**:
   *"No default URL found on test, please specify a URL using -u or --url flag."* Whether it is set is
-  the half you get for free — `run_context.defaults.url_set` — and `false` predicts exactly that
+  the half you get for free — `runContext.defaults.urlSet` — and `false` predicts exactly that
   error on a local run given no `--url`. That a url *is* set says nothing about whether it is the
   host you want.
 - `--run-id <test-run-id>` inherits url, environment, and credentials **together** from a real prior
@@ -208,8 +208,8 @@ print at all for a mobile test. The rest of this list is what can make those lin
   reproduces that run's target *exactly*, and that target can be **stale or ephemeral** (a per-PR
   preview host that no longer exists); the resolved-target header above is how you catch it, and
   `--url` overrides when the inherited target isn't what you want.
-- Credentials marked `cloud_only` are rejected for local runs. `run_context.defaults` answers this per
-  candidate with `credential_cloud_only`, present only when the test records a credential and that
+- Credentials marked `cloud_only` are rejected for local runs. `runContext.defaults` answers this per
+  candidate with `credentialCloudOnly`, present only when the test records a credential and that
   credential resolved — so an absent flag is unknown, not "safe for local." Without it, `credentials
   list` always warns that *"Cloud credentials are not available for local runs"* but never says
   **which** credential is the cloud-only one; the default table hides that field, so check with
@@ -275,28 +275,28 @@ does not, so screen for "does step 1 navigate," not for "does it pass in the clo
 candidates you plan to run locally. It is a defect in the test — the fix is a leading *Visit URL*
 step — so either pick a different candidate or say so in the row.
 
-`defaults.url_set: false` is a *different* local failure that arrives free with the results: the test
+`defaults.urlSet: false` is a *different* local failure that arrives free with the results: the test
 records no default URL, so a local `tests run` with neither `--url` nor `--run-id` fails immediately
 rather than guessing.
 Every dispatch in `SKILL.md`'s **Run it** pins the url explicitly, which is what makes that
-survivable. A `url_set: false` test has nowhere to navigate; the missing-*Visit URL* test above has
+survivable. A `urlSet: false` test has nowhere to navigate; the missing-*Visit URL* test above has
 somewhere and never goes there.
 
 ## Banding side effects without reading everything
 
-**This is the screening question `run_context` does not answer.** It scans steps for GenAI assertions
+**This is the screening question `runContext` does not answer.** It scans steps for GenAI assertions
 and counts them; it says nothing about whether a test creates, edits, or deletes, so banding stays a
 step read. Don't trust the test's own metadata either: a `description` can claim self-cleaning
 behavior its steps don't perform.
 
 Reading steps means `get_mabl_test_steps`, the **long pole** of screening — tens of kilobytes per
-test, no bulk form, because every selector carries full DOM metadata. `run_context.step_count` is the
+test, no bulk form, because every selector carries full DOM metadata. `runContext.stepCount` is the
 cheap forecast of that cost and lets you spend the reads where they buy the most; `0` means there is
 nothing to read and nothing to band. For a large set, triage rather than read all of them: band the
 highest-risk candidates properly and mark the rest **"side effects not verified"**, which puts them in
 the bottom band by rule rather than implying they are clean. **Never spend that shortcut on a
-candidate without a history baseline** — `quality` absent, `run_history` absent with no
-`incomplete_reasons` token, or any `run_history_note`. History is the other way to judge a test, so a
+candidate without a history baseline** — `quality` absent, `runHistory` absent with no
+`incompleteReasons` token, or any `runHistoryNote`. History is the other way to judge a test, so a
 candidate that has none has only its steps: read them and band it by what they do — **unverified**
 when those steps show a bulk delete, cascade or permission change, or when the step lookup failed,
 never as the shortcut. Take the shortcut instead and the test a dev wrote *for
