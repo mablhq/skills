@@ -45,9 +45,8 @@ choosing against a gap is the one way this mode runs something nothing asked for
 
 The caller's policy replaces the ask that an interactive pass would make:
 
-- **Carries one of the policy labels preflight names** (on mabl's own ui, `cicd-mabl-ui-smoke` or
-  `cicd-mabl-ui-regression`) — that suite already runs unattended against this environment, so the
-  test is dispatchable as it stands.
+- **Carries one of the policy labels preflight names** — the caller's standing suites that already
+  run unattended against this environment — so the test is dispatchable as it stands.
 - **Anything else** needs a `get_mabl_test_steps` read before it is kept, looking for what a run
   would leave behind: create, edit or delete steps, a payment, an email sent to a real address.
   Clean read, keep it. Side effects, or a read you could not complete, **drop it with that reason** —
