@@ -53,6 +53,11 @@ The caller's policy replaces the ask that an interactive pass would make:
   unverified is not safe, and there is no approver to escalate to (`references/screening.md`,
   **Banding side effects without reading everything**).
 
+**Keep browser tests only.** A test selection cannot mix API, performance or mobile tests with
+browser tests, and a preview URL is a browser target; drop anything whose `runContext.testType` is
+not `browser` with `not a browser test` as its reason. The caller drops them too if you miss one,
+but a row you dropped yourself carries your reason rather than the caller's.
+
 **Cap the kept set at 50.** A test selection cannot carry more, and the caller refuses a proposal
 that does. If the assessment keeps more than that, drop the weakest tail — `uses` before
 `validates` — and record each dropped row with `over the 50-test cap` as its reason.
@@ -81,8 +86,9 @@ Both are the caller's contract, and between them they are your entire output:
   copied, never summarized or trimmed.
 - **`run.json`** — `{"kept": [{"test_invariant_id", "test_name", "reason"}], "dropped":
   [{"test_invariant_id", "test_name", "reason"}], "selection_name"}`. Every test the analysis
-  returned appears in exactly one of `kept` and `dropped`, with its name as the analysis gave it. Nothing else: the deployment id and the plan run ids are the caller's to record
-  once it has dispatched.
+  returned appears in exactly one of `kept` and `dropped`, with its name as the analysis gave it.
+  Nothing else: the deployment id and the plan run ids are the caller's to record once it has
+  dispatched.
 
 **Write nothing else** — no report, no summary, no comment. A later step validates both files,
 dispatches, renders them, and reads the results; a page of test names you write yourself would be
