@@ -79,9 +79,9 @@ Both are the caller's contract, and between them they are your entire output:
 
 - **`analysis.json`** — the same six keys advisory mode writes, from this analysis: the analysis
   copied, never summarized or trimmed.
-- **`run.json`** — `{"kept": [{"test_invariant_id", "reason"}], "dropped": [{"test_invariant_id",
-  "reason"}], "selection_name"}`. Every test the analysis returned appears in exactly one of `kept`
-  and `dropped`. Nothing else: the deployment id and the plan run ids are the caller's to record
+- **`run.json`** — `{"kept": [{"test_invariant_id", "test_name", "reason"}], "dropped":
+  [{"test_invariant_id", "test_name", "reason"}], "selection_name"}`. Every test the analysis
+  returned appears in exactly one of `kept` and `dropped`, with its name as the analysis gave it. Nothing else: the deployment id and the plan run ids are the caller's to record
   once it has dispatched.
 
 **Write nothing else** — no report, no summary, no comment. A later step validates both files,
