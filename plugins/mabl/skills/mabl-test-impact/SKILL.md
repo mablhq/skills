@@ -47,7 +47,7 @@ doing, and not the others.
 | `references/local-run-dispatch.md` | Dispatching a wave: the canary command, then the local-CLI specifics — the defaults that mislead, a worked parallel script, reading its exit codes |
 | `references/report.md` | Writing the report, or re-validating on a follow-up commit |
 | `references/ci-advisory.md` | Running the analysis inside CI, with nothing dispatched |
-| `references/ci-run.md` | Running the analysis inside CI and dispatching the impacted set as one linked deployment |
+| `references/ci-run.md` | Running the analysis inside CI and deciding which of the impacted set the caller dispatches as one linked deployment |
 | `references/customizing.md` | Recording site notes after a first pass, and the precedence rule they follow |
 
 ### Vocabulary
