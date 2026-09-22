@@ -5,6 +5,13 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.3] - 2026-09-22
+### Changed
+- `mabl-test-impact` CI run mode: the unattended-safety step read now says which clicks count as
+  writes: the button that starts a run or submits a form does, the one that only opens the dialog
+  in front of it does not, and the reader reads past a click before deciding. Reviews of the same
+  test had landed on either side of that line.
+
 ## [1.9.2] - 2026-09-21
 ### Added
 - `mabl-test-impact` gains a second CI mode. Advisory stays the default — one
