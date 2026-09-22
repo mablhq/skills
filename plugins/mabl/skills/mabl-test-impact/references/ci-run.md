@@ -48,7 +48,11 @@ The caller's policy replaces the ask that an interactive pass would make:
 - **Carries one of the policy labels preflight names** — the caller's standing suites that already
   run unattended against this environment — so the test is dispatchable as it stands.
 - **Anything else** needs a `get_mabl_test_steps` read before it is kept, looking for what a run
-  would leave behind: create, edit or delete steps, a payment, an email sent to a real address.
+  would leave behind: any step that creates, edits or deletes an entity, and any click that saves,
+  submits or starts something — the button that starts a run or submits a form counts, the one
+  that only opens the dialog in front of it does not — plus a payment or an email sent to a real
+  address. Judge what the steps *do*, not what the test is about, and read past a click before
+  deciding: an accessibility check on a run dialog is read-only, one that submits it writes.
   Clean read, keep it. Side effects, or a read you could not complete, **drop it with that reason** —
   unverified is not safe, and there is no approver to escalate to (`references/screening.md`,
   **Banding side effects without reading everything**).
