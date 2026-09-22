@@ -5,6 +5,20 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.2] - 2026-09-21
+### Added
+- `mabl-test-impact` gains a second CI mode. Advisory stays the default — one
+  analysis call, nothing dispatched — but a CI job that is configured to run the
+  impacted set now has rules of its own in `references/ci-run.md`: assess the
+  analysis against the change rather than re-running it, never add a test the
+  analysis did not return, screen anything outside the caller's trusted labels by
+  reading its steps, and hand what survives to the caller, which dispatches it as
+  a single deployment linked back to the analysis session. The agent never holds
+  the tool that runs tests in this mode. Unattended dispatch replaces a human
+  approval with the caller's policy, so the file is explicit about what that
+  policy has to pin — application, environment, credential, preview URL — and
+  about the calls the agent must never make.
+
 ## [1.9.1] - 2026-09-17
 ### Fixed
 - `mabl-test-edit` now uses the parameter and response field names the mabl MCP

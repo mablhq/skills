@@ -148,12 +148,13 @@ Carrying either one silently is how a narrower pass inherits a wider pass's gree
 
 ## Running in CI
 
-**Advisory mode is the CI mode this skill ships** — one analysis call, nothing dispatched, nothing
-screened, nobody approving anything. **→ `references/ci-advisory.md`**, which is self-contained and is
-the only file a CI workflow prompt needs to name.
+**Advisory mode is the default CI mode** — one analysis call, nothing dispatched, nothing screened,
+nobody approving anything. **→ `references/ci-advisory.md`**, which is self-contained and is the only
+file such a workflow's prompt needs to name.
 
-A CI job that *dispatches* runs is follow-up work. When it exists, its contract is that an incomplete
-validation must never report as a pass: "everything I was allowed to run passed" and "this change is
+A job that *runs* the assessed set instead — you assess, the job dispatches — runs under
+**→ `references/ci-run.md`**, again the only file its prompt names. Its contract is that an incomplete validation must never report as a
+pass: "everything I was allowed to run passed" and "this change is
 validated" are different claims, and a change whose impacted set is entirely approval-gated has
 validated nothing. That has to be enforced by a machine-readable verdict the job fails on — branch
 protection does not read prose — and never by the wording of the report. The bands do not bend to make

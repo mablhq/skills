@@ -47,6 +47,7 @@ doing, and not the others.
 | `references/local-run-dispatch.md` | Dispatching a wave: the canary command, then the local-CLI specifics — the defaults that mislead, a worked parallel script, reading its exit codes |
 | `references/report.md` | Writing the report, or re-validating on a follow-up commit |
 | `references/ci-advisory.md` | Running the analysis inside CI, with nothing dispatched |
+| `references/ci-run.md` | Running the analysis inside CI and deciding which of the impacted set the caller dispatches as one linked deployment |
 | `references/customizing.md` | Recording site notes after a first pass, and the precedence rule they follow |
 
 ### Vocabulary
@@ -605,13 +606,15 @@ terms as an approval-gated one (**Report the validation**), not a passing one wi
 | Validate **uncommitted local changes** | `mabl` CLI `tests run` against a local server | Pass/fail via the **exit code** (no JSON) |
 | Machine-readable results on **deployed** code | `run_mabl_test_cloud` | `journey_run` ids you poll with `get_mabl_test_run` |
 | A human wants to **watch** a local run | `run_mabl_test_local` | A **launcher link to hand the person** — and nothing else: no status, logs, or pass/fail |
-| Running **inside CI** | `analyze_test_impact` only, no run tools | The impacted list and the gaps, in the job output or a PR comment; nothing dispatched (`references/ci-advisory.md`) |
+| Running **inside CI**, advisory | `analyze_test_impact` only, no run tools | The impacted list and the gaps, in the job output or a PR comment; nothing dispatched (`references/ci-advisory.md`) |
+| Running **inside CI**, dispatching | `analyze_test_impact`, then one `trigger_mabl_deployment` with `testIds` and `impactSessionId` | A deployment event on the Deployments page, running the assessed set under plan `<event>-selection` and linked to the analysis (`references/ci-run.md`) |
 | **CI without an agent** | `mabl tests impact -a <application-id> --change-description-file <file> -o markdown` (CLI ≥ 2.132.3) | The same advisory markdown, rendered by the CLI; advisory, exit 0 on any completed analysis |
 
 The second row is the environment-honesty point made concrete; the third is a structural dead end
 for this workflow, not a limitation to work around, which leaves the CLI as the **only** mechanism
-giving you pass/fail for local changes. **Advisory is the CI mode this skill ships** — a CI job
-that dispatches runs is follow-up work (`references/report.md`, **Running in CI**).
+giving you pass/fail for local changes. **CI ships in two modes, and advisory is the default** —
+a job dispatches only when its own configuration says to, and then under the caller's policy rather
+than a human's approval (`references/report.md`, **Running in CI**).
 
 **Four rules for a local CLI dispatch**, whatever script you end up with:
 
