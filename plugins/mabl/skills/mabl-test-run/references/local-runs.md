@@ -161,7 +161,7 @@ itself twenty times too late.
 # Pin the whole target; every worker inherits it. Mind the scheme: an HTTPS dev server
 # won't answer on http://.
 export MABL_URL="https://<registered-local-origin>:PORT" MABL_CRED=<credentials-id> MABL_ENV=<environment-id>
-export MABL_WS=<workspace-id>   # the workspace the analysis ran in; reporting only
+export MABL_WS=<workspace-id>   # the tests' workspace; sets where results report, nothing else
 export MABL_BRANCH=""           # the mabl branch the change names, if any
 
 # One quoted id per element. Only three lists exist, because only these are dispatchable.
@@ -174,8 +174,7 @@ APPROVED=(  "<id-1>" "<id-2>" )  # approved individually, by id
 : "${RUN_DIR:?run the canary step first, or set RUN_DIR yourself}"
 agg=0                            # not `status`: read-only in zsh
 
-# PARALLEL defaults to 1 (the fixed port). Guard the empty case: printf with no
-# arguments still sends a blank line, which GNU xargs runs as an empty --id.
+# PARALLEL defaults to 1 (the fixed port).
 if [ ${#READ_ONLY[@]} -gt 0 ]; then
   printf '%s\n' "${READ_ONLY[@]}" | xargs -P "${PARALLEL:-1}" -I{} sh -c \
     'mabl tests run --id "$1" --headless --url "$MABL_URL" \

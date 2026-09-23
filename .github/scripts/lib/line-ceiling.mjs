@@ -1,5 +1,5 @@
-// Every skill is held at the size it had when this check landed; a skill not
-// listed gets DEFAULT_LINE_CEILING. An entry moves down with its skill and never
+// A listed skill is pinned at its exact size; a skill not listed gets
+// DEFAULT_LINE_CEILING. An entry moves down with its skill and never
 // up, so a skill that shrinks fails until its entry is lowered to match.
 export const DEFAULT_LINE_CEILING = 500;
 
