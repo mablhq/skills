@@ -120,7 +120,9 @@ node scripts/validate-template.mjs                      # Cursor manifests (offi
 node .github/scripts/validate-cursor-parity.mjs        # mcp.json == .mcp.json + Cursor/Claude parity
 node .github/scripts/validate-codex-parity.mjs         # Codex/Claude manifest parity + marketplace
 node --test .github/scripts/lib/frontmatter.test.mjs    # the frontmatter reader's folding rules
-node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, sibling dependency declarations
+node --test .github/scripts/lib/line-ceiling.test.mjs   # the SKILL.md line ceiling
+node --test .github/scripts/lib/allowed-tools.test.mjs  # allowed-tools MCP name pairing
+node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, line ceiling, allowed-tools pairing, sibling dependency declarations
 ```
 
 `scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (we ship no hooks), not an error.
@@ -133,8 +135,6 @@ To test the Cursor plugin: import this repo as a team marketplace (Cursor **Dash
 
 To test the Codex plugin: `codex plugin marketplace add .` (or `mablhq/skills`) then `codex plugin add mabl@mabl`. Confirm with `codex plugin list` (should be `installed, enabled`) and `codex mcp list` (both servers present; the `mabl` server shows `Auth: OAuth`).
 
-## Syncing with mabl-cli
+## Relationship to the mabl CLI
 
-These skills also ship inside the mabl CLI. mabl keeps the two copies in sync, so an outside contributor has nothing extra to do — fix it here.
-
-mabl maintainers: mirror content fixes into the CLI's copy in a follow-up PR.
+The mabl CLI no longer bundles these skills; this repo is their only source. Fix a skill here, and nowhere else.

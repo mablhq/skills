@@ -6,7 +6,7 @@ command-list` for a subtree). Pass `--output yaml` for a human-readable
 form. Use `mabl agent debug <subcommand> --help` for yargs' formatted
 text help on a specific command.
 
-Below: artifact shape, install targets, and common runtime errors.
+Below: artifact shape and common runtime errors.
 
 ---
 
@@ -70,30 +70,6 @@ mabl agent debug artifact screenshot foo-jr --step-run-id step-1 --before
 Artifacts cache to `.mabl/debug/<jr-id>/`. Re-running the same call is
 free; you can also bypass the CLI and read the cached file directly
 once you know its path.
-
----
-
-## agent install \<target\>
-
-Install the `mabl-debug` skill (and the `chrome-for-mabl` + `mabl` MCP
-entries on supported targets) into an AI tool.
-
-```bash
-mabl agent install <target> [--scope user|project] [--force] [--skip-mcp] [--append-snippet]
-```
-
-| Target | Skill destination (project scope) | MCP wired? |
-|--------|-----------------------------------|-----------|
-| `claude` | `<cwd>/.claude/skills/mabl-debug/` | yes |
-| `vscode` | `<cwd>/.github/skills/mabl-debug/` | yes |
-| `cursor` | `<cwd>/.cursor/skills/mabl-debug/` | yes |
-| `copilot` | `<cwd>/.github/skills/mabl-debug/` | yes |
-| `agents-md` | `<cwd>/.agents/skills/mabl-debug/` | no |
-
-`--scope user` writes to the user's home directory instead.
-`--append-snippet` appends a short "Testing: mabl" section to the
-target's instruction file (`.claude/CLAUDE.md`, `.cursorrules`,
-`AGENTS.md`, …).
 
 ---
 

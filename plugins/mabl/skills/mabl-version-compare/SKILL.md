@@ -15,7 +15,7 @@ description: |
   or flow id (`*-f`). Takes the entity as given; it does not search for it.
   Standalone, and built to be called by other skills. To CHANGE a test use
   mabl-test-edit; for a FAILING run use mabl-debug.
-allowed-tools: Bash, Read, Write, mcp__mabl__list_mabl_test_versions, mcp__mabl__compare_mabl_test_versions, mcp__mabl__list_mabl_flow_versions, mcp__mabl__compare_mabl_flow_versions, mcp__mabl__get_mabl_flow_steps, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_tests
+allowed-tools: Bash, Read, Write, mcp__mabl__list_mabl_test_versions, mcp__plugin_mabl_mabl__list_mabl_test_versions, mcp__mabl__compare_mabl_test_versions, mcp__plugin_mabl_mabl__compare_mabl_test_versions, mcp__mabl__list_mabl_flow_versions, mcp__plugin_mabl_mabl__list_mabl_flow_versions, mcp__mabl__compare_mabl_flow_versions, mcp__plugin_mabl_mabl__compare_mabl_flow_versions, mcp__mabl__get_mabl_flow_steps, mcp__plugin_mabl_mabl__get_mabl_flow_steps, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests
 ---
 
 # mabl compare versions
@@ -235,10 +235,10 @@ gate makes the skill look like it missed an edit it deliberately reclassified.
   branch operation or a metadata save. It is not the only cause, and the other
   one looks identical.
 - **A test's version 0 on the source side is the reference to distrust.**
-  Measured 2026-08-31 on two tests created through `create_mabl_test`:
-  `<*-j>:0` against `<*-j>:1` returned `changed: 0` with **both sides rendering
-  the version-1 body**, and `get_mabl_test_steps` at `:0` returned the version-1
-  steps as well, so the source side was never a distinct snapshot. A flow's
+  For a test created through `create_mabl_test`, `<*-j>:0` against `<*-j>:1`
+  can return `changed: 0` with **both sides rendering the version-1 body**, and
+  `get_mabl_test_steps` at `:0` returns the version-1 steps as well, so the
+  source side may not be a distinct snapshot. A flow's
   version 0 does not behave this way, and `<*-f>:0` against `<*-f>:1` renders
   version 0 correctly, so this is the test reference rather than the diff engine.
   Where the source is a test's version 0 and the summary is all zeros, report the

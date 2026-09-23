@@ -12,7 +12,7 @@ description: |
   Run this once per project, before authoring or running tests. For creating a
   single test use mabl-test-authoring; for a whole suite use
   mabl-test-coverage-design.
-allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__mabl__list_mabl_test_run_summaries
+allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__list_mabl_test_run_summaries, mcp__plugin_mabl_mabl__list_mabl_test_run_summaries
 ---
 
 # mabl init

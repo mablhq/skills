@@ -129,8 +129,9 @@ mabl auth login --auto   # browser OAuth — the user completes this; --auto cap
 mabl auth info    # confirm it took
 ```
 
-**The version floor is real,** and it belongs to one path: the CLI screening fallback uses `mabl tests
-get-runs`, added at the version the Prerequisites block pins. On an older CLI it fails as an unknown
+**The version floor is real,** and it belongs to the CLI paths: `mabl tests impact`, used by CI
+without an agent under **Run it**, sets it; the screening fallback's `mabl tests get-runs` predates
+it. On an older CLI either fails as an unknown
 command, which reads like a broken recipe rather than a stale install — so when a `mabl tests`
 subcommand is "unknown", re-run the Prerequisites block before debugging the recipe.
 

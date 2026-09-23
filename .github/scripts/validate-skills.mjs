@@ -11,11 +11,16 @@
 //      "**Requires `<name>`.**" — a skill can be installed on its own, and it
 //      cannot know which of the five surfaces installed it, so it names the
 //      skill it needs rather than an install command.
+//   5. SKILL.md sits at its line ceiling (lib/line-ceiling.mjs).
+//   6. Every MCP entry in allowed-tools for a server this plugin ships is listed
+//      under both the plugin and the hand-configured name (lib/allowed-tools.mjs).
 // Exits non-zero with a clear message on any failure.
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFrontmatter } from './lib/frontmatter.mjs';
+import { checkLineCount, countLines, staleCeilings } from './lib/line-ceiling.mjs';
+import { splitAllowedTools, unpairedMcpEntries } from './lib/allowed-tools.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const skillsRoot = join(repoRoot, 'plugins', 'mabl', 'skills');
@@ -82,6 +87,18 @@ if (!existsSync(skillsRoot)) {
   errors.push('plugins/mabl/skills/ has no skill folders — the plugin ships no skills');
 }
 
+errors.push(...staleCeilings(skillNames));
+
+// The servers the plugin ships, which are the ones Claude Code renames under a
+// plugin install.
+const mcpConfigPath = join(repoRoot, 'plugins', 'mabl', '.mcp.json');
+let mcpServers = [];
+try {
+  mcpServers = Object.keys(JSON.parse(readFileSync(mcpConfigPath, 'utf8')).mcpServers ?? {});
+} catch (error) {
+  errors.push(`plugins/mabl/.mcp.json could not be read: ${error.message}`);
+}
+
 // Report a folder name that can't be a skill name, and drop it before it is
 // used as one. Check 1 constrains the FRONTMATTER name; the FOLDER name is what
 // reaches the pattern below.
@@ -129,6 +146,17 @@ for (const folder of validSkillNames) {
     continue;
   }
   const { keys, values, body } = frontmatter;
+
+  // 5. Line ceiling.
+  const lineError = checkLineCount(folder, countLines(raw));
+  if (lineError) errors.push(lineError);
+
+  // 6. Both names for every plugin MCP entry.
+  for (const unpaired of unpairedMcpEntries(splitAllowedTools(values['allowed-tools']), mcpServers)) {
+    errors.push(
+      `${rel}: allowed-tools ${unpaired} — a plugin install resolves tools as mcp__plugin_mabl_<server>__, a hand-configured server as mcp__<server>__, so list both`,
+    );
+  }
 
   // SKILL.md contributes its body only (the description is exempt — see check
   // 4); every other markdown file in the folder contributes its whole text.
@@ -204,5 +232,5 @@ if (errors.length) {
 }
 
 console.log(
-  `All ${validSkillNames.length} skills in plugins/mabl/skills/ are valid: name matches folder, description within ${DESCRIPTION_LIMIT} characters, spec-only frontmatter keys, and a declared dependency for every sibling it routes to.`,
+  `All ${validSkillNames.length} skills in plugins/mabl/skills/ are valid: name matches folder, description within ${DESCRIPTION_LIMIT} characters, spec-only frontmatter keys, SKILL.md at its line ceiling, both names for every plugin MCP entry, and a declared dependency for every sibling it routes to.`,
 );

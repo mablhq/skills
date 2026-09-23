@@ -5,6 +5,20 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.4] - 2026-09-23
+### Changed
+- Skills' `allowed-tools` now also match the tool names Claude Code uses for a plugin install
+  (`mcp__plugin_mabl_…`), so a plugin install pre-approves the same tools as a hand-configured
+  server. Nothing else about what's pre-approved changes.
+- `mabl-test-impact` no longer pre-approves `curl`.
+- `mabl-test-impact` requires mabl CLI 2.132.3.
+
+### Fixed
+- `mabl-test-impact` no longer claims there is no batch dispatch.
+- `mabl-debug` names the mabl MCP tools by their current names, and its command reference drops
+  `mabl agent install`, which the CLI no longer offers.
+- The README lists all eight skills for `gh skill install` and drops `mabl agent install`.
+
 ## [1.9.3] - 2026-09-22
 ### Changed
 - `mabl-test-impact` CI run mode: the unattended-safety step read now says which clicks count as

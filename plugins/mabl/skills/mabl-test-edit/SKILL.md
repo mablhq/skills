@@ -16,7 +16,7 @@ description: |
   it holds the authoring intent and the rule against converging by deleting
   coverage. Don't take the decision over. Do accept the specifiable fixes it
   routes here: a structured step edit is instant and cannot delete anything.
-allowed-tools: Bash, mcp__mabl__*
+allowed-tools: Bash, mcp__mabl__*, mcp__plugin_mabl_mabl__*
 ---
 
 # mabl test edit
