@@ -9,9 +9,11 @@ description: |
   Fire when the user says "set up mabl", "mabl init", "initialize mabl",
   "configure mabl for this project", "save my mabl workspace / application /
   environment / credentials", "add mabl to my CLAUDE.md", or "/mabl-init".
-  Run this once per project, before authoring or running tests. For creating a
-  single test use mabl-test-authoring; for a whole suite use
-  mabl-test-coverage-design.
+  Also fires to set up or check test impact analysis: "set up test impact
+  analysis", "is test impact analysis working", "analyze_test_impact is
+  missing", "test impact analysis is not enabled". Run once per project, before
+  authoring or running tests. For creating a single test use
+  mabl-test-authoring; for a whole suite use mabl-test-coverage-design.
 allowed-tools: Bash, Read, Write, Edit, mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__list_mabl_test_run_summaries, mcp__plugin_mabl_mabl__list_mabl_test_run_summaries
 ---
 
@@ -28,16 +30,18 @@ This skill uses the hosted **`mabl` MCP server** (bundled with this plugin) —
 not the mabl CLI. Start by calling `get_current_user` to grab
 `defaultWorkspaceId` (the fallback workspace when the user doesn't pick one).
 
+**Setting up or checking test impact analysis** (`analyze_test_impact` missing
+or refused, or "is it working?"): walk `references/test-impact-setup.md`
+instead of the workflow below, and report every row with its status.
+
 ## Workflow
 
 Do these in order. Steps 1–5 gather; step 6 writes.
 
-**Write only what the user chose.** Everything you discover is shown to help
-them decide — but the memory file records only the workspace, application(s),
-environment(s), and credentials they explicitly selected or confirmed here.
-Don't add the ones they didn't pick, and don't editorialize about them (no
-"these are the other applications" asides). If you're unsure whether something
-belongs, ask — don't pad the file to look complete.
+**Write only what the user chose.** Show everything you discover, but record only
+the workspace, applications, environments, and credentials they selected or
+confirmed. No unpicked extras, no "these are the other applications" asides. If
+you're unsure whether something belongs, ask; don't pad the file.
 
 ### 1. Confirm the workspace
 
@@ -62,18 +66,14 @@ that exist but have no deployment yet (these have a name and id but no URL).
 Show the user a table: application → environment → URL. This is the raw
 material for the memory file.
 
-One call (default limit 100) is enough for setup — don't chase pagination. A
-`nextCursor` can come back even when everything already fit on the first page,
-so only fetch another page if the workspace genuinely has more than 100 of
-something.
+One call (default limit 100) is enough; a `nextCursor` can come back even when
+everything fit, so page only when the workspace truly has more than 100.
 
-If no applications or environments come back, this workspace isn't set up for
-testing yet. Don't write an empty table — tell the user to add an application
-and a deployment in mabl first (or that tests can still target an ad-hoc URL via
-`urlOverride`), and check they picked the workspace they meant in step 1. Same
-if apps and environments exist but none has a deployment `url`: there's no
-deployment for `run_mabl_test_cloud` to resolve, so tell the user to add one, or
-record that runs must pass `urlOverride`.
+If no applications or environments come back, the workspace isn't set up for
+testing. Don't write an empty table: tell the user to add an application and a
+deployment in mabl (or target an ad-hoc URL via `urlOverride`), and check the
+workspace from step 1. If none has a deployment `url`, there's nothing for
+`run_mabl_test_cloud` to resolve: add one, or record that runs pass `urlOverride`.
 
 ### 3. Decide how to choose an application & environment
 
@@ -93,9 +93,8 @@ one default for (a), the mapped pairs for (b), or the set worth considering for
 
 ### 4. Map credentials
 
-**Don't download and dump the whole credential list.** Lead with the
-credentials actually used for the app + environment the user chose, and suggest
-only those.
+**Don't dump the whole credential list.** Suggest only the credentials actually
+used for the app + environment the user chose.
 
 1. For each application + environment the user kept in step 3, call
    `list_mabl_test_run_summaries` with the `workspaceId`, that `applicationId`,
@@ -110,9 +109,8 @@ only those.
    Dev**"). Let the user accept, edit, or skip each, and store only the ones
    they keep.
 
-If a combo has no runs (or no credential on any run) and the user still wants an
-authenticated test, ask whether they'd like to pick from the workspace's
-credentials — and only then show the `list_mabl_credentials` list. If a test
+If a combo has no runs (or no credential on any run) and the user wants an
+authenticated test, offer the `list_mabl_credentials` list only then. If a test
 needs no login, store no credential for it.
 
 Per stored credential: **name, ID, and type** plus the note — never a username
@@ -141,21 +139,18 @@ Ask the user how they want it saved — don't assume a file. Offer:
   `.github/instructions/mabl.instructions.md` with `applyTo`). Pairs naturally
   with the folder-based strategy from step 3 — scope the rule's globs to the
   mapped folders so the right app/environment loads per path.
-- **(c) A skill** — a small `mabl-config` skill (a `SKILL.md` in the client's
-  skills directory, e.g. `.claude/skills/mabl-config/SKILL.md`) the agent
-  invokes on demand. Only pick this if you'd rather it not always be in context
-  — the IDs won't be loaded unless the skill is triggered.
+- **(c) A skill** — a small `mabl-config` skill (e.g.
+  `.claude/skills/mabl-config/SKILL.md`) invoked on demand, for when you'd rather
+  it not always be in context; the IDs load only when it triggers.
 
 Default to (a) at the project root. Confirm the format and the resolved path
 with the user before writing.
 
 ### 6. Write (or merge) the setup
 
-Fill in the template below from what you gathered, honoring the "write only what
-the user chose" rule above — no extra applications, environments, or credentials.
-For "Choosing an application & environment", keep only the block that matches the
-strategy from step 3, and drop the other two and the `<!-- … -->` picker markers
-(guides for you, not content for the file).
+Fill in the template below, writing only what the user chose. For "Choosing an
+application & environment", keep only the block matching step 3's strategy, and
+drop the other two and the `<!-- … -->` markers (guides for you, not content).
 
 Then save it in the format chosen in step 5. The content is identical; only the
 wrapper differs:
@@ -170,14 +165,12 @@ wrapper differs:
   `---` block) has a `name` and a **trigger-first `description`**, with the
   template as the body. The description must fire before any mabl work (e.g.
   "Read before creating or running any mabl test in this project — holds the
-  workspace, applications, and credentials to use"). Without frontmatter the
-  skill won't load; without that trigger the IDs won't be in context when tests
-  are later authored — either way it defeats the point of saving them.
+  workspace, applications, and credentials to use"); without frontmatter or that
+  trigger, the IDs are never in context when tests are authored.
 
 ### 7. Confirm and suggest a next step
 
-Summarize what you saved (workspace, number of apps and credentials, file path)
-and suggest a smoke check, e.g.:
+Summarize what you saved (workspace, apps, credentials, file path) and suggest a smoke check:
 
 > Try: *"create a mabl test for &lt;a page in your app&gt;"* — I'll use the
 > workspace and app you just configured.
@@ -186,10 +179,8 @@ and suggest a smoke check, e.g.:
 
 ## Setup content template
 
-This is the content to save — as a `## mabl testing` section (memory file), or
-as the body of a rule or skill (see step 6). Replace every `<…>` and drop rows /
-blocks that don't apply. Reference mabl tools by their plain names (the agent
-maps them to its own MCP tool names).
+The content to save (see step 6). Replace every `<…>` and drop rows / blocks
+that don't apply. Name mabl tools plainly; the agent maps them to its own names.
 
 ```markdown
 ## mabl testing
@@ -257,4 +248,13 @@ it creates an empty, non-runnable test envelope.
   mabl resolves the matching deployment/URL automatically. Pass `urlOverride`
   to run against an ad-hoc URL such as a preview deploy.
 - A plan: `run_mabl_plan` with the `planId` (ends in `-p`).
+
+### Test runs
+<!-- Optional: only what the user states. Pins and policy, never procedure. -->
+- Critical set: label `<label>` always runs.
+- Billable GenAI assertions (`--allow-billable-features`) on local runs: <allowed | not allowed>.
+- Local dev server: <https://host:port>; served-build check: `<command>`.
+- Shared-state runs are approved by <who>.
+These notes never demote a safety gate: the ask-first bands, the canary, and
+the plan-run rule hold whatever a note says.
 ```

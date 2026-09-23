@@ -5,6 +5,24 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.10.0] - 2026-09-23
+### Added
+- `mabl-test-run` runs an existing set of mabl tests safely: screen, canary, dispatch, poll,
+  diagnose, report. It takes the impacted set from `mabl-test-impact`, or test ids, a plan or labels
+  you name. The screening bands, the approval asks, the five failure causes and the report are the
+  ones `mabl-test-impact` used, now in one place.
+
+### Changed
+- `mabl-test-impact` now finds and explains the tests a change reaches, plus the gaps, and hands
+  running off to `mabl-test-run`. It runs no tests and no `mabl` commands, and pre-approves only
+  read and analysis tools. Its CI references stay where they are.
+- The test impact analysis setup checklist moved to `mabl-init`, which now also fires on "set up
+  test impact analysis" and "is test impact analysis working". Its setup template gains an optional
+  test-runs block for the critical-set label, billable-assertion policy, local dev server and who
+  approves shared-state runs.
+- `mabl-debug` names three traps: passing login steps don't mean a signed-in session, an `Echo` or
+  TODO step is a lead rather than a verdict, and `get-variables` is never safe to run.
+
 ## [1.9.4] - 2026-09-23
 ### Changed
 - Skills' `allowed-tools` now also match the tool names Claude Code uses for a plugin install

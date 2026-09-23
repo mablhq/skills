@@ -54,8 +54,7 @@ The caller's policy replaces the ask that an interactive pass would make:
   address. Judge what the steps *do*, not what the test is about, and read past a click before
   deciding: an accessibility check on a run dialog is read-only, one that submits it writes.
   Clean read, keep it. Side effects, or a read you could not complete, **drop it with that reason** —
-  unverified is not safe, and there is no approver to escalate to (`references/screening.md`,
-  **Banding side effects without reading everything**).
+  unverified is not safe, and there is no approver to escalate to.
 
 **Keep browser tests only.** A test selection cannot mix API, performance or mobile tests with
 browser tests, and a preview URL is a browser target; drop anything whose `runContext.testType` is

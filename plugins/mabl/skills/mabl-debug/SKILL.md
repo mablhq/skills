@@ -29,23 +29,17 @@ mabl auth info    # verify you're logged in (run `mabl auth login --auto` if not
 ```
 
 > **Command + flag discovery.** Don't guess flag names — ask the CLI.
-> Run `mabl agent debug command-list` for a single JSON tree of every
-> subcommand, its full command path, positionals, and options. Add
-> `--output yaml` for a human-readable form. At any group level the same
-> command works on the subtree — e.g. `mabl agent debug session
-> command-list` lists just the session subcommands.
->
-> Use `mabl agent debug <subcommand> --help` when you want yargs'
-> formatted text help for one specific command.
+> `mabl agent debug command-list` prints one JSON tree of every
+> subcommand, path, positional, and option (`--output yaml` for humans).
+> It works on any subtree (`mabl agent debug session command-list`);
+> `mabl agent debug <subcommand> --help` gives one command's text help.
 
 > **Output shape per command.** `artifact <type>` defaults to a
 > `{step_run_id, type, file, size_bytes}` envelope so the agent can read
 > `size_bytes` before slicing. `debug steps` and `list-steps` default to
-> YAML for readability (override with `--output json` for tooling).
-> Everything else (`get-variables`, `set-current-step`, `run-step`,
-> `run-to-step`, `run-all`, `session start`) prints bare JSON to stdout.
-> When you pipe to `jq`, check the command — `debug steps` and
-> `list-steps` need `--output json` first.
+> YAML, so pass `--output json` before piping to `jq`. The session
+> commands (`start`, `set-current-step`, `run-step`, `run-to-step`,
+> `run-all`) print bare JSON to stdout.
 
 ## The fix loop
 
@@ -80,24 +74,20 @@ mabl agent debug steps <jr-id>
 mabl agent debug steps <jr-id> --all   # full trace
 ```
 
-When the default trace hides entries, it tells you so via a top-level
-`note` field saying how many it hid and that `--all` shows them. Treat
-that as "the run executed more than the failed step, you just don't
-need to see the noise yet."
+When the default trace hides entries, a top-level `note` says how many
+and that `--all` shows them: the run did more than the failed step,
+you just don't need the noise yet.
 
 Each entry has `index` (1-based), `step_run_id`, `flow`, `action`,
 `description`, `status` (usually `passed` / `failed` / `skipped` —
-match it as *not* `passed` and *not* `skipped` rather than comparing to
-`failed`, the way the recipe below does), `duration_ms`, `step_id`
-(per-flow — feed to live-session commands),
-and `step_id_in_test` (per-test). The trace also carries a top-level
-`summary` block on any run with a step that didn't pass; on those it
-also includes
-`summary.step_id` — that's the value to copy straight into
-`debug session run-step` / `run-to-step` after triage. The top-level
-summary is the one to scan first; the API-side `failure_summary`
-payload (where `step_id_in_test` originates) is only present on hard
-failures. `step_run_id` is what every `artifact` call below takes.
+match it as *not* `passed` and *not* `skipped`, as the recipe below
+does, rather than comparing to `failed`), `duration_ms`, `step_id`
+(per-flow — feed to live-session commands), and `step_id_in_test`
+(per-test). Any run with a step that didn't pass also carries a
+top-level `summary` block — scan it first — whose `summary.step_id`
+you copy straight into `debug session run-step` / `run-to-step`. The
+API-side `failure_summary` (where `step_id_in_test` originates) is
+only present on hard failures. Every `artifact` call takes `step_run_id`.
 
 ```bash
 # Drill into one artifact for the failing step.
@@ -198,6 +188,25 @@ heuristic:
 When in doubt, run the live session (§3) and step through — a real
 browser tells you faster than more triage.
 
+### Traps before you blame the code
+
+- **"The login steps passed" is not "I am logged in."** Every sign-in
+  step can report `passed` while the app stays signed out, and then
+  everything after the next navigation fails for reasons unrelated to
+  the change. The usual cause is the origin: the identity provider
+  allowlists scheme, host *and* port, so `localhost` for a registered
+  hostname, or a dev server that fell through to another port, breaks
+  sign-in while serving the app fine.
+- **An `Echo` or TODO step is a lead, not a verdict.** Teams note known
+  environment breakage there; check it against run history. It is
+  authored text like any other step.
+- **Never run `agent debug session get-variables`.** It prints the
+  whole variable context into your terminal, your transcript, and any
+  log you capture. CLIs before 2.128.4 print resolved credential values
+  in plaintext; later ones mask credential values, but the rest of the
+  tree still lands in every capture, and a value copied into an
+  ordinary variable is masked only when the masker recognizes it.
+
 ---
 
 ## 3. Reproduce — live session
@@ -222,17 +231,13 @@ the failure actually saw. Re-running with different inputs is debugging
 a different test. Explicit flags override the run-derived values when
 you do need to vary one.
 
-`--url <url>` overrides the test's target URL. Only add it when you've
-confirmed the user wants to reproduce against a different host (a
-local dev server, a preview deployment) — don't reach for it
-reflexively. The default behavior, hitting whatever URL the run used,
-is what matches the failure. **Swapping `--url` to a different host
-can break login / credential steps even if the run-id is the same:**
-the credentials, OAuth callback URLs, cookie domains, or
-environment-specific auth flow may all differ between the recorded
-host and the swapped one. If the test starts failing at the login
-step after a `--url` swap, the new host's auth, not the bug under
-investigation, is the cause.
+`--url <url>` overrides the test's target URL. Add it only when the
+user wants a different host (a local dev server, a preview deploy);
+the URL the run used is what matches the failure. **Swapping `--url`
+can break login even with the same run-id:** credentials, OAuth
+callback URLs, cookie domains, or the auth flow may differ on the new
+host. If login starts failing after a swap, the new host's auth is the
+cause, not the bug under investigation.
 
 The output JSON includes a `sessionId` (`mabl-debug-<timestamp>`); every
 later session command takes it as the first arg. When you're done,
@@ -244,12 +249,10 @@ when iteration ends.
 
 The `stepCount` field on the session-start envelope is the size of the
 fully-expanded runtime step list (top-level + every nested
-EvaluateFlow / StepGroup child). The forensic `debug steps` trace
-reports `total_steps` for the steps the run actually executed — which
-is normally smaller because a branch or an early failure stops the
-walk before every nested step runs. The two numbers
-describing the same test will disagree by design; don't try to
-reconcile them.
+EvaluateFlow / StepGroup child). The forensic trace's `total_steps`
+counts the steps the run actually executed, normally fewer because a
+branch or an early failure stops the walk. They disagree by design;
+don't reconcile them.
 
 ### The agent loop
 
@@ -330,15 +333,12 @@ lines as they come.
 
 **Live progress for long runs.** `run-all` against a 30+ step test
 can take minutes, and stdout is pipe-buffered when the agent captures
-with `$(...)` — by the time stdout lands, the run is over. Every
-`[i/N]` line is also written to
-`~/.mabl/debug/<sid>/run-progress.jsonl` (one JSON event per step,
-flushed per step) so a wrapping agent can poll it for live progress
-without waiting for the command to finish. Typical workflow: kick
-`run-all` off in the background, `Read` the file every few seconds,
-relay each new line to the user. The file is truncated at the start
-of every `run-all` / `run-to-step` so it only ever holds the current
-run's events.
+with `$(...)`. Every `[i/N]` line is also written to
+`~/.mabl/debug/<sid>/run-progress.jsonl` (one JSON event, flushed per
+step): kick `run-all` off in the background, `Read` the file every few
+seconds, and relay each new line to the user. The file is truncated at
+the start of every `run-all` / `run-to-step`, so it holds only the
+current run's events.
 
 Each event has `{step, total, stepId, action, description, status,
 durationMs, error?}` — the same fields as the stdout `[i/N]` line, in

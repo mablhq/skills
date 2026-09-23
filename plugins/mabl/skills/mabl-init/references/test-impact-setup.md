@@ -1,4 +1,4 @@
-# Setup: the checklist, and how to satisfy each row
+# Test impact analysis setup: the checklist, and how to satisfy each row
 
 **Two ways you got here, and they want different things.**
 
@@ -8,7 +8,7 @@ already satisfied, so they can see what's done. End with the single thing blocki
 is.
 
 **Something failed mid-workflow** — a tool is missing, a `mabl` command isn't found. Use the symptom
-table, fix that row, and go straight back to `SKILL.md`. Don't walk the rest.
+table, fix that row, and go straight back to the workflow that sent you here. Don't walk the rest.
 
 What neither case justifies is opening this file to confirm a working setup works. There is no way to
 tell a first run from a hundredth, so absent a request or a failure, start the workflow and let it
@@ -16,11 +16,13 @@ tell you.
 
 | Symptom | Row |
 |---|---|
-| The skill fired but `analyze_test_impact` isn't in the tool list | 2, then 3 |
+| `analyze_test_impact` isn't in the tool list | 2, then 3 |
 | The tool is there; calling it says not enabled | 3 |
 | `mabl: command not found`, or an unknown-command error | 4 |
 | "Login has expired" on a CLI command while MCP tools still work | 4 |
-| A local run or debug session can't reach the app: certificate, port, or sign-in origin | `references/screening.md`, **Local target gates** |
+
+A local run that can't reach the app (certificate, port, or sign-in origin) is not a setup row: the
+test runner's local target gates cover it.
 
 Rows 2 and 3 are everything you need to answer *"which tests does this change impact."* Row 4 only
 matters once you want to run one, so **don't verify rows you don't need**.
@@ -29,7 +31,7 @@ matters once you want to run one, so **don't verify rows you don't need**.
 |---|---|---|
 | 2 | The `mabl` MCP server is reachable | `get_current_user` responds — it's ungated, so it answers whenever the server is up |
 | 3 | Test impact analysis is enabled for both workspaces it checks: the tool is *listed* based on your default workspace, and a *call* is checked against the workspace that owns the application | The tool is in the list **and** a call against your real `applicationId` succeeds |
-| 4 | mabl CLI at the floor `SKILL.md`'s **Prerequisites** block pins, authenticated | `mabl --version`, `mabl auth info` |
+| 4 | mabl CLI at 2.132.3 or later, authenticated | `mabl --version`, `mabl auth info` |
 
 ## 2 · Is the server reachable?
 
@@ -116,28 +118,27 @@ guess.
 Only mabl can change these. Give them the message verbatim, the workspace id and application id from
 it, and whether the tool was visible — that last one tells support which of the two gates failed. Ask
 them to check **both** gates **and** the workspace's feature settings, rather than naming one you can't
-identify. Meanwhile `search_mabl_tests` is the fallback, and everything downstream in this skill works
-on a set found that way, reported as a fallback (`SKILL.md`, **Preflight**).
+identify. Meanwhile `search_mabl_tests` is the fallback, reported as a fallback: a searched set has no
+`role`, `context` or `coverageGaps`.
 
 ## 4 · The mabl CLI
 
-The Prerequisites block in `SKILL.md` installs or upgrades the CLI. What it can't check is
-authentication:
+Only running a test locally needs the CLI; the analysis needs none. The test runner's prerequisites
+block installs or upgrades it. What that block can't check is authentication:
 
 ```bash
 mabl auth login --auto   # browser OAuth — the user completes this; --auto captures the code for agents
 mabl auth info    # confirm it took
 ```
 
-**The version floor is real,** and it belongs to the CLI paths: `mabl tests impact`, used by CI
-without an agent under **Run it**, sets it; the screening fallback's `mabl tests get-runs` predates
-it. On an older CLI either fails as an unknown
-command, which reads like a broken recipe rather than a stale install — so when a `mabl tests`
-subcommand is "unknown", re-run the Prerequisites block before debugging the recipe.
+**The version floor is real.** `mabl tests impact`, which CI uses without an agent, sets it, and on an
+older CLI it fails as an unknown command, which reads like a broken recipe rather than a stale install
+— so when a `mabl tests` subcommand is "unknown", upgrade before debugging the recipe.
 
 **CLI auth expires independently of MCP auth.** The MCP tools keep working while `mabl tests run`
 fails with "Login has expired." When runs fail but analysis works, check `mabl auth info` first.
 
 ---
 
-Once the failing row is satisfied, go back to `SKILL.md` and pick up where you stopped.
+Once the failing row is satisfied, go back to the workflow that sent you here and pick up where you
+stopped.

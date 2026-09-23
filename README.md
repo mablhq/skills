@@ -26,7 +26,8 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | [`mabl-version-compare`](plugins/mabl/skills/mabl-version-compare/SKILL.md) | Say what changed between two versions of a test or flow, separating real changes from reorganization. |
 | [`mabl-test-edit-verify`](plugins/mabl/skills/mabl-test-edit-verify/SKILL.md) | Certify an edit against its intent and the prior version instead of trusting one green run; never edits or merges. |
 | [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Triage a failed run from its artifacts, then reproduce and verify the fix step by step in a live Chrome. |
-| [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Find, screen, and run the existing tests a code change reaches, and report the gaps; never starts a plan run itself. |
+| [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Find the existing tests a code change reaches and the coverage gaps it leaves; runs nothing itself. |
+| [`mabl-test-run`](plugins/mabl/skills/mabl-test-run/SKILL.md) | Screen, canary, and run a set of existing tests, sort each failure by cause, and report; never starts a plan run itself. |
 
 ### MCP servers
 
@@ -107,9 +108,10 @@ gh skill install mablhq/skills mabl-test-edit-verify
 gh skill install mablhq/skills mabl-version-compare
 gh skill install mablhq/skills mabl-debug
 gh skill install mablhq/skills mabl-test-impact
+gh skill install mablhq/skills mabl-test-run
 ```
 
-`gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging, coverage-design, and test-impact skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
+`gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging and coverage-design skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
 
 ```json
 {
