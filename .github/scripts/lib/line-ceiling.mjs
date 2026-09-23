@@ -10,7 +10,7 @@ export const LINE_CEILINGS = {
   'mabl-test-coverage-design': 654,
   'mabl-test-edit': 338,
   'mabl-test-edit-verify': 442,
-  'mabl-test-impact': 180,
+  'mabl-test-impact': 183,
   'mabl-test-run': 250,
   'mabl-version-compare': 812,
 };

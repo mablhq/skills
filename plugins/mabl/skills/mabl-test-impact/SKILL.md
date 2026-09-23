@@ -1,8 +1,8 @@
 ---
 name: mabl-test-impact
-allowed-tools: Read, mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan
+allowed-tools: Read, mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan
 description: >-
-  Find and explain the EXISTING mabl end-to-end tests a product-code change reaches, and the coverage gaps it leaves, after unit tests pass and before opening a PR, or check what already covers an area. Runs nothing itself: it hands the impacted set to mabl-test-run to screen, run and report. For designing NEW coverage for an area use mabl-test-coverage-design; for a test your change intentionally broke use mabl-test-edit; for setting up or checking test impact analysis use mabl-init. Not for docs, config, or pure refactors. Surfaces coverage gaps; authors against them only as an opt-in handoff to mabl-test-authoring. Triggers on "which mabl tests should I run for this change", "what mabl tests are impacted by this change", "what covers this area before I add tests", "which mabl tests does this diff reach".
+  Find and explain the EXISTING mabl end-to-end tests a product-code change reaches, and the coverage gaps it leaves, after unit tests pass and before opening a PR, or check what already covers an area. The first step of validating a change against mabl: it runs nothing itself and hands the impacted set to mabl-test-run to screen, run and report. For designing NEW coverage for an area use mabl-test-coverage-design; for a test your change intentionally broke use mabl-test-edit; for setting up or checking test impact analysis use mabl-init. Not for docs, config, or pure refactors. Surfaces coverage gaps; authors against them only as an opt-in handoff to mabl-test-authoring. Triggers on "which mabl tests should I run for this change", "what mabl tests are impacted by this change", "validate this change against mabl", "what covers this area before I add tests", "which mabl tests does this diff reach".
 ---
 
 # Finding the mabl tests a change reaches
@@ -46,18 +46,19 @@ otherwise resolve them and say you did. Tool names appear here without a client-
 **If `analyze_test_impact` is absent or refuses:** it is gated twice. Your *default* workspace decides
 whether the tool is listed at all (a **missing tool, not a refusal**), and the workspace owning the
 `applicationId` decides whether a call succeeds. The two can disagree. `get_current_user` carries no
-gate and tells not-connected from connected-but-not-entitled; report which. Wait ~60 s and reconnect
-once, because the tool list is fixed at connect time and the flags are cached. Then fall back:
-`search_mabl_tests` with a few phrasings of the change finds candidates (except in CI, §7).
+gate and tells not-connected from connected-but-not-entitled; report which. A missing tool: wait ~60 s
+and reconnect once (the list is fixed at connect time). Still missing, or refused: keep going with
+`search_mabl_tests` and a few phrasings of the change (except in CI, §7). Don't stop to fix setup.
 
 **Report the fallback as a fallback.** A searched set has no `role`, `context`, `coverageGaps`,
-`moreMayExist` or `runContext`: omit the `Analysis` line and record `Gaps: not analyzed (impact
-analysis unavailable)`. An invented gap list is worse than an absent one.
+`moreMayExist` or `runContext`: say it was searched, write `Gaps: not analyzed (impact analysis
+unavailable)` in place of **Gaps (N)**, and offer the setup check after the set. An invented gap list
+is worse than an absent one.
 
 **Setting it up or checking it** is a different request: *"set up test impact analysis"*, *"is this
-working?"*, or a tool still missing after the reconnect. The setup checklist lives in `mabl-init`.
-**Requires `mabl-init`.** If that skill isn't there, report the symptom, the workspace and application
-ids, and whether the tool was listed, and stop; don't guess at the fix.
+working?"*, or the user taking up that offer. The checklist lives in `mabl-init`; never switch to it
+unasked. **Requires `mabl-init`.** If that skill isn't there, report the symptom, the workspace and
+application ids, and whether the tool was listed, and stop; don't guess at the fix.
 
 **It is slow by design:** single-digit minutes, with a server-side cap around five and a heartbeat.
 Slow is not a hang.
@@ -137,9 +138,11 @@ A very large set says the change is broad: group and order it rather than trimmi
 - **One line saying nothing ran**, with `moreMayExist` and `runContextIncomplete` as returned. A page
   of test names reads as a run unless you say otherwise.
 
-**To run the set**, hand it to `mabl-test-run` with its `runContext`, `workspaceId`, `applicationId`
-and `sessionId`; it screens, canaries, asks, dispatches and reports. **Requires `mabl-test-run`.** If
-that skill isn't there, say it is missing and stop at the list; don't run tests yourself.
+**To run the set** (asked to run or validate; otherwise offer it), hand it to `mabl-test-run` as
+returned (every §5 field) with your change description (which decides the destructive override), the
+mabl branch and the commit; it screens, canaries, asks, dispatches and reports.
+**Requires `mabl-test-run`.** If that skill isn't there, say it is missing and stop at the list; don't
+run tests yourself.
 
 **To author against a gap** once the user accepts, hand it to `mabl-test-authoring`.
 **Requires `mabl-test-authoring`.** If it isn't installed, don't author the test yourself: name the
@@ -151,14 +154,14 @@ Each CI mode reads one self-contained reference, and its prompt names nothing el
 
 | Goal | Mechanism | What you get back |
 |---|---|---|
-| Running **inside CI**, advisory | `analyze_test_impact` only, no run tools | The impacted list and the gaps, in the job output or a PR comment; nothing dispatched (`references/ci-advisory.md`) |
+| Running **inside CI**, advisory | `analyze_test_impact` only, no run tools | The impacted set and the gaps, in the job output or a PR comment; nothing dispatched (`references/ci-advisory.md`) |
 | Running **inside CI**, dispatching | `analyze_test_impact`, then one `trigger_mabl_deployment` with `testIds` and `impactSessionId` | A deployment event on the Deployments page, running the assessed set under plan `<event>-selection` and linked to the analysis (`references/ci-run.md`) |
 | **CI without an agent** | `mabl tests impact -a <application-id> --change-description-file <file> -o markdown` (CLI ≥ 2.132.3) | The same advisory markdown, rendered by the CLI; advisory, exit 0 on any completed analysis |
 
 **Advisory is the default**: a job dispatches only when its own configuration says to, under the
 caller's policy rather than a human's approval. Two rules above change in CI. **One call, never a
-refinement**: record the `changeDescription` that produced the set. **No substitute search in CI
-advisory mode**: when the tool is missing, report connected versus not entitled, and stop. A
+refinement**: record the `changeDescription` that produced the set. **No substitute search in
+either CI mode**: when the tool is missing, report connected versus not entitled, and stop. A
 dispatching job never reports an incomplete validation as a pass: a machine-readable verdict the job
 fails on enforces that, not the wording, and no screen relaxes to make a job look complete.
 

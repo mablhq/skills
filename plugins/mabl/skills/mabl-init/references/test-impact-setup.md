@@ -21,8 +21,8 @@ tell you.
 | `mabl: command not found`, or an unknown-command error | 4 |
 | "Login has expired" on a CLI command while MCP tools still work | 4 |
 
-A local run that can't reach the app (certificate, port, or sign-in origin) is not a setup row: the
-test runner's local target gates cover it.
+A local run that can't reach the app (certificate trust, the dev server's port, or a sign-in origin
+the identity provider doesn't allowlist) is a target problem, not a setup row; don't diagnose it here.
 
 Rows 2 and 3 are everything you need to answer *"which tests does this change impact."* Row 4 only
 matters once you want to run one, so **don't verify rows you don't need**.
@@ -30,7 +30,7 @@ matters once you want to run one, so **don't verify rows you don't need**.
 | | Must be true | How to check |
 |---|---|---|
 | 2 | The `mabl` MCP server is reachable | `get_current_user` responds — it's ungated, so it answers whenever the server is up |
-| 3 | Test impact analysis is enabled for both workspaces it checks: the tool is *listed* based on your default workspace, and a *call* is checked against the workspace that owns the application | The tool is in the list **and** a call against your real `applicationId` succeeds |
+| 3 | Test impact analysis is enabled for both workspaces it checks: the tool is *listed* based on your default workspace, and a *call* is checked against the workspace that owns the application | The tool is in the list **and** a call against your real `applicationId` succeeds (a one-line made-up change is enough; send nothing from the repo) |
 | 4 | mabl CLI at 2.132.3 or later, authenticated | `mabl --version`, `mabl auth info` |
 
 ## 2 · Is the server reachable?
@@ -123,8 +123,9 @@ identify. Meanwhile `search_mabl_tests` is the fallback, reported as a fallback:
 
 ## 4 · The mabl CLI
 
-Only running a test locally needs the CLI; the analysis needs none. The test runner's prerequisites
-block installs or upgrades it. What that block can't check is authentication:
+Only running a test locally needs the CLI; the analysis needs none. Missing or below the floor,
+`npm install -g @mablhq/mabl-cli@latest` installs or upgrades it; it is a global install, so ask
+first. Then authenticate:
 
 ```bash
 mabl auth login --auto   # browser OAuth — the user completes this; --auto captures the code for agents

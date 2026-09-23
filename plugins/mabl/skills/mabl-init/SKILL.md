@@ -26,13 +26,13 @@ setup where you want it — an agent memory file, a rule, or a skill.
 
 ## Prerequisites
 
-This skill uses the hosted **`mabl` MCP server** (bundled with this plugin) —
-not the mabl CLI. Start by calling `get_current_user` to grab
-`defaultWorkspaceId` (the fallback workspace when the user doesn't pick one).
+This skill uses the hosted **`mabl` MCP server** (bundled with this plugin), not
+the mabl CLI, except the test impact analysis check below. Start with
+`get_current_user` for `defaultWorkspaceId` (the fallback when the user picks none).
 
 **Setting up or checking test impact analysis** (`analyze_test_impact` missing
-or refused, or "is it working?"): walk `references/test-impact-setup.md`
-instead of the workflow below, and report every row with its status.
+or refused, or "is it working?"): follow `references/test-impact-setup.md`
+instead of the workflow below; its opening says how much of it to walk.
 
 ## Workflow
 

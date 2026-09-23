@@ -60,9 +60,9 @@ doesn't print at all for a mobile test.
   test, present only when the credential resolved; absent is unknown. `credentials list` warns without
   naming which credential; check with `-o json`.
 - A test's real destination is in its **navigation** (`VisitUrl`) steps, not its selectors: every
-  selector carries the url it was recorded on. `mabl tests export --format json` has the steps
-  **nested under `flows[].steps`**, not at the top level. It writes `<test-id>-<n>.mabl.json` to your
-  current directory; don't commit it.
+  selector carries the url it was recorded on. `mabl tests export --format json` (with `--mabl-branch`
+  when you dispatch with one) has the steps **nested under `flows[].steps`**, not at the top level. It
+  writes `<test-id>-<n>.mabl.json` to your current directory; don't commit it.
 
 ## Local target gates
 

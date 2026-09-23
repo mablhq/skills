@@ -19,7 +19,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
 | Skill | What it does |
 |-------|--------------|
-| [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | One-time project setup: records your workspace, apps, environments, and credentials in agent memory. |
+| [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | One-time project setup: records your workspace, apps, environments, and credentials in agent memory; also sets up or checks test impact analysis. |
 | [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Plan a test in plain language, generate it in the mabl cloud, and check it against what you asked for. |
 | [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Explore a feature like a user and author a suite of self-isolating tests, each checked against the ask. |
 | [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change an existing test through the cheapest lane that works, confirming before it writes to the default branch. |
