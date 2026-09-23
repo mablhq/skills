@@ -19,14 +19,14 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
 | Skill | What it does |
 |-------|--------------|
-| [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | Set up a project once. Discovers your mabl workspace, applications, environments, and credentials, asks how the agent should pick between them, and writes it all into your agent memory file (`CLAUDE.md` / `AGENTS.md` / Copilot instructions) so every later session knows how to create and run your tests. |
-| [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Create mabl browser and API tests through conversational planning. Describe what to test in plain language, refine the plan with the mabl AI agent, then generate the test in the mabl cloud — no local browser needed. Checks the built test against what you asked for and offers to fix it if it falls short. |
-| [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Design a whole suite of mabl tests for a feature, not just one. The agent explores your app like a user (never reading source), maps what it sees onto proven UI-coverage patterns, then authors a set of self-isolating tests in the mabl cloud — and checks each one against what you asked for, so you get told which tests are verified and which only look finished. |
-| [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change a test that already exists. Routes each edit to the cheapest lane that works: metadata (rename, labels, enable/disable), structured step edits (replace/insert/delete/move — no browser), or a live cloud authoring agent when the change needs to look at the running app. Reviews shared-flow blast radius and confirms before writing to the default branch. |
-| [`mabl-version-compare`](plugins/mabl/skills/mabl-version-compare/SKILL.md) | Say what changed between two versions of a test or reusable flow, without telling you what to think about it. Separates changes that alter behaviour from ones that only reorganize, so a refactor doesn't read as lost coverage: it works out whether a step that left actually moved, had its id regenerated, or was extracted into a reusable flow before calling anything deleted. Reports assertion counts by type and the changes that keep a test the same size while it proves less — a strict assertion swapped for a looser one, a value emptied, a step disabled. The classification is the output; the verdict stays with whoever asked for the change. |
-| [`mabl-test-edit-verify`](plugins/mabl/skills/mabl-test-edit-verify/SKILL.md) | Certifies an edit already made to a test, instead of trusting the green run — including whether it matches the intent the editor was given. Diffs against the version before the change to catch a pass bought by deleting a check, judges a moved step on what its new position crosses, re-runs it isolated on its branch when that version still needs a run, and needs more than one clean run before calling an intermittent test fixed. Reports verified, not verified, or verified-but-not-green — and never edits or merges. |
-| [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Diagnose and fix mabl test failures. Forensic triage of a failed run (step traces, screenshots, DOM snapshots, network logs, console errors), then live reproduction: the agent re-runs the test step by step in a real Chrome it controls, patches the page or your code, and verifies the fix. |
-| [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Validate a product-code change against the mabl tests that already cover it, after unit tests pass and before the PR. Asks mabl which end-to-end tests the change reaches, screens each one before anything runs, runs the safe ones with one canary before fanning out, and reports validated, not run and why, and coverage gaps — offered to `mabl-test-authoring`, never authored unasked. Never starts a plan run. |
+| [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | One-time project setup: records your workspace, apps, environments, and credentials in agent memory. |
+| [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Plan a test in plain language, generate it in the mabl cloud, and check it against what you asked for. |
+| [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Explore a feature like a user and author a suite of self-isolating tests, each checked against the ask. |
+| [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change an existing test through the cheapest lane that works, confirming before it writes to the default branch. |
+| [`mabl-version-compare`](plugins/mabl/skills/mabl-version-compare/SKILL.md) | Say what changed between two versions of a test or flow, separating real changes from reorganization. |
+| [`mabl-test-edit-verify`](plugins/mabl/skills/mabl-test-edit-verify/SKILL.md) | Certify an edit against its intent and the prior version instead of trusting one green run; never edits or merges. |
+| [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Triage a failed run from its artifacts, then reproduce and verify the fix step by step in a live Chrome. |
+| [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Find, screen, and run the existing tests a code change reaches, and report the gaps; never starts a plan run itself. |
 
 ### MCP servers
 
@@ -71,7 +71,7 @@ The repo is also a Cursor plugin (`.cursor-plugin/`). It installs through a Curs
 2. Enter the repo URL: `https://github.com/mablhq/skills`
 3. Developers then install `mabl` from the **Customize** panel in the Cursor sidebar.
 
-Skills and all three MCP servers are configured in one step. For a quick per-project setup without a marketplace, run `mabl agent install cursor` from the mabl CLI instead — it currently wires up `chrome-for-mabl` and `mabl` only, so add `chrome-devtools` by hand (see the `gh skill install` JSON below).
+Skills and all three MCP servers are configured in one step.
 
 ### GitHub Copilot in VS Code
 
@@ -103,6 +103,8 @@ gh skill install mablhq/skills mabl-init
 gh skill install mablhq/skills mabl-test-authoring
 gh skill install mablhq/skills mabl-test-coverage-design
 gh skill install mablhq/skills mabl-test-edit
+gh skill install mablhq/skills mabl-test-edit-verify
+gh skill install mablhq/skills mabl-version-compare
 gh skill install mablhq/skills mabl-debug
 gh skill install mablhq/skills mabl-test-impact
 ```
@@ -127,8 +129,6 @@ gh skill install mablhq/skills mabl-test-impact
   }
 }
 ```
-
-Alternatively, `mabl agent install <claude|cursor|vscode|copilot>` from the mabl CLI sets up skills and MCP servers for your agent in one command — same `chrome-devtools` caveat as above.
 
 ## Quick tour
 

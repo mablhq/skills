@@ -143,8 +143,8 @@ instead, or for a window the response didn't use. Their bounds are what the rule
 The CLI covers most of the hard gates. **`mabl tests list`** reports enabled state (an `Enabled`
 column, or the field in `-o json`) — mind its `--limit`, which **defaults to 10**. **`mabl tests
 get-runs <test-id>`** lists a test's recent runs with outcome plus a failure category and summary
-each, which is a real per-test trend; it is the one command behind the `MIN_MABL_CLI_VERSION` floor
-in `SKILL.md`'s **Prerequisites**, so check `mabl tests --help` before relying on it. Don't
+each, which is a real per-test trend; it needs the `MIN_MABL_CLI_VERSION` floor in `SKILL.md`'s
+**Prerequisites**, so check `mabl tests --help` before relying on it. Don't
 substitute `mabl test-runs`: that group's `get-test` resolves a run back to its test, the wrong
 direction.
 

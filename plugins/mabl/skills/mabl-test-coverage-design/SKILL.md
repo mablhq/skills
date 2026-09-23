@@ -8,7 +8,7 @@ description: >
   form, flow, or feature broadly, not one specific scenario. This skill explores
   the feature, designs the set of tests, then authors each one in the mabl cloud.
   For a SINGLE test, use mabl-test-authoring directly.
-allowed-tools: Bash, mcp__chrome-devtools__*
+allowed-tools: Bash, mcp__chrome-devtools__*, mcp__plugin_mabl_chrome-devtools__*
 ---
 
 # mabl test coverage design

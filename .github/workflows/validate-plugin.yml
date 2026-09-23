@@ -56,11 +56,16 @@ jobs:
       # validator, so a broken reader can't green-light a PR.
       - name: Test the frontmatter reader
         run: node --test .github/scripts/lib/frontmatter.test.mjs
+      - name: Test the line ceiling
+        run: node --test .github/scripts/lib/line-ceiling.test.mjs
+      - name: Test the allowed-tools pairing
+        run: node --test .github/scripts/lib/allowed-tools.test.mjs
 
       # No validator checks the skills themselves against what the install
       # surfaces require, so check that here: frontmatter name == folder name,
       # a description short enough that Codex won't truncate it, only the keys
-      # the Agent Skills spec allows, and a declared dependency for every
-      # sibling skill a body routes to.
+      # the Agent Skills spec allows, a SKILL.md at its line ceiling, both names
+      # for every plugin MCP entry in allowed-tools, and a declared dependency
+      # for every sibling skill a body routes to.
       - name: Validate skills
         run: node .github/scripts/validate-skills.mjs

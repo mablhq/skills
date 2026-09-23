@@ -15,7 +15,7 @@ description: |
   "do these edits match what was asked", "did the agent do what I told it to".
   Also fires on a handed-over branch carrying an edited test.
   To make the edit use mabl-test-edit; to find what is wrong use mabl-debug.
-allowed-tools: mcp__mabl__get_mabl_test, mcp__mabl__list_mabl_test_versions, mcp__mabl__list_mabl_test_runs, mcp__mabl__run_mabl_test_cloud, mcp__mabl__get_mabl_test_run
+allowed-tools: mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__list_mabl_test_versions, mcp__plugin_mabl_mabl__list_mabl_test_versions, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__run_mabl_test_cloud, mcp__plugin_mabl_mabl__run_mabl_test_cloud, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run
 ---
 
 # mabl verify change

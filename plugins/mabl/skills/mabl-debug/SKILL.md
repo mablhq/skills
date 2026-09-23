@@ -10,7 +10,7 @@ description: |
   (`*-jr`) or plan run ID (`*-pr`), asks to investigate / debug / fix /
   reproduce a failing test, or pairs "mabl" with words like "failing",
   "broken", "regression", "step through".
-allowed-tools: Bash, mcp__mabl__*, mcp__chrome-for-mabl__*
+allowed-tools: Bash, mcp__mabl__*, mcp__plugin_mabl_mabl__*, mcp__chrome-for-mabl__*, mcp__plugin_mabl_chrome-for-mabl__*
 ---
 
 # mabl agent debug
@@ -106,7 +106,7 @@ failures. `step_run_id` is what every `artifact` call below takes.
 mabl agent debug artifact <type> <jr-id> --step-run-id <sid>
 ```
 
-> **Prefer this over the hosted MCP's `get_test_run_artifact`.** The CLI
+> **Prefer this over the hosted MCP's `get_mabl_test_run_artifact`.** The CLI
 > downloads once to `.mabl/debug/<jr-id>/`, slices locally with
 > `--query` / `--text-only` / `--head/--tail/--bytes`, and reuses the
 > cached file across calls. The MCP equivalent ships the full payload
@@ -176,11 +176,11 @@ The triage output gives you names that ground the search:
 | stack-trace function | `grep -r "handleSubmit" src/` |
 | failed API endpoint  | `grep -r "/api/v1/users" src/` |
 | missing element / data-testid | `grep -r "register-submit" src/` |
-| recent regression | `git log --oneline <last_passing_deploy>..HEAD` (deploy from `analyze_failure`) |
+| recent regression | `git log --oneline <last_passing_deploy>..HEAD` (deploy from `analyze_mabl_failure`) |
 
 For higher-level analysis the hosted **`mabl` MCP server** exposes
-`analyze_failure` (root-cause inference, related-tests, last-passing
-deploy), `get_mabl_test_details`, `get_environments`, `get_credentials`.
+`analyze_mabl_failure` (root-cause inference, related-tests, last-passing
+deploy), `get_mabl_test`, `list_mabl_environments`, `list_mabl_credentials`.
 Use these when the shell tools don't give enough context — same APIs,
 no shell required.
 

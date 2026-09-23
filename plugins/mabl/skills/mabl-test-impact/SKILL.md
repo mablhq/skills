@@ -1,6 +1,6 @@
 ---
 name: mabl-test-impact
-allowed-tools: Read, Bash(mabl *), Bash(npm install -g @mablhq/mabl-cli*), Bash(curl *), Bash(lsof *), Bash(ss *), Bash(xargs --version), mcp__mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__mabl__get_test_quality_report, mcp__mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__mabl__get_mabl_test_run_failure_reason, mcp__mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local
+allowed-tools: Read, Bash(mabl *), Bash(npm install -g @mablhq/mabl-cli*), Bash(lsof *), Bash(ss *), Bash(xargs --version), mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__get_mabl_test_run_failure_reason, mcp__plugin_mabl_mabl__get_mabl_test_run_failure_reason, mcp__mabl__run_mabl_test_cloud, mcp__plugin_mabl_mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local, mcp__plugin_mabl_mabl__run_mabl_test_local
 description: >-
   Find, screen, run, and report on the EXISTING mabl end-to-end tests covering a product-code change, after unit tests pass and before opening a PR, or check what already covers an area. For designing NEW coverage for an area use mabl-test-coverage-design; for a test your change intentionally broke use mabl-test-edit. Not for docs, config, or pure refactors. Surfaces coverage gaps; authors against them only as an opt-in handoff to mabl-test-authoring. Triggers on "which mabl tests should I run for this change", "what mabl tests are impacted by this change", "validate this change against mabl", "what covers this area before I add tests". Also fires on first-time setup and missing prerequisites: "set up test impact analysis", "check my test impact setup", "is test impact analysis working", "analyze_test_impact is missing", "test impact analysis is not enabled".
 ---
@@ -22,18 +22,19 @@ first `mabl` command, not before the workflow:
 
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
-MIN_MABL_CLI_VERSION=2.123.4
+MIN_MABL_CLI_VERSION=2.132.3
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 ```
 
-That check, and the dispatch script in `references/local-run-dispatch.md`, run as compound commands
-that no `allowed-tools` pattern pre-approves: each asks for approval once, by design, rather than
-widening the standing allowlist.
+That check, the dispatch script in `references/local-run-dispatch.md`, and any `curl` (the
+served-build check included) run as commands that no `allowed-tools` pattern pre-approves: each
+asks for approval, by design, rather than widening the standing allowlist.
 
-That floor serves one path: the CLI screening fallback (`references/screening.md`) uses `mabl
-tests get-runs`, which shipped in that release; the analysis itself needs no CLI. On an older CLI
-it fails as an unknown command, which reads like a broken recipe rather than a stale install.
+`mabl tests impact`, used by CI without an agent under **Run it**, sets that floor; the screening
+fallback's `mabl tests get-runs` (`references/screening.md`) predates it. The analysis itself
+needs no CLI. On an older CLI either fails as an unknown command, which reads like a broken
+recipe rather than a stale install.
 Authentication is separate: `mabl auth login --auto` once, and `mabl auth info` when runs start failing
 while the MCP tools still work.
 
@@ -508,8 +509,8 @@ rather than a guess:
 
 - **Order:** `validates`/directly-exercising tests first, `uses`/rippled tests next. Never mark
   the tail "skippable" — order it, do not discard it.
-- **Cost & shape:** state the count. There is **no batch dispatch** for an ad-hoc set — N tests is
-  N calls, which is what makes the canary worth its extra minute. When an existing plan already
+- **Cost & shape:** state the count. Each test is its own run, which is what makes the canary
+  worth its extra minute. When an existing plan already
   covers most of the set, *recommend* it — but **a plan run is always an ask, never something you
   start yourself**, because a plan contains whatever its author put in it: tests you never
   screened, never banded, and may never have seen. The same goes for `run_mabl_plan`,
@@ -595,8 +596,8 @@ of three and say which: **keep polling** (the default while runs are still compl
 **inspect** the in-flight run, or **cancel** — and cancelling takes approval, since a cancelled
 run has already consumed capacity and leaves a partial record behind.
 
-**Put a wall-clock budget on the wave, not just on a run.** With ~4-minute runs, no batch
-dispatch, and a set that can hit the result ceiling, "keep polling" has no natural end. Set a
+**Put a wall-clock budget on the wave, not just on a run.** With ~4-minute runs and a set
+that can hit the result ceiling, "keep polling" has no natural end. Set a
 budget before you start; when it runs out, stop dispatching, report what completed, and mark the
 remainder `not run · timed out`. A timed-out wave is an incomplete validation on exactly the same
 terms as an approval-gated one (**Report the validation**), not a passing one with fewer rows.
