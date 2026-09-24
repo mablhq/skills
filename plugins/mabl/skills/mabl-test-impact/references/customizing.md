@@ -24,7 +24,7 @@ Only what your org knows and the tools can't tell the agent. Ten to twenty lines
   your policy on billable GenAI assertions (`--allow-billable-features`). A note is the only thing
   that can permit that flag; the skill never adds it on its own.
 - **Run-scope conventions** — the label that marks your always-run critical set, and any plan or label
-  scope a team expects by default (`SKILL.md`'s **Run scope**). mabl has no criticality field, so this
+  scope a team expects by default. mabl has no criticality field, so this
   is the only place the agent can learn which label means "critical" here.
 - **Process** — when this workflow runs (pre-PR, CI, both), the CI wall-clock budget, who approves
   shared-state runs.
