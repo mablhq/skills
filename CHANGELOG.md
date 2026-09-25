@@ -5,6 +5,16 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.10.0] - 2026-09-24
+### Added
+- `mabl-test-run` screens, runs, and reports on the tests `mabl-test-impact` found for a change. Its
+  procedure (the screen, the approval asks, the canary, diagnosis, and the report) moved over from
+  `mabl-test-impact` unchanged.
+
+### Changed
+- `mabl-test-impact` finds the tests a change reaches and the gaps it leaves, then hands running
+  off to `mabl-test-run`. It runs nothing itself and no longer pre-approves the CLI or the run tools.
+
 ## [1.9.4] - 2026-09-23
 ### Changed
 - Skills' `allowed-tools` now also match the tool names Claude Code uses for a plugin install

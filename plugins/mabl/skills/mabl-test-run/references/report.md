@@ -38,8 +38,8 @@ without re-deriving any of it from run history.
 
 Keep it this short. The report competes for attention with the diff itself, and a reviewer who skips
 it because it's long is worse off than one who never got it. Short does **not** mean dropping the
-links: every test and every authored gap carries its `viewTestUrl`, the same rule `SKILL.md`'s
-**Read the results as judgment** applies everywhere else, because a name alone makes the reader
+links: every test and every authored gap carries its `viewTestUrl`, the same rule that applies
+everywhere else, because a name alone makes the reader
 re-find the test by hand.
 
 ## Row reasons
@@ -67,7 +67,7 @@ is ` · `, never parentheses.
 | **Deployment** | Which host the runs actually hit — the difference between a hosted dev deployment and a local one that was also on offer. |
 | **Deployed build** | For a cloud run, the identity of the build deployed to the target when the canary ran — the version, commit, or deployment revision your pipeline recorded — and that it contains the change. For a local run, the served-build evidence from `SKILL.md`'s **Report the validation**. This is what separates *the tests passed* from *the tests passed on a build that contains the change*; omit it and the whole report can be true and worthless. The run's `execution_runtime_version` is the mabl runtime, not your build; if you record it, label it as such. |
 | **PR and commit SHA** | Ties the report to the exact diff it validated. The SHA, not just the PR number — the ledger below compares against it. |
-| **`Previously validated` + `carried from <sha>`** | Inherited rows live in their own block and carry the commit they were run on. They are never counted in `Validated`, because retrieval variance (`SKILL.md`'s **Read the results as judgment**) means a test can leave the impacted set without ceasing to be impacted. Without both the block and the tag, a second push produces a report that can't tell a fresh result from an inherited one. |
+| **`Previously validated` + `carried from <sha>`** | Inherited rows live in their own block and carry the commit they were run on. They are never counted in `Validated`, because retrieval variance (repeat analysis calls genuinely differ) means a test can leave the impacted set without ceasing to be impacted. Without both the block and the tag, a second push produces a report that can't tell a fresh result from an inherited one. |
 | **`viewTestUrl` on every row** | The reader opens tests from the report; a bare name makes them go find it. |
 | **Candidate count + `moreMayExist`** | Whether the set hit the result ceiling. "19, exhaustive" and "19 of possibly more" support different conclusions about coverage. |
 | **`runContextIncomplete`** | The response's own flag that some per-test enrichment failed or was cut off. Report it, but **read it as a prompt, not a verdict**: it can be true on `plans_truncated` alone — a statement about plan membership, not about anything screening uses — and it stays true after you close a gap with a fallback lookup. What the reader needs is the residue: which candidates you still could not settle *after* those fallbacks, and on which field, named on their own rows. |
@@ -82,7 +82,7 @@ is ` · `, never parentheses.
 The report is a ledger. It does **not** make the second pass cheap — see the honesty note at the end
 of this section — it makes the second pass *legible*:
 
-1. **Re-run `analyze_test_impact` against the new commit. Always.** Mapping a diff to impacted tests
+1. **Start from a fresh impacted set for the new commit. Always.** Mapping a diff to impacted tests
    is the one thing you cannot infer from the previous report: a later push can add a screen, touch a
    new flow, or reach an area of the same application the first analysis never saw. Reusing the
    earlier set is exactly how a report comes out looking exhaustive while silently missing everything
@@ -127,7 +127,7 @@ of this section — it makes the second pass *legible*:
 
 **Why carried rows can't sit in `Validated`:** the obvious rule — "carry forward the tests that
 dropped out of the impacted set" — assumes dropping out is a fact about the code. It isn't reliably.
-Retrieval varies between calls (`SKILL.md`'s **Read the results as judgment**), so on any given push a
+Retrieval varies between calls, so on any given push a
 test can leave the set as pure variance while remaining every bit as impacted. Put that row in
 `Validated` and the report states it was validated against a commit it never ran on — exactly the lie
 the ledger exists to prevent, arriving through the one door the deterministic rule leaves open. A
@@ -145,18 +145,3 @@ application invalidates every carried-forward row, because those rows were true 
 no longer testing. **A changed run scope moves it too**, in both directions: a widened scope has rows
 that were never run, and a narrowed one has carried rows that today's pass would not have run at all.
 Carrying either one silently is how a narrower pass inherits a wider pass's green.
-
-## Running in CI
-
-**Advisory mode is the default CI mode** — one analysis call, nothing dispatched, nothing screened,
-nobody approving anything. **→ `references/ci-advisory.md`**, which is self-contained and is the only
-file such a workflow's prompt needs to name.
-
-A job that *runs* the assessed set instead — you assess, the job dispatches — runs under
-**→ `references/ci-run.md`**, again the only file its prompt names. Its contract is that an incomplete validation must never report as a
-pass: "everything I was allowed to run passed" and "this change is
-validated" are different claims, and a change whose impacted set is entirely approval-gated has
-validated nothing. That has to be enforced by a machine-readable verdict the job fails on — branch
-protection does not read prose — and never by the wording of the report. The bands do not bend to make
-a job look complete, in CI least of all: an unattended agent writing to a shared account is the
-failure mode they exist to prevent.

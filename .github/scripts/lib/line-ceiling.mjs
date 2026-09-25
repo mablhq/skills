@@ -1,4 +1,4 @@
-// Every skill is held at the size it had when this check landed; a skill not
+// A listed skill is held at its size; a skill not
 // listed gets DEFAULT_LINE_CEILING. An entry moves down with its skill and never
 // up, so a skill that shrinks fails until its entry is lowered to match.
 export const DEFAULT_LINE_CEILING = 500;
@@ -10,7 +10,7 @@ export const LINE_CEILINGS = {
   'mabl-test-coverage-design': 654,
   'mabl-test-edit': 338,
   'mabl-test-edit-verify': 442,
-  'mabl-test-impact': 791,
+  'mabl-test-run': 570,
   'mabl-version-compare': 812,
 };
 

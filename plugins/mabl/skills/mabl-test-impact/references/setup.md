@@ -20,7 +20,7 @@ tell you.
 | The tool is there; calling it says not enabled | 3 |
 | `mabl: command not found`, or an unknown-command error | 4 |
 | "Login has expired" on a CLI command while MCP tools still work | 4 |
-| A local run or debug session can't reach the app: certificate, port, or sign-in origin | `references/screening.md`, **Local target gates** |
+| A local run or debug session can't reach the app: certificate, port, or sign-in origin | **Local target gates**, in the skill that runs the tests |
 
 Rows 2 and 3 are everything you need to answer *"which tests does this change impact."* Row 4 only
 matters once you want to run one, so **don't verify rows you don't need**.
@@ -29,7 +29,7 @@ matters once you want to run one, so **don't verify rows you don't need**.
 |---|---|---|
 | 2 | The `mabl` MCP server is reachable | `get_current_user` responds — it's ungated, so it answers whenever the server is up |
 | 3 | Test impact analysis is enabled for both workspaces it checks: the tool is *listed* based on your default workspace, and a *call* is checked against the workspace that owns the application | The tool is in the list **and** a call against your real `applicationId` succeeds |
-| 4 | mabl CLI at the floor `SKILL.md`'s **Prerequisites** block pins, authenticated | `mabl --version`, `mabl auth info` |
+| 4 | mabl CLI ≥ 2.132.3, authenticated | `mabl --version`, `mabl auth info` |
 
 ## 2 · Is the server reachable?
 
@@ -121,7 +121,7 @@ on a set found that way, reported as a fallback (`SKILL.md`, **Preflight**).
 
 ## 4 · The mabl CLI
 
-The Prerequisites block in `SKILL.md` installs or upgrades the CLI. What it can't check is
+The Prerequisites block in the skill that runs the tests installs or upgrades the CLI. What it can't check is
 authentication:
 
 ```bash
@@ -130,10 +130,10 @@ mabl auth info    # confirm it took
 ```
 
 **The version floor is real,** and it belongs to the CLI paths: `mabl tests impact`, used by CI
-without an agent under **Run it**, sets it; the screening fallback's `mabl tests get-runs` predates
+without an agent under **In CI**, sets it; the screening fallback's `mabl tests get-runs` predates
 it. On an older CLI either fails as an unknown
 command, which reads like a broken recipe rather than a stale install — so when a `mabl tests`
-subcommand is "unknown", re-run the Prerequisites block before debugging the recipe.
+subcommand is "unknown", re-run that Prerequisites block before debugging the recipe.
 
 **CLI auth expires independently of MCP auth.** The MCP tools keep working while `mabl tests run`
 fails with "Login has expired." When runs fail but analysis works, check `mabl auth info` first.
