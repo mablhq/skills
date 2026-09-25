@@ -14,22 +14,28 @@ without re-deriving any of it from run history.
 ## Test impact analysis
 
 **Scope** — storefront web app · storefront-qa workspace · shop.qa.example.com · deployed build `9f4c1ab` (release 2026.09.02-3) · PR #482 @ `9f4c1ab` · scope: plan *Nightly regression* (15/19 in scope)
-**Analysis** — 19 candidates, 2 gaps · `moreMayExist: false` · `runContextIncomplete: false`
+**Analysis** — 19 candidates, 2 gaps · `policy: broad` · `moreMayExist: false` · `runContextIncomplete: false`
 
-**Validated (13)**
-- [Account - Saved addresses - Edit](viewTestUrl) — passed
-- [Account - Sign in - Shadow DOM host](viewTestUrl) — failed · pre-existing · quality 4 across 38 runs
-- [Checkout - Place order](viewTestUrl) — failed · died in shared setup, never reached the change
+**Validated (11)**
+- [Account - Saved addresses - Edit](viewTestUrl) `[direct · should_pass]` — passed · types a postal code and asserts the inline error (fetched steps)
+- [Account - Sign in - Shadow DOM host](viewTestUrl) `[blast_radius · should_pass]` — failed · pre-existing · quality 4 across 38 runs · its sign-in form runs the same field validator (search excerpt)
+- [Checkout - Place order](viewTestUrl) `[direct · should_pass]` — failed · died in shared setup, never reached the change · enters card expiry (fetched steps)
 - [Account - Sign in](viewTestUrl) — passed · `[critical]` label `smoke`
 
 **Previously validated (1)** — not in this commit's impacted set, not counted above
 - [Catalog - Search results](viewTestUrl) — passed · carried from `a1b2c3d`
+
+**Tests to update (1)** — fail as written by design, so not counted above
+- [Checkout - No error while typing](viewTestUrl) `[direct · fails_by_design]` — error text used to wait for blur, now appears per keystroke · updated, then passed
 
 **Not run (7)**
 - [Checkout - Guest express pay](viewTestUrl) — disabled
 - [Account - Saved addresses - Bulk delete](viewTestUrl) — pending approval · shared-state
 - [Catalog - Bulk archive](viewTestUrl) — pending approval · unverified
 - [Catalog - Facet counts](viewTestUrl) — out of scope · plan *Nightly regression*
+
+**Nearest coverage (1)** — no step reaches the change, so not validation of it
+- [Account - Saved cards list](viewTestUrl) `[adjacent · should_pass]` — passed
 
 **Gaps (2)**
 - Postal-code error clears on correct re-entry — authored [`<new-test-id>`](viewTestUrl)
@@ -59,17 +65,25 @@ is ` · `, never parentheses.
 | Budget exhausted | `timed out` | the wall-clock budget ran out mid-wave |
 | Screen incomplete | `unknown · <field>` | a field that never resolved, named |
 
+A `fails_by_design` test never takes a row reason, because not running it as written is the plan:
+it sits in **Tests to update** as `updated, then passed`, `updated, then failed · <cause>`, or
+`deferred`.
+
 ## What each field is load-bearing for
 
 | Field | Why it's in there |
 |---|---|
 | **Application + workspace** | The two values that can silently scope an analysis to the wrong product. Printed, they become a claim someone can check in a second. |
 | **Deployment** | Which host the runs actually hit — the difference between a hosted dev deployment and a local one that was also on offer. |
-| **Deployed build** | For a cloud run, the identity of the build deployed to the target when the canary ran — the version, commit, or deployment revision your pipeline recorded — and that it contains the change. For a local run, the served-build evidence from `SKILL.md`'s **Report the validation**. This is what separates *the tests passed* from *the tests passed on a build that contains the change*; omit it and the whole report can be true and worthless. The run's `execution_runtime_version` is the mabl runtime, not your build; if you record it, label it as such. |
+| **Deployed build** | For a cloud run, the identity of the build deployed to the target when the canary ran — the version, commit, or deployment revision your pipeline recorded — and that it contains the change. For a local run, the served-build evidence: the branch and commit the dev server was started from, or a grep of the served bundle for something the change introduced. This is what separates *the tests passed* from *the tests passed on a build that contains the change*; omit it and the whole report can be true and worthless. The run's `execution_runtime_version` is the mabl runtime, not your build; if you record it, label it as such. |
 | **PR and commit SHA** | Ties the report to the exact diff it validated. The SHA, not just the PR number — the ledger below compares against it. |
 | **`Previously validated` + `carried from <sha>`** | Inherited rows live in their own block and carry the commit they were run on. They are never counted in `Validated`, because retrieval variance (`SKILL.md`'s **Read the results as judgment**) means a test can leave the impacted set without ceasing to be impacted. Without both the block and the tag, a second push produces a report that can't tell a fresh result from an inherited one. |
 | **`viewTestUrl` on every row** | The reader opens tests from the report; a bare name makes them go find it. |
 | **Candidate count + `moreMayExist`** | Whether the set hit the result ceiling. "19, exhaustive" and "19 of possibly more" support different conclusions about coverage. |
+| **`policy`** | How the analysis read your guidance, which decides which tiers came back. Six candidates under `precise` and nineteen under `broad` describe different searches, not different coverage. |
+| **The `[relation · expectedOutcome]` tag and the evidence on every row** | The tag says how the test reaches the change and what it should do; the evidence is the one step or citation that put it in the set, so a reviewer can check relevance without opening the test. |
+| **`Tests to update` apart from `Validated`** | A `fails_by_design` test fails as written, on purpose. Counted in `Validated`, its red reads as a regression; left unlisted, the update it needs becomes nobody's. |
+| **`Nearest coverage` beside the gaps** | An `adjacent` test's pass says nothing about the change. It sits next to the gaps because it is the closest thing to coverage that area has, not proof of it. |
 | **`runContextIncomplete`** | The response's own flag that some per-test enrichment failed or was cut off. Report it, but **read it as a prompt, not a verdict**: it can be true on `plans_truncated` alone — a statement about plan membership, not about anything screening uses — and it stays true after you close a gap with a fallback lookup. What the reader needs is the residue: which candidates you still could not settle *after* those fallbacks, and on which field, named on their own rows. |
 | **A cause on every failure** | An unsorted failure list reads as *your change broke five things* when four were already red. The cause is what makes red actionable. |
 | **A reason on every not-run** | A test that's absent with no reason is indistinguishable from one you forgot. Skipping is fine; silent skipping isn't. |
@@ -95,7 +109,8 @@ of this section — it makes the second pass *legible*:
    **Run scope**) — every commit, not only when the scope changed. The analysis result is never the
    run set by itself once a scope is in play.
 3. **Screen the candidates that are new to this commit**, then **run everything in the fresh final run
-   set that screening cleared**, the canary first as for any wave (`SKILL.md`, **Canary**). Two halves,
+   set that screening cleared**, the canary first as for any wave (`SKILL.md`, **Canary**), with
+   `fails_by_design` tests still going to **Tests to update** rather than the wave. Two halves,
    both load-bearing. *Run everything*, because a test lands in the impacted set precisely when shared
    code or an indirect dependency reached it, which is the case where nothing about the test *looks*
    touched and the analysis knows better than you do. *That screening cleared*, because a candidate

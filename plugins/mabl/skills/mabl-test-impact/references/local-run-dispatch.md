@@ -128,10 +128,11 @@ export MABL_BRANCH=""   # set to the branch name when the change names one
 # lists exist because only three things are dispatchable: read-only, contained, and
 # whatever a human approved BY ID. A shared-state or unverified candidate nobody
 # approved belongs in no variable here -- it is reported as pending approval, not
-# run serially as a compromise. One quoted id per element: several ids inside one
-# pair of quotes is a legal one-element array that dispatches as a single malformed
-# --id. A candidate with no run history is banded by reading its steps like any
-# other, so it belongs in whichever list its steps put it in.
+# run serially as a compromise. A fails_by_design test belongs in none of them until
+# it has been updated (SKILL.md, Run it). One quoted id per element: several ids
+# inside one pair of quotes is a legal one-element array that dispatches as a
+# single malformed --id. A candidate with no run history is banded by reading its
+# steps like any other, so it belongs in whichever list its steps put it in.
 READ_ONLY=( "<id-1>" "<id-2>" )                      # confirmed to only read
 CONTAINED=( "<id-1>" "<id-2>" )                      # teardown you verified — serial; EMPTY when the change is itself destructive (Side-effect bands override): those ids go to the ask
 APPROVED=(  "<id-1>" "<id-2>" )                      # approved individually, BY ID

@@ -5,6 +5,19 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.5] - 2026-09-25
+### Changed
+- `mabl-test-impact` reads the new per-test labels from `analyze_test_impact`: `relation` (`direct`,
+  `blast_radius`, `adjacent`), `expectedOutcome` (`should_pass`, `fails_by_design`, `uncertain`),
+  and a one-sentence `evidence`, plus the result-level `policy` that says how the call's guidance
+  was read. The old `role` label is gone from the tool's output, and from the skill.
+- `direct` and `fails_by_design` tests are the must set; `blast_radius` tests are the default
+  extension; `adjacent` tests are reported as nearest coverage beside the gaps, not as validation.
+- A `fails_by_design` test is no longer run to validate the change. It goes to a new
+  **Tests to update** bucket in the run plan and report, is offered for update through
+  `mabl-test-edit`, and its failure is never reported as a regression. CI run mode drops such tests
+  from the dispatched set.
+
 ## [1.9.4] - 2026-09-23
 ### Changed
 - Skills' `allowed-tools` now also match the tool names Claude Code uses for a plugin install
