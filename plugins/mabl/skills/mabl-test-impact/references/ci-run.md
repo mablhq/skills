@@ -9,10 +9,10 @@ do not need the rest of the skill to follow it.
 **The preflight is the caller's.** `preflight.json` carries the workspace, the `applicationId`, the
 `environmentId`, the preview URL, the `credentialsId`, the `revision`, and the labels the caller's
 policy trusts for unattended runs. They tell you what the kept set will run against; you do not
-pass them anywhere. The `credentialsId` is only the default login: a kept test in a plan carrying
-one of those labels logs in the way that plan runs it, which the caller reads from the plans
-itself, so no login is yours to choose. Do not call `list_mabl_applications`,
-`list_mabl_environments` or `list_mabl_credentials` to second-guess them.
+pass them anywhere. The `credentialsId` is the caller's default login, not necessarily the one
+every kept test uses: the caller decides each test's login, and none is yours to choose. Do not
+call `list_mabl_applications`, `list_mabl_environments` or `list_mabl_credentials` to second-guess
+them.
 
 **Describe the change in product vocabulary**, naming every user-facing area it reaches — including
 surfaces the diff never mentions. That is the half the tool cannot do. Worked example: a shared
@@ -26,9 +26,9 @@ pull request.
 
 **One call.** Call `analyze_test_impact` once, with the caller's `guidance` — the `focus` text when
 the caller passed one — and the `references` and `revision` from preflight. Retry a *failure* once;
-never a third call, never a refined `changeDescription` over an earlier set, never `includePlans`,
-whose plan logins the caller reads for itself. What you keep is assessed from the set that call
-returned, so a second analysis moves the ground under it.
+never a third call, never a refined `changeDescription` over an earlier set, never `includePlans`.
+What you keep is assessed from the set that call returned, so a second analysis moves the ground
+under it.
 
 ## Assess, do not re-analyze
 
@@ -74,8 +74,8 @@ that does. If the assessment keeps more than that, drop the weakest tail — `us
 starts a run. Do not look for another way. The caller's job reads `run.json`, checks that every
 kept test is one the analysis returned and that the cap held, and creates the deployment itself
 — pinned to the application, environment, revision and preview URL from preflight, each test
-logging in as above, and with `impactSessionId` set to the `sessionId` the analysis returned so
-the runs link back to it.
+logging in as the caller decides, and with `impactSessionId` set to the `sessionId` the analysis
+returned so the runs link back to it.
 Your `selection_name` names the pull request, so the event is readable on the Deployments page.
 The key that spends is never in your hands, which is what lets a mistaken assessment cost at most
 fifty runs against the caller's own preview.

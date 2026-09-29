@@ -8,9 +8,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 ## [1.9.5] - 2026-09-29
 ### Fixed
 - `mabl-test-impact` CI run mode no longer says every kept test runs as the preflight
-  `credentialsId`. That is the default login: a test in a plan carrying one of the caller's
-  labels logs in the way that plan runs it, which the caller reads from the plans itself. The
-  analysis still never sets `includePlans`.
+  `credentialsId`. That is the caller's default login, and the caller decides each test's login.
 
 ## [1.9.4] - 2026-09-23
 ### Changed
