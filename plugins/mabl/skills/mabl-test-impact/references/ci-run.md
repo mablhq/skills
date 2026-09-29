@@ -6,13 +6,15 @@ scope the caller pinned before you started. Nobody is watching this happen: the 
 the approval, and the assessment below is the whole of the screen. This file stands on its own; you
 do not need the rest of the skill to follow it.
 
-**The preflight is the caller's.** `preflight.json` carries the workspace, the `applicationId`, the
-`environmentId`, the preview URL, the `credentialsId`, the `revision`, and the labels the caller's
-policy trusts for unattended runs. They tell you what the kept set will run against; you do not
-pass them anywhere. The `credentialsId` is the caller's default login, not necessarily the one
-every kept test uses: the caller decides each test's login, and none is yours to choose. Do not
-call `list_mabl_applications`, `list_mabl_environments` or `list_mabl_credentials` to second-guess
-them.
+**The preflight is the caller's setup for this run**, written to `preflight.json` before you
+start. It carries the workspace, the `applicationId`, the `environmentId`, the preview URL, the
+`credentialsId`, the `revision`, and the labels the caller's policy trusts for unattended runs.
+They tell you what the kept set will run against; you do not pass them anywhere. Do not call
+`list_mabl_applications`, `list_mabl_environments` or `list_mabl_credentials` to second-guess them.
+
+**Logins are the caller's too.** The `credentialsId` is the caller's default login, and a kept test
+may log in differently: the caller decides each test's login when it dispatches. You never pick or
+pass a login, and `run.json` has no field for one.
 
 **Describe the change in product vocabulary**, naming every user-facing area it reaches — including
 surfaces the diff never mentions. That is the half the tool cannot do. Worked example: a shared
