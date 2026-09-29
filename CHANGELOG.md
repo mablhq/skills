@@ -5,6 +5,13 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.5] - 2026-09-29
+### Fixed
+- `mabl-test-impact` CI run mode no longer says every kept test runs as the preflight
+  `credentialsId`. That is the default login: a test in a plan carrying one of the caller's
+  labels logs in the way that plan runs it, which the caller reads from the plans itself. The
+  analysis still never sets `includePlans`.
+
 ## [1.9.4] - 2026-09-23
 ### Changed
 - Skills' `allowed-tools` now also match the tool names Claude Code uses for a plugin install
