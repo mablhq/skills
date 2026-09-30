@@ -5,6 +5,12 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.9.6] - 2026-09-30
+### Changed
+- The `chrome-for-mabl` and `chrome-devtools` MCP servers now run `chrome-devtools-mcp@1.10.1`
+  instead of `@latest`, so every install runs the same reviewed version.
+- The README links mabl's privacy policy.
+
 ## [1.9.5] - 2026-09-29
 ### Fixed
 - `mabl-test-impact` CI run mode no longer says every kept test logs in as the `credentialsId` in
