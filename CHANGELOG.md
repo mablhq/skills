@@ -5,6 +5,12 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.10.0] - 2026-09-30
+### Added
+- A Devin plugin. Install it with `devin plugins install mablhq/skills#plugins/mabl`, or from the Devin
+  web app. You get all eight skills and the three MCP servers.
+- `mabl-init` knows where Devin keeps its memory file, rules, and skills.
+
 ## [1.9.6] - 2026-09-30
 ### Changed
 - The `chrome-for-mabl` and `chrome-devtools` MCP servers now run `chrome-devtools-mcp@1.10.1`
