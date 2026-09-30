@@ -97,20 +97,19 @@ Skills and all three MCP servers are configured in one step. The hosted `mabl` s
 
 ### Devin
 
-The plugin lives in the `plugins/mabl` subdirectory. Install it from there.
+The repo is also a Devin plugin (`plugins/mabl/.devin-plugin/`). Devin installs it from the `plugins/mabl` subdirectory. In Devin for Terminal:
 
-- **Devin for Terminal:** `devin plugins install mablhq/skills#plugins/mabl`
-- **Devin web app:** **Customize → Plugins → Add plugin → From repository**, enter `mablhq/skills` with subdirectory `plugins/mabl`. Install it at personal or organization scope.
+```bash
+devin plugins install mablhq/skills#plugins/mabl
+```
 
-Skills load as `/mabl:<skill>` along with all three MCP servers. Devin prompts you to authorize the hosted `mabl` server with OAuth.
+Or in the Devin web app:
 
-In a cloud Devin session there's no browser for `mabl auth login`, so authenticate with an API key instead:
+1. Open **Customize → Plugins → Add plugin → From repository**.
+2. Enter `mablhq/skills` with the subdirectory `plugins/mabl`.
+3. Choose personal or organization scope.
 
-1. Create an API key in mabl under **Settings → APIs** and store it as a Devin secret named `MABL_API_KEY` (organization or repo scope).
-2. Run `mabl auth activate-key "\\$MABL_API_KEY"` in your blueprint's setup. The leading backslash keeps a key that starts with `-` from being read as a flag; the CLI strips it.
-3. To connect to mabl's MCP without OAuth, add a custom MCP server in Devin's MCP settings with URL `https://mcp.mabl.com/mcp` and an `x-api-key: ${MABL_API_KEY}` header. Name it `mabl` so the skills find it; a server you configure under that name takes the place of the plugin's.
-
-The live step-through in `mabl-debug`, and the Chrome-driven exploration in `mabl-test-coverage-design`, start a local Chrome that the `chrome-*` MCP servers attach to. In Devin for Terminal that Chrome runs on your machine as usual; in cloud sessions it hasn't been verified yet.
+Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Devin prompts you to authorize it on first use.
 
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 
