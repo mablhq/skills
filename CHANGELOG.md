@@ -5,6 +5,11 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.10.1] - 2026-09-30
+### Changed
+- `mabl-test-impact` CI modes pass the mabl branch to `analyze_test_impact` as `branch` when the
+  caller gives one, so tests written or repaired on that branch are analyzed at their branch version.
+
 ## [1.10.0] - 2026-09-30
 ### Added
 - A Devin plugin. Install it with `devin plugins install mablhq/skills#plugins/mabl`, or from the Devin

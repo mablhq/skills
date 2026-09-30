@@ -17,8 +17,9 @@ account settings**, which the diff never names because the change was framed aro
 no paths, no hunks, no secrets. The text goes to mabl's servers and a bot posts it back onto the pull
 request.
 
-**One call.** Call `analyze_test_impact` once, with the caller's `guidance`. Retry a *failure* once;
-never a third call, never a refined `changeDescription` over an earlier set, never `includePlans`.
+**One call.** Call `analyze_test_impact` once, with the caller's `guidance`, and with `branch` when
+the caller gives a mabl branch. Retry a *failure* once; never a third call, never a refined
+`changeDescription` over an earlier set, never `includePlans`.
 The follow-up-to-sharpen that applies elsewhere does not apply here: record the `changeDescription`
 that produced the set you report.
 

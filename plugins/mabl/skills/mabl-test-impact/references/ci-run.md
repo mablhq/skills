@@ -27,8 +27,9 @@ no paths, no hunks, no secrets. The text goes to mabl's servers and a bot posts 
 pull request.
 
 **One call.** Call `analyze_test_impact` once, with the caller's `guidance` — the `focus` text when
-the caller passed one — and the `references` and `revision` from preflight. Retry a *failure* once;
-never a third call, never a refined `changeDescription` over an earlier set, never `includePlans`.
+the caller passed one — the `references` and `revision` from preflight, and `branch` when the caller
+gives a mabl branch. Retry a *failure* once; never a third call, never a refined `changeDescription`
+over an earlier set, never `includePlans`.
 What you keep is assessed from the set that call returned, so a second analysis moves the ground
 under it.
 
