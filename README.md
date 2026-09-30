@@ -2,7 +2,7 @@
 
 **Independent verification for agentic development using the world's most advanced testing harness.** mabl closes the loop between application change and verified behavior — authoring, orchestrating, executing, and maintaining automated test suites, analyzing failures, and generating reporting, all with the auditable evidence that business-critical applications require.
 
-This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, and an **OpenAI Codex plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
+This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, an **OpenAI Codex plugin**, and a **Devin plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
 
 Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
@@ -95,6 +95,23 @@ codex plugin add mabl@mabl
 
 Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Codex prompts you to authorize it on first use.
 
+### Devin
+
+The plugin lives in the `plugins/mabl` subdirectory. Install it from there.
+
+- **Devin for Terminal:** `devin plugins install mablhq/skills#plugins/mabl`
+- **Devin web app:** **Customize → Plugins → Add plugin → From repository**, enter `mablhq/skills` with subdirectory `plugins/mabl`. Install it at personal or organization scope.
+
+Skills load as `/mabl:<skill>` along with all three MCP servers. Devin prompts you to authorize the hosted `mabl` server with OAuth.
+
+In a cloud Devin session there's no browser for `mabl auth login`, so authenticate with an API key instead:
+
+1. Create a mabl API key and store it as a Devin secret named `MABL_API_KEY` (organization or repo scope).
+2. Run `mabl auth activate-key "$MABL_API_KEY"` in your blueprint's setup, or let the skills run it when they find the CLI logged out.
+3. To connect the `mabl` MCP server without OAuth, send the key as an `x-api-key: ${MABL_API_KEY}` header instead.
+
+The live step-through in `mabl-debug`, and the Chrome-driven exploration in `mabl-test-coverage-design`, start a local Chrome that the `chrome-*` MCP servers attach to. In Devin for Terminal that Chrome runs on your machine as usual; in cloud sessions it hasn't been verified yet.
+
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 
 ```bash
@@ -108,6 +125,8 @@ gh skill install mablhq/skills mabl-version-compare
 gh skill install mablhq/skills mabl-debug
 gh skill install mablhq/skills mabl-test-impact
 ```
+
+For Devin for Terminal and other agents the [`skills`](https://github.com/vercel-labs/skills) CLI supports, `npx skills add mablhq/skills -a devin` (or your agent's id) does the same.
 
 `gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging, coverage-design, and test-impact skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
 

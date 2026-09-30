@@ -7,6 +7,7 @@
     "email": "support@mabl.com",
     "url": "https://www.mabl.com"
   },
+  "homepage": "https://www.mabl.com",
   "repository": "https://github.com/mablhq/skills",
   "license": "MIT",
   "keywords": [
@@ -17,6 +18,6 @@
     "debugging",
     "mabl"
   ],
-  "skills": "plugins/mabl/skills/",
-  "mcpServers": "plugins/mabl/.mcp.json"
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
 }

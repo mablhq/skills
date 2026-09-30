@@ -1,13 +1,14 @@
 # CLAUDE.md
 
-This repo is the public home of mabl's agent skills. One repo, five install surfaces — all sharing **one plugin home, `plugins/mabl/`**. That directory holds the skills, the MCP config, and each surface's plugin manifest; there is exactly one copy of everything. The repo root holds only the per-surface marketplace files that point into it (plus the Copilot manifest, which has to live at the root — see below).
+This repo is the public home of mabl's agent skills. One repo, six install surfaces — all sharing **one plugin home, `plugins/mabl/`**. That directory holds the skills, the MCP config, and each surface's plugin manifest; there is exactly one copy of everything. The repo root holds only the per-surface marketplace files that point into it (plus the Copilot manifest, which has to live at the root — see below).
 
-Why a subdirectory and not the repo root? **Codex.** Its marketplace requires each plugin in a subdirectory (`codex plugin add` rejects the repo root as a plugin) and copies that subdir into its cache **without following symlinks** — so the skills and MCP config have to be real files inside the plugin dir, not links back to the root. Rather than keep a second copy in sync, `plugins/mabl/` *is* the home and the other four surfaces point at it.
+Why a subdirectory and not the repo root? **Codex.** Its marketplace requires each plugin in a subdirectory (`codex plugin add` rejects the repo root as a plugin) and copies that subdir into its cache **without following symlinks** — so the skills and MCP config have to be real files inside the plugin dir, not links back to the root. Rather than keep a second copy in sync, `plugins/mabl/` *is* the home and the other five surfaces point at it.
 
 - **OpenAI Codex plugin** (`mabl`) — manifest `plugins/mabl/.codex-plugin/plugin.json`, listed by `.agents/plugins/marketplace.json` (`source: ./plugins/mabl`). Reads `plugins/mabl/skills/` and `plugins/mabl/.mcp.json`. Codex reads the same `.mcp.json` shape as Claude (camelCase `mcpServers`, `type: http` remote servers with OAuth).
 - **Claude Code plugin** (`mabl`) — manifest `plugins/mabl/.claude-plugin/plugin.json`; marketplace `.claude-plugin/marketplace.json` at the root with `source: ./plugins/mabl`. Claude reads skills and `.mcp.json` by convention at the plugin root (`plugins/mabl/`).
 - **Cursor plugin** (`mabl`) — manifest `plugins/mabl/.cursor-plugin/plugin.json`; marketplace `.cursor-plugin/marketplace.json` at the root with `source: ./plugins/mabl`. Cursor reads MCP servers from `plugins/mabl/mcp.json` (note: not `.mcp.json` — Cursor only reads `mcp.json`).
 - **GitHub Copilot / VS Code plugin** (`mabl`) — manifest is the **root `plugin.json`**, because VS Code's plugin loader checks for a manifest at the repo root. It points into the home: `"skills": "plugins/mabl/skills/"`, `"mcpServers": "plugins/mabl/.mcp.json"`.
+- **Devin plugin** (`mabl`) — manifest `plugins/mabl/.devin-plugin/plugin.json`, installed from the subdirectory (`devin plugins install mablhq/skills#plugins/mabl`, or the web app's **From repository** with subdirectory `plugins/mabl`). Reads `plugins/mabl/skills/` and `plugins/mabl/.mcp.json`. Devin would fall back to `.claude-plugin/plugin.json` without its own manifest; ours keeps the pointers explicit.
 - **`gh skill install` source** — skills discovered via the `skills/*/SKILL.md` convention, which `gh skill` finds even nested under a prefix (`plugins/mabl/skills/...`).
 
 ### Changing a skill? Bump the version and update the docs
@@ -21,7 +22,7 @@ comments, CI-only tweaks).
 
 ### Keep the manifests and MCP files in sync
 
-The four plugin manifests — `plugins/mabl/.claude-plugin/plugin.json`, `plugins/mabl/.cursor-plugin/plugin.json`, `plugins/mabl/.codex-plugin/plugin.json`, and the root `plugin.json` (Copilot) — describe the same plugin. When you bump `version` or change `name`/`description`/`author`, update **all four** (and the `version` in the three `marketplace.json` files, which isn't parity-checked). CI checks this parity.
+The five plugin manifests — `plugins/mabl/.claude-plugin/plugin.json`, `plugins/mabl/.cursor-plugin/plugin.json`, `plugins/mabl/.codex-plugin/plugin.json`, `plugins/mabl/.devin-plugin/plugin.json`, and the root `plugin.json` (Copilot) — describe the same plugin. When you bump `version` or change `name`/`description`/`author`, update **all five** (and the `version` in the three `marketplace.json` files, which isn't parity-checked). CI checks this parity.
 
 The one remaining duplication is MCP config: `plugins/mabl/mcp.json` (Cursor) must be a byte-identical copy of `plugins/mabl/.mcp.json` (Claude/Copilot/Codex). Cursor refuses any other filename, so the two can't be collapsed — CI enforces they match.
 
@@ -72,7 +73,7 @@ install it, because that depends on how this skill was installed.
 
 **`**Requires \`<name>\`.**` is the checked token.** A structural declaration, not a sentence: CI verifies it exactly, it reads as prose, and it names the skill so the error message is right. Every other word around it is free to edit. What CI can't verify is that the fallback beside it is correct — that stays a review item.
 
-**Name the missing skill, never an install command.** A skill cannot know which of the five surfaces installed it, so `gh skill install ...` is wrong guidance for the four readers who used a marketplace instead. Report what's missing and let the user install it their way.
+**Name the missing skill, never an install command.** A skill cannot know which of the six surfaces installed it, so `gh skill install ...` is wrong guidance for the five readers who used a plugin instead. Report what's missing and let the user install it their way.
 
 Don't name a sibling where nothing routes there — say the thing itself instead.
 
@@ -119,6 +120,7 @@ node .github/scripts/validate-copilot-manifest.mjs     # root plugin.json (Copil
 node scripts/validate-template.mjs                      # Cursor manifests (official validator)
 node .github/scripts/validate-cursor-parity.mjs        # mcp.json == .mcp.json + Cursor/Claude parity
 node .github/scripts/validate-codex-parity.mjs         # Codex/Claude manifest parity + marketplace
+node .github/scripts/validate-devin-parity.mjs         # Devin/Claude manifest parity + plugin paths
 node --test .github/scripts/lib/frontmatter.test.mjs    # the frontmatter reader's folding rules
 node --test .github/scripts/lib/line-ceiling.test.mjs   # the SKILL.md line ceiling
 node --test .github/scripts/lib/allowed-tools.test.mjs  # allowed-tools MCP name pairing
@@ -134,6 +136,8 @@ To test the Copilot plugin: in VS Code, run **Chat: Install Plugin From Source**
 To test the Cursor plugin: import this repo as a team marketplace (Cursor **Dashboard → Settings → Plugins → Add Marketplace → Import from Repo**), then install `mabl` from the **Customize** panel.
 
 To test the Codex plugin: `codex plugin marketplace add .` (or `mablhq/skills`) then `codex plugin add mabl@mabl`. Confirm with `codex plugin list` (should be `installed, enabled`) and `codex mcp list` (both servers present; the `mabl` server shows `Auth: OAuth`).
+
+To test the Devin plugin: in Devin for Terminal, `devin plugins install --local ./plugins/mabl`, then `devin plugins info mabl` should list the eight skills and three MCP servers. Remove it afterwards with `devin plugins remove mabl`.
 
 ## Relationship to the mabl CLI
 

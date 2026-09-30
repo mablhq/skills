@@ -126,6 +126,7 @@ authentication:
 
 ```bash
 mabl auth login --auto   # browser OAuth — the user completes this; --auto captures the code for agents
+mabl auth activate-key "$MABL_API_KEY"   # headless sessions (cloud agents, CI): use an API key instead
 mabl auth info    # confirm it took
 ```
 

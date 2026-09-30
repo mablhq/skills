@@ -51,6 +51,10 @@ jobs:
       # in parity with the Claude manifest and the marketplace points at it.
       - name: Validate Codex cross-surface parity
         run: node .github/scripts/validate-codex-parity.mjs
+      # Devin installs from plugins/mabl/ and prefers .devin-plugin/plugin.json
+      # over the Claude manifest, so assert the two agree.
+      - name: Validate Devin cross-surface parity
+        run: node .github/scripts/validate-devin-parity.mjs
       # The frontmatter folding rules are what the description budget is
       # measured against, so they get direct tests — and they run before the
       # validator, so a broken reader can't green-light a PR.

@@ -27,7 +27,7 @@ MIN_MABL_CLI_VERSION=2.124.30
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 
-mabl auth login --auto   # one-time OAuth in browser — required before any command
+mabl auth login --auto   # one-time OAuth in browser — required before any command (headless: mabl auth activate-key "$MABL_API_KEY")
 ```
 
 You also need the **`chrome-devtools` MCP**, which drives its own real Chrome
