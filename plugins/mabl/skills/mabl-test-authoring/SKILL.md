@@ -26,7 +26,7 @@ MIN_MABL_CLI_VERSION=2.124.30
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 
-mabl auth login --auto   # one-time OAuth in browser — required before any command (no browser but $MABL_API_KEY set: mabl auth activate-key "\\$MABL_API_KEY")
+mabl auth login --auto   # one-time OAuth in browser — required before any command
 mabl auth info    # verify you're logged in and the token hasn't expired
 ```
 

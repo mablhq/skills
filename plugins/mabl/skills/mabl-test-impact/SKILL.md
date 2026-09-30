@@ -35,7 +35,7 @@ asks for approval, by design, rather than widening the standing allowlist.
 fallback's `mabl tests get-runs` (`references/screening.md`) predates it. The analysis itself
 needs no CLI. On an older CLI either fails as an unknown command, which reads like a broken
 recipe rather than a stale install.
-Authentication is separate: `mabl auth login --auto` once (no browser but `$MABL_API_KEY` set: `mabl auth activate-key "\\$MABL_API_KEY"`), and `mabl auth info` when runs start failing
+Authentication is separate: `mabl auth login --auto` once, and `mabl auth info` when runs start failing
 while the MCP tools still work.
 
 **Procedure lives here; detail lives in the references.** Open the one that matches what you are
