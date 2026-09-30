@@ -152,6 +152,7 @@ The agent uses mabl's failure analysis and run artifacts to decide whether it's 
 - [mabl docs](https://help.mabl.com) — documentation and guides
 - [mabl CLI](https://www.npmjs.com/package/@mablhq/mabl-cli) — command line interface
 - [Support](https://help.mabl.com) — help center
+- [Privacy policy](https://www.mabl.com/privacy) — how mabl handles your data
 
 ---
 

@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "chrome-devtools-mcp@latest",
+        "chrome-devtools-mcp@1.10.1",
         "--browserUrl",
         "http://127.0.0.1:9222"
       ]
@@ -13,7 +13,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "chrome-devtools-mcp@latest"
+        "chrome-devtools-mcp@1.10.1"
       ]
     },
     "mabl": {
