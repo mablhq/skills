@@ -106,9 +106,9 @@ Skills load as `/mabl:<skill>` along with all three MCP servers. Devin prompts y
 
 In a cloud Devin session there's no browser for `mabl auth login`, so authenticate with an API key instead:
 
-1. Create a mabl API key and store it as a Devin secret named `MABL_API_KEY` (organization or repo scope).
-2. Run `mabl auth activate-key "$MABL_API_KEY"` in your blueprint's setup, or let the skills run it when they find the CLI logged out.
-3. To connect the `mabl` MCP server without OAuth, send the key as an `x-api-key: ${MABL_API_KEY}` header instead.
+1. Create an API key in mabl under **Settings → APIs** and store it as a Devin secret named `MABL_API_KEY` (organization or repo scope).
+2. Run `mabl auth activate-key "\\$MABL_API_KEY"` in your blueprint's setup. The leading backslash keeps a key that starts with `-` from being read as a flag; the CLI strips it.
+3. To connect to mabl's MCP without OAuth, add a custom MCP server in Devin's MCP settings with URL `https://mcp.mabl.com/mcp` and an `x-api-key: ${MABL_API_KEY}` header. Name it `mabl` so the skills find it; a server you configure under that name takes the place of the plugin's.
 
 The live step-through in `mabl-debug`, and the Chrome-driven exploration in `mabl-test-coverage-design`, start a local Chrome that the `chrome-*` MCP servers attach to. In Devin for Terminal that Chrome runs on your machine as usual; in cloud sessions it hasn't been verified yet.
 
@@ -125,8 +125,6 @@ gh skill install mablhq/skills mabl-version-compare
 gh skill install mablhq/skills mabl-debug
 gh skill install mablhq/skills mabl-test-impact
 ```
-
-For Devin for Terminal and other agents the [`skills`](https://github.com/vercel-labs/skills) CLI supports, `npx skills add mablhq/skills -a devin` (or your agent's id) does the same.
 
 `gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging, coverage-design, and test-impact skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
 

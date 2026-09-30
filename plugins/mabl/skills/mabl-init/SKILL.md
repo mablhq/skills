@@ -137,12 +137,12 @@ Ask the user how they want it saved — don't assume a file. Offer:
   `CLAUDE.md`, Cursor / Codex / Devin → `AGENTS.md`, GitHub Copilot →
   `.github/copilot-instructions.md`.
 - **(b) A rule** — for clients with path-scoped rules (e.g. Cursor
-  `.cursor/rules/mabl.mdc` with `globs`, Devin `.devin/rules/mabl.md`, GitHub Copilot
+  `.cursor/rules/mabl.mdc` with `globs`, Devin `.devin/rules/mabl.md` with `trigger: glob` and `globs`, GitHub Copilot
   `.github/instructions/mabl.instructions.md` with `applyTo`). Pairs naturally
   with the folder-based strategy from step 3 — scope the rule's globs to the
   mapped folders so the right app/environment loads per path.
 - **(c) A skill** — a small `mabl-config` skill (a `SKILL.md` in the client's
-  skills directory, e.g. `.claude/skills/mabl-config/SKILL.md`, or `.agents/skills/` for Devin) the agent
+  skills directory, e.g. `.claude/skills/mabl-config/SKILL.md`, or `.agents/skills/mabl-config/SKILL.md` in Devin) the agent
   invokes on demand. Only pick this if you'd rather it not always be in context
   — the IDs won't be loaded unless the skill is triggered.
 

@@ -9,8 +9,8 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 ### Added
 - A Devin plugin. Install it with `devin plugins install mablhq/skills#plugins/mabl`, or from the Devin
   web app. You get all eight skills and the three MCP servers.
-- Skills that log in to the mabl CLI now name the headless option, `mabl auth activate-key
-  "$MABL_API_KEY"`, for cloud agents and CI where a browser login isn't possible.
+- Skills that log in to the mabl CLI now name the API-key option, `mabl auth activate-key
+  "\\$MABL_API_KEY"`, for cloud agents and CI where a browser login isn't possible.
 - `mabl-init` knows where Devin keeps its memory file, rules, and skills.
 
 ## [1.9.6] - 2026-09-30
