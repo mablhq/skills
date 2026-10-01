@@ -26,6 +26,11 @@ account settings**, which the diff never names because the change was framed aro
 no paths, no hunks, no secrets. The text goes to mabl's servers and a bot posts it back onto the
 pull request.
 
+Use **"wide pre-PR safety pass, everything potentially relevant"** for a caller requesting broad
+coverage, or **"a short, high-confidence list, precision over recall"** for a narrow ask. Preserve
+the caller's other guidance. Report a policy mismatch without re-calling; `default` may also be a
+fallback for a missing or invalid submitted policy.
+
 **One call.** Call `analyze_test_impact` once, with the caller's `guidance` — the `focus` text when
 the caller passed one — and the `references` and `revision` from preflight. Retry a *failure* once;
 never a third call, never a refined `changeDescription` over an earlier set, never `includePlans`.
@@ -39,12 +44,13 @@ diff: *"touches the plan-run list this test reads"*, *"surfaced on the shared si
 the change does not reach sign-in"*. The line is the artifact a reviewer checks the run against, so
 write it about this change, not about the test.
 
-Start from each test's `evidence`, the deciding step or citation the analysis names. Its `relation`
-is the agent's judgment from the steps, and the line between `direct` and `blast_radius` is soft, so
-check the evidence against the diff rather than deciding on the label alone. **Drop every
-`fails_by_design` test** with `fails by design · needs updating` as its reason: it is expected to
-fail as written, so its run proves nothing and its red would read as a regression, and nobody is
-present to update it.
+Start from each test's `evidence` and check it against the diff. Both `relation` and
+`expectedOutcome` are model judgments. When a label affects a keep/drop or cap decision, use the
+step read screening already needs below; don't fetch steps just to confirm a label that changes
+nothing. **Keep a relevant `fails_by_design` test if it clears the same scope and safety screen**,
+with `predicted intentional failure · <old → new>; run to verify` in its reason. Do not drop it or
+excuse a failure solely on that prediction. The actual failing step must confirm the intentional
+change before an update is proposed; an unrelated failure can still be a regression.
 
 **You may not add a test the analysis did not return.** No `search_mabl_tests`, no
 `list_mabl_tests`, no test you recall from another run: the independence of this mode rests on the

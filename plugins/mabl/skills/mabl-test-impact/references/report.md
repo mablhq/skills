@@ -16,7 +16,7 @@ without re-deriving any of it from run history.
 **Scope** — storefront web app · storefront-qa workspace · shop.qa.example.com · deployed build `9f4c1ab` (release 2026.09.02-3) · PR #482 @ `9f4c1ab` · scope: plan *Nightly regression* (15/19 in scope)
 **Analysis** — 19 candidates, 2 gaps · `policy: broad` · `moreMayExist: false` · `runContextIncomplete: false`
 
-**Validated (11)**
+**Validated (10)**
 - [Account - Saved addresses - Edit](viewTestUrl) `[direct · should_pass]` — passed · types a postal code and asserts the inline error (fetched steps)
 - [Account - Sign in - Shadow DOM host](viewTestUrl) `[blast_radius · should_pass]` — failed · pre-existing · quality 4 across 38 runs · its sign-in form runs the same field validator (search excerpt)
 - [Checkout - Place order](viewTestUrl) `[direct · should_pass]` — failed · died in shared setup, never reached the change · enters card expiry (fetched steps)
@@ -25,8 +25,8 @@ without re-deriving any of it from run history.
 **Previously validated (1)** — not in this commit's impacted set, not counted above
 - [Catalog - Search results](viewTestUrl) — passed · carried from `a1b2c3d`
 
-**Tests to update (1)** — fail as written by design, so not counted above
-- [Checkout - No error while typing](viewTestUrl) `[direct · fails_by_design]` — error text used to wait for blur, now appears per keystroke · updated, then passed
+**Tests to update (1)** — intentional failure confirmed from the run, not counted above
+- [Checkout - No error while typing](viewTestUrl) `[direct · fails_by_design]` — asserts no error before blur (fetched steps) · ran, failed as expected at that assertion: errors now appear per keystroke · update proposed
 
 **Not run (7)**
 - [Checkout - Guest express pay](viewTestUrl) — disabled
@@ -35,7 +35,7 @@ without re-deriving any of it from run history.
 - [Catalog - Facet counts](viewTestUrl) — out of scope · plan *Nightly regression*
 
 **Nearest coverage (1)** — no step reaches the change, so not validation of it
-- [Account - Saved cards list](viewTestUrl) `[adjacent · should_pass]` — passed
+- [Account - Saved cards list](viewTestUrl) `[adjacent · should_pass]` — passed · opens saved cards without interacting with validation (search excerpt)
 
 **Gaps (2)**
 - Postal-code error clears on correct re-entry — authored [`<new-test-id>`](viewTestUrl)
@@ -65,9 +65,12 @@ is ` · `, never parentheses.
 | Budget exhausted | `timed out` | the wall-clock budget ran out mid-wave |
 | Screen incomplete | `unknown · <field>` | a field that never resolved, named |
 
-A `fails_by_design` test never takes a row reason, because not running it as written is the plan:
-it sits in **Tests to update** as `updated, then passed`, `updated, then failed · <cause>`, or
-`deferred`.
+A predicted `fails_by_design` test uses the same run and not-run reasons as any candidate.
+If it passes, or fails for another cause, report it in **Validated** with that actual outcome.
+Only a run whose failing step confirms the intentional old → new goes in **Tests to update**:
+`ran, failed as expected · <step/cause> · update proposed`, `deferred`, `updated, then passed`, or
+`updated, then failed · <cause>`. Record the initial failure even when an update later passes,
+and count each candidate once. A label alone never places a test in this block.
 
 ## What each field is load-bearing for
 
@@ -79,10 +82,10 @@ it sits in **Tests to update** as `updated, then passed`, `updated, then failed 
 | **PR and commit SHA** | Ties the report to the exact diff it validated. The SHA, not just the PR number — the ledger below compares against it. |
 | **`Previously validated` + `carried from <sha>`** | Inherited rows live in their own block and carry the commit they were run on. They are never counted in `Validated`, because retrieval variance (`SKILL.md`'s **Read the results as judgment**) means a test can leave the impacted set without ceasing to be impacted. Without both the block and the tag, a second push produces a report that can't tell a fresh result from an inherited one. |
 | **`viewTestUrl` on every row** | The reader opens tests from the report; a bare name makes them go find it. |
-| **Candidate count + `moreMayExist`** | Whether the set hit the result ceiling. "19, exhaustive" and "19 of possibly more" support different conclusions about coverage. |
-| **`policy`** | How the analysis read your guidance, which decides which tiers came back. Six candidates under `precise` and nineteen under `broad` describe different searches, not different coverage. |
-| **The `[relation · expectedOutcome]` tag and the evidence on every row** | The tag says how the test reaches the change and what it should do; the evidence is the one step or citation that put it in the set, so a reviewer can check relevance without opening the test. |
-| **`Tests to update` apart from `Validated`** | A `fails_by_design` test fails as written, on purpose. Counted in `Validated`, its red reads as a regression; left unlisted, the update it needs becomes nobody's. |
+| **Candidate count + `moreMayExist`** | Whether the set may be incomplete because of the ceiling or additional candidates the model reported. "19, exhaustive" and "19 of possibly more" support different conclusions about coverage. |
+| **`policy`** | How the analysis read your guidance, which decides which tiers came back. Six candidates under `precise` and nineteen under `broad` describe different inclusion breadth, not different coverage. |
+| **The `[relation · expectedOutcome]` tag and evidence on analyzed candidates in Validated, Tests to update, and Nearest coverage** | The tag records the predicted relevance and outcome; the evidence is the one step or citation that put it in the set, so a reviewer can check relevance without opening the test. |
+| **`Tests to update` apart from `Validated`** | The actual failing step and diff confirmed an intentional old → new. The row records that evidence and the proposed or completed update; a model prediction alone never excuses a red. |
 | **`Nearest coverage` beside the gaps** | An `adjacent` test's pass says nothing about the change. It sits next to the gaps because it is the closest thing to coverage that area has, not proof of it. |
 | **`runContextIncomplete`** | The response's own flag that some per-test enrichment failed or was cut off. Report it, but **read it as a prompt, not a verdict**: it can be true on `plans_truncated` alone — a statement about plan membership, not about anything screening uses — and it stays true after you close a gap with a fallback lookup. What the reader needs is the residue: which candidates you still could not settle *after* those fallbacks, and on which field, named on their own rows. |
 | **A cause on every failure** | An unsorted failure list reads as *your change broke five things* when four were already red. The cause is what makes red actionable. |
@@ -109,8 +112,8 @@ of this section — it makes the second pass *legible*:
    **Run scope**) — every commit, not only when the scope changed. The analysis result is never the
    run set by itself once a scope is in play.
 3. **Screen the candidates that are new to this commit**, then **run everything in the fresh final run
-   set that screening cleared**, the canary first as for any wave (`SKILL.md`, **Canary**), with
-   `fails_by_design` tests still going to **Tests to update** rather than the wave. Two halves,
+   set that screening cleared**, including predicted `fails_by_design` tests, the canary first as
+   for any wave (`SKILL.md`, **Canary**). Two halves,
    both load-bearing. *Run everything*, because a test lands in the impacted set precisely when shared
    code or an indirect dependency reached it, which is the case where nothing about the test *looks*
    touched and the analysis knows better than you do. *That screening cleared*, because a candidate

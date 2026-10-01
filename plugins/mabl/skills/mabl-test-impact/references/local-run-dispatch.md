@@ -128,8 +128,8 @@ export MABL_BRANCH=""   # set to the branch name when the change names one
 # lists exist because only three things are dispatchable: read-only, contained, and
 # whatever a human approved BY ID. A shared-state or unverified candidate nobody
 # approved belongs in no variable here -- it is reported as pending approval, not
-# run serially as a compromise. A fails_by_design test belongs in none of them until
-# it has been updated (SKILL.md, Run it). One quoted id per element: several ids
+# run serially as a compromise. A fails_by_design prediction doesn't change the band:
+# screen and dispatch it like the other candidates. One quoted id per element: several ids
 # inside one pair of quotes is a legal one-element array that dispatches as a
 # single malformed --id. A candidate with no run history is banded by reading its
 # steps like any other, so it belongs in whichever list its steps put it in.

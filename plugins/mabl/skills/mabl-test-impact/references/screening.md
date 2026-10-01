@@ -338,8 +338,9 @@ not verified" on a large set puts the majority into the bottom band, which means
 Banding costs a `get_mabl_test_steps` read per test; not banding costs the test. Spend the reads on
 the candidates you actually intend to dispatch, in this order — **candidates without a history
 baseline first, then `relation: direct`, then `blast_radius`, then the rest** — and be explicit in
-the report about how many you left unbanded and why. A `fails_by_design` test is not dispatched as
-written, so its read waits for the updated version. No-history candidates come first because nothing
+the report about how many you left unbanded and why. A `fails_by_design` prediction doesn't
+remove a test from this screen or the run. Check advisory labels during these reads only when
+they affect a narrow-set or cap decision. No-history candidates come first because nothing
 else can screen them: a test authored on a branch for the change under review has no history to
 read, so the shortcut would put the one test written *for* this change into the bottom band.
 Reading it first closes that.

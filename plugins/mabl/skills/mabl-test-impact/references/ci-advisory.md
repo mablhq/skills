@@ -36,8 +36,8 @@ would be a different artifact wearing this one's name.
 
 - `Impacted (N)` — every test the analysis returned, in its order, each with its `relation` and
   `expectedOutcome`, the reason it surfaced (its `evidence`, then `context`), and its `viewTestUrl`.
-  Mark each `fails_by_design` test as needing an update rather than a run, so a reader doesn't take
-  its coming failure for a regression.
+  Mark `fails_by_design` as a predicted intentional failure, unconfirmed because nothing ran;
+  neither label establishes that an update is needed or what would cause a failure.
 - `Gaps (N)` — each with its basis text and **no disposition**: nobody is present to author or defer,
   so the gap is recorded for follow-up rather than owned.
 - `policy`, `moreMayExist` and `runContextIncomplete`, as returned. A `policy` other than the one the

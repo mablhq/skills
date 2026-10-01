@@ -80,8 +80,8 @@ where you are and aren't expected to stop.
 5. **Diagnose.** Sort every failure by cause before you report it. An unsorted failure list reads
    as "your change broke five things" when four of them were already red.
 6. **Report.** **The report is the deliverable** — a list of test names is not.
-7. **Offer.** Surface each coverage gap and each test to update *together with* an offer to author
-   or update it. Both are opt-in; staying silent about either is not an option.
+7. **Offer.** Surface each coverage gap and each confirmed test update with an offer to author or
+   update it. Both are opt-in; a predicted intentional failure needs run evidence first.
 
 **Decide these yourself — but only once the preflight's six scope values are stated: resolved, or
 explicitly marked provisional where the table says they can't be resolved yet (credentials, the
@@ -167,8 +167,10 @@ heartbeat built because a call this long would otherwise sit silent. Slow is not
 **Describe the change first — this is the half only you can do.** Name **every user-facing area
 your change reaches, including surfaces the diff never mentions.** The dominant failure is an
 incomplete description: shared code reaches the user where the change is framed *and* where it
-isn't, and a surface you omit has no tests to surface. A pre-PR safety pass is a broad-coverage
-intent — say so in `guidance`, and check that the result's `policy` came back `broad`.
+isn't, and a surface you omit has no tests to surface. Put the breadth in the first call's
+`guidance`: **"wide pre-PR safety pass, everything potentially relevant"** for `broad`, or
+**"a short, high-confidence list, precision over recall"** for `precise`. Report a returned policy
+mismatch; don't automatically re-call, because each call costs minutes and produces a different set.
 
 Worked example — say you reworked a shared field-validation module (the code that formats and
 checks postal codes, card numbers, and expiry dates as the user types), switching it from
@@ -204,9 +206,10 @@ every `viewTestUrl` is `/workspaces/<workspace-id>/train/tests/<test-id>/current
 one confirms the workspace the analysis actually resolved. If it isn't the one you passed, fix the
 application, not the workspace.
 
-**Not every workspace has a knowledge graph, and nothing in the response says so.** Graph-backed
-analysis is a property of the application's workspace, not a knob you can turn; assume search-only
-unless some `evidence` or `context` cites a Knowledge Graph path. Without a graph the call still
+**Graph availability has no separate response field, and not every workspace has a graph.** Graph-backed
+analysis is a property of the application's workspace. `evidence` and `context` usually cite graph
+use when it informed a match, but an absent citation doesn't establish that no graph was used.
+Without a graph the call still
 succeeds on search alone, so the set arrives thinner — when results look shallow, check which
 application you passed before rewriting the description to chase depth that was never on offer.
 
@@ -246,37 +249,36 @@ duplicate calls: you pay the full cost twice and can still get two different set
 and when a follow-up comes back thinner, read it as variance rather than as proof the first set
 was wrong.
 
-The returned set is already retrieved, verified, and prioritized server-side. Don't drop tests to
-look tidy; read the fields and act:
+The server checks returned ids; the agent prioritizes the set. Labels and citations are model judgments,
+sometimes based on excerpts. Don't drop tests to look tidy; read the fields and act:
 
 - **`summary`** — read this first: what was searched, how the set was prioritized, and where
   caveats about the analysis itself appear.
-- **`relation`**, judged from the steps — `direct`: a step clicks, types into, navigates via, finds,
-  or asserts what the change alters, reusable-flow steps included. `blast_radius`: a step touches
-  something sharing a component, flow, or data with it, the link named in `context`. `adjacent`:
-  nothing reaches it; nearest coverage in the area. It orders the set and sets how wide to go
-  (**Run it**), never culls. It is the agent's judgment and the `direct`/`blast_radius` line is
-  soft: when that split matters, confirm it from `evidence` and the steps.
-- **`expectedOutcome`** — `should_pass`: a failure is a bug. `fails_by_design`: a step finds,
-  clicks, or asserts what the change intentionally removes, renames, moves, or makes required, so
-  the test must be updated, not re-run (**Run it**). `uncertain`: run it, and diagnose a
-  failure without presuming either cause. Independent of `relation`.
-- **`evidence`** — the deciding step or citation, and whether it came from a search excerpt, fetched
-  steps, or a Knowledge Graph citation: the fast relevance check, carried onto every report row.
+- **`relation`** is advisory: `direct` interacts with what changed, including reusable-flow steps;
+  `blast_radius` names a shared component, flow, or data link; `adjacent` is nearest coverage with
+  no step reaching the change. It orders the set, never culls. When the split affects a narrow-set
+  ask or CI's cap trim, check it during the step read screening already needs for banding.
+- **`expectedOutcome`** is advisory too: `should_pass` predicts preserved behavior;
+  `fails_by_design` predicts an intentional break in the current test; `uncertain` leaves that
+  open. Run every screened candidate, including predicted intentional failures, and diagnose from
+  the actual failing step before deciding a test needs updating. No label establishes the cause.
+- **`evidence`** names the deciding step or citation and usually its source: a search excerpt,
+  fetched steps, or a graph citation. The source isn't a separate response field. Use the citation
+  as a pointer, carry it into the report, and don't infer unshown behavior from an excerpt.
 - **`context`** — the rest of the reason, with caveats: the shared link for `blast_radius`, old →
   new for `fails_by_design`. Carry it through rather than re-describing the test.
-- **`policy`** — how your `guidance` was read: `broad` adds `adjacent` tests; `default` is every
-  `direct`, `fails_by_design`, and linked `blast_radius` test, `adjacent` only where nothing is
-  closer; `precise` is `direct` and `fails_by_design` only. It changes which tiers come back, never
-  what a label means. Not what you meant? Re-call: *"wide pre-PR safety pass, everything
-  potentially relevant"* reads as `broad`, *"a short, high-confidence list"* as `precise`.
+- **`policy`** records breadth: `broad` adds adjacent tests; `default` includes direct,
+  predicted intentional failures and linked blast-radius tests, plus adjacent coverage where
+  nothing is closer; `precise` includes direct and predicted intentional failures only. Missing
+  or invalid submitted policy also falls back to `default`. Report a mismatch with the requested
+  breadth, rather than assuming guidance was misread or automatically repeating the analysis.
 - **`coverageGaps`** — surface these as candidate targets for new tests, each with an offer to
   author it (**Report the validation**). Absence from the list is not proof of coverage (**Honest
   limits**), and **an empty `coverageGaps` on a brand-new surface is the expected reading, not a
   clean bill:** the tool cannot index a surface no test could have touched yet, so reason about that
   gap yourself.
-- **`moreMayExist`** true means the set hit the result ceiling, not that nothing else is
-  relevant. Don't present it as exhaustive; `moreMayExistNote` hints at how to narrow a
+- **`moreMayExist`** true means the set may be incomplete: the server capped it or the model
+  reported more candidates. Don't present it as exhaustive; `moreMayExistNote` hints at how to narrow a
   follow-up call.
 - **`runContext`** — the screening facts for that test: most of **Screen before you run**,
   arriving with the analysis instead of after it.
@@ -292,9 +294,8 @@ surface a test or a gap so the reader can open it; carry the id through, because
 screening and run mechanism downstream takes as its key. A very large set is itself a signal your
 change is broad — group and order it (**Run it**) rather than trimming keep-worthy tests.
 
-Treat the call as **conversational**: a follow-up with narrower `guidance` or a refined
-`changeDescription` is the intended way to sharpen a set that came back too broad or too thin, not
-a sign the first call failed. **CI advisory mode is the exception** — one call there, never a
+A user-requested follow-up can refine `guidance` or `changeDescription`; preserve both sets and
+explain how they differ. A policy mismatch alone doesn't trigger a follow-up. **CI advisory mode is the exception** — one call there, never a
 refinement (`references/ci-advisory.md`).
 
 ## 6. Screen before you run
@@ -505,7 +506,7 @@ Present the set as a **run plan** first — ordered and annotated so the run rea
 rather than a guess:
 
 - **Order and tiers:** keep the analysis's order. `direct` plus `fails_by_design` is the must
-  tier, to run or update before shipping; `blast_radius` is the default extension; `adjacent` is
+  tier, to run first and diagnose before proposing any update; `blast_radius` is the default extension; `adjacent` is
   nearest coverage, not validation of the change, so it runs last and is reported beside the gaps.
   Never mark the tail "skippable" — order it, do not discard it.
 - **Cost & shape:** state the count. Each test is its own run, which is what makes the canary
@@ -532,11 +533,9 @@ Shape it like this:
 >
 > **Running now** — read-only · contained — N tests
 > - `[direct · should_pass]` **Checkout - Shipping address validation** — `evidence` · [view test](viewTestUrl)
+> - `[direct · fails_by_design]` **Checkout - No error while typing** — predicted old → new; run to verify · [view test](viewTestUrl)
 > - `[blast_radius · should_pass]` **Account - Saved payment methods** — `evidence` · [view test](viewTestUrl)
 > - `[critical]` **Account - Sign in** — always-run label `smoke` · [view test](viewTestUrl)
->
-> **Tests to update** — `fails_by_design` — N tests
-> - `[direct · fails_by_design]` **Checkout - No error while typing** — old → new · [view test](viewTestUrl)
 >
 > **Needs your approval** — shared-state · unverified — N tests
 > - `[direct · should_pass]` **Account - Saved addresses - Bulk delete** — what it writes and where · [view test](viewTestUrl)
@@ -547,9 +546,8 @@ Shape it like this:
 >
 > Approve the **Needs your approval** group and I'll add it to this wave.
 
-These are the same buckets the report uses (**Report the validation**), with one collapse: anything
-left unapproved when you write the report joins **Not run**, carrying `pending approval` as its
-reason. Keep the words identical at both ends — buckets, scope line, label and `[critical]` tags, row
+The report adds **Tests to update** only after a failure confirms the intentional old → new.
+Anything left unapproved joins **Not run**, carrying `pending approval` as its reason. Keep the words identical at both ends — buckets, scope line, label and `[critical]` tags, row
 reasons (`references/report.md`, **Row reasons**) — so a reader tracking one test needn't translate.
 
 **Dispatch the first group yourself.** Read-only and contained tests don't need a confirmation
@@ -564,10 +562,10 @@ that your call. Surface the exact calls for both groups — `testId` is what an 
 run mechanism takes, and **display names are not unique**, so a name-keyed reference can silently
 collapse two distinct tests into one.
 
-**Don't run a `fails_by_design` test to validate the change** — it fails as written, by design, so
-it goes in **Tests to update**, never in a wave, and its failure is never a regression. Offer the
-update, hand it to `mabl-test-edit` once accepted, then screen and run the updated version.
-**Requires `mabl-test-edit`.** If it isn't there, name the test and its old → new, and stop.
+**Run predicted intentional failures through the same scope, screening, approval and canary gates.**
+State the prediction in the run plan; it neither exempts the test from running nor explains a red.
+If it passes, report that result. If it fails, diagnose the actual step before proposing an update
+(**Diagnosing a failure**). A failure in unchanged setup can still be a regression.
 
 ### Canary
 
@@ -665,13 +663,15 @@ run died short of your change.
 | Cause | The tell |
 |---|---|
 | **Died in shared setup, never reached your change** | The failing step is inside a shared flow *and* what it targets is nothing your diff touched. Only then does it say nothing about your diff. |
-| **Your change intentionally altered this behavior — the test needs updating** | The failing assertion describes the *old* behavior and your change made it wrong on purpose. Test maintenance, not a defect; updating it is `mabl-test-edit`'s job. A `fails_by_design` test that ran anyway lands here, never as a regression. |
+| **Your change intentionally altered this behavior — the test needs updating** | The failing assertion describes the *old* behavior and your change made it wrong on purpose. Test maintenance, not a defect; updating it is `mabl-test-edit`'s job. Confirm the actual failing step matches the intentional old → new; `fails_by_design` alone is insufficient. |
 | **Genuine regression** | The failing step exercises what you changed, and the test passed before it. |
 | **Pre-existing failure** | It was already failing before your diff — check run history (**Screen before you run**) before attributing a break to your change. |
 | **Flake or environment** | Untrained selectors, timing, or local state that differs from where the test normally runs — a list of causes, not a tell; the discriminator is below. |
 
-**Requires `mabl-test-edit`.** If it isn't there, name the test and the failing assertion in the
-report and stop; don't edit the test yourself.
+Offer an update only after that intentional break is confirmed, and edit only when accepted.
+**Requires `mabl-test-edit`.** If it isn't there, say `mabl-test-edit` is missing, list the test and
+confirmed old → new under **Tests to update**, and continue the remaining runs. Don't edit it yourself.
+After an accepted update, screen and run the updated version; diagnose any new failure on its own evidence.
 
 **The flake row needs evidence, not a shrug** — it is last in the table and catches everything the
 other four didn't claim, which is how a regression gets written off as flaky. The evidence came back
@@ -726,7 +726,7 @@ every time — including when everything passed, especially then, because a bare
 its scope block is indistinguishable from "I ran the wrong thing and it passed."
 
 Five blocks — scope, analysis, validated, not run, gaps — plus **Tests to update** and **Nearest
-coverage** when there are `fails_by_design` or `adjacent` tests, and **Previously validated** on a
+coverage** when there are confirmed intentional failures or `adjacent` tests, and **Previously validated** on a
 follow-up commit (`references/report.md`). The scope line is the preflight plus two things preflight
 couldn't know, what actually executed and which commit it executed against, minus credentials and
 run mode. The cause on a failed row is one of the five under **Diagnosing a failure**; the reason on
@@ -740,9 +740,9 @@ Scope:      <application> · <workspace> · <deployment> · <what ran: see below
 Analysis:   <N> candidates, <N> gaps · policy: <policy> · moreMayExist: <bool> · runContextIncomplete: <bool>
 Validated:  <test> [<relation> · <expectedOutcome>] — passed | failed · <cause> · <evidence>
 Previously: <test> — passed · carried from <sha>   (follow-up commits only; never counted in Validated)
-To update:  <test> [<relation> · fails_by_design] — <old → new> · updated, then passed | failed · <cause> | deferred
+To update:  <test> [<relation> · <expectedOutcome>] — <confirmed old → new> · ran, failed as expected · <step/cause> · update proposed | deferred | updated, then passed | updated, then failed · <cause>
 Not run:    <test> — disabled | quality <score> across <n> runs | pending approval · shared-state | out of scope · plan <name>
-Nearest:    <test> [adjacent] — passed | failed · <cause> · nearest coverage, not validation of the change
+Nearest:    <test> [adjacent · <expectedOutcome>] — passed | failed · <cause> · <evidence> · nearest coverage, not validation of the change
 Gaps:       <gap> — authored <test-id> | deferred
 ```
 
