@@ -5,13 +5,18 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.10.1] - 2026-09-30
+## [1.10.2] - 2026-10-01
 ### Changed
 - `mabl-test-impact` uses change-specific relevance, expected-outcome, evidence, and inclusion-policy
   labels. These are advisory: screened tests run before an intentional behavior change is confirmed
   from a failure and a test update is proposed. CI follows the same approach.
 - Guidance states the requested breadth on the first call; policy mismatches are reported without
   automatically repeating the analysis.
+
+## [1.10.1] - 2026-09-30
+### Changed
+- `mabl-test-impact` CI modes pass the mabl branch to `analyze_test_impact` as `branch` when the
+  caller gives one, so tests written or repaired on that branch are analyzed at their branch version.
 
 ## [1.10.0] - 2026-09-30
 ### Added

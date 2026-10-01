@@ -1,6 +1,6 @@
 {
   "name": "mabl",
-  "version": "1.10.1",
+  "version": "1.10.2",
   "description": "Independent verification for agentic development using the world's most advanced testing harness. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
   "author": {
     "name": "mabl",

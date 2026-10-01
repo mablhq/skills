@@ -156,8 +156,8 @@ and everything downstream works the same on a set found that way.
 **Report the fallback as a fallback.** A searched set has no `relation`, `expectedOutcome`,
 `evidence` or `context` per test, and no `policy`, `coverageGaps`, `moreMayExist` or `runContext`:
 omit the `Analysis` line, record `Gaps: not analyzed (impact analysis unavailable)`, screen by
-explicit lookups (`references/screening.md`), and read the steps to tell a test to run from one to
-update. An invented gap list is worse than an absent one, because a reader can act on it.
+explicit lookups (`references/screening.md`), and run screened candidates. Confirm intentional
+breaks from actual failures before proposing updates; report no invented gaps.
 
 **It is slow by design** — single-digit minutes, with a server-side cap around five and a
 heartbeat built because a call this long would otherwise sit silent. Slow is not a hang.
