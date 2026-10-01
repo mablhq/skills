@@ -6,11 +6,15 @@ scope the caller pinned before you started. Nobody is watching this happen: the 
 the approval, and the assessment below is the whole of the screen. This file stands on its own; you
 do not need the rest of the skill to follow it.
 
-**The preflight is the caller's.** `preflight.json` carries the workspace, the `applicationId`, the
-`environmentId`, the preview URL, the `credentialsId`, the `revision`, and the labels the caller's
-policy trusts for unattended runs. They tell you what the kept set will run against and as whom;
-you do not pass them anywhere. Do not call `list_mabl_applications`, `list_mabl_environments` or
-`list_mabl_credentials` to second-guess them.
+**The preflight is the caller's setup for this run**, written to `preflight.json` before you
+start. It carries the workspace, the `applicationId`, the `environmentId`, the preview URL, the
+`credentialsId`, the `revision`, and the labels the caller's policy trusts for unattended runs.
+They tell you what the kept set will run against; you do not pass them anywhere. Do not call
+`list_mabl_applications`, `list_mabl_environments` or `list_mabl_credentials` to second-guess them.
+
+**Logins are the caller's too.** The `credentialsId` is the caller's default login, and a kept test
+may log in differently: the caller decides each test's login when it dispatches. You never pick or
+pass a login, and `run.json` has no field for one.
 
 **Describe the change in product vocabulary**, naming every user-facing area it reaches — including
 surfaces the diff never mentions. That is the half the tool cannot do. Worked example: a shared
@@ -79,8 +83,9 @@ then `blast_radius` ones, from the end of the analysis's order — and record ea
 `trigger_mabl_deployment` is not in your tool list here, on purpose, and nothing else you hold
 starts a run. Do not look for another way. The caller's job reads `run.json`, checks that every
 kept test is one the analysis returned and that the cap held, and creates the deployment itself
-— pinned to the application, environment, revision, preview URL and credential from preflight,
-with `impactSessionId` set to the `sessionId` the analysis returned so the runs link back to it.
+— pinned to the application, environment, revision and preview URL from preflight, each test
+logging in as the caller decides, and with `impactSessionId` set to the `sessionId` the analysis
+returned so the runs link back to it.
 Your `selection_name` names the pull request, so the event is readable on the Deployments page.
 The key that spends is never in your hands, which is what lets a mistaken assessment cost at most
 fifty runs against the caller's own preview.

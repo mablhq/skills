@@ -2,7 +2,7 @@
 
 **Independent verification for agentic development using the world's most advanced testing harness.** mabl closes the loop between application change and verified behavior — authoring, orchestrating, executing, and maintaining automated test suites, analyzing failures, and generating reporting, all with the auditable evidence that business-critical applications require.
 
-This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, and an **OpenAI Codex plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
+This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, an **OpenAI Codex plugin**, and a **Devin plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
 
 Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
@@ -95,6 +95,22 @@ codex plugin add mabl@mabl
 
 Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Codex prompts you to authorize it on first use.
 
+### Devin
+
+The repo is also a Devin plugin (`plugins/mabl/.devin-plugin/`). Devin installs it from the `plugins/mabl` subdirectory. In Devin for Terminal:
+
+```bash
+devin plugins install mablhq/skills#plugins/mabl
+```
+
+Or in the Devin web app:
+
+1. Open **Customize → Plugins → Add plugin → From repository**.
+2. Enter `mablhq/skills` with the subdirectory `plugins/mabl`.
+3. Choose personal or organization scope.
+
+Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Devin prompts you to authorize it on first use.
+
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 
 ```bash
@@ -152,6 +168,7 @@ The agent uses mabl's failure analysis and run artifacts to decide whether it's 
 - [mabl docs](https://help.mabl.com) — documentation and guides
 - [mabl CLI](https://www.npmjs.com/package/@mablhq/mabl-cli) — command line interface
 - [Support](https://help.mabl.com) — help center
+- [Privacy policy](https://www.mabl.com/privacy) — how mabl handles your data
 
 ---
 
