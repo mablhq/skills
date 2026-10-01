@@ -26,7 +26,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | [`mabl-version-compare`](plugins/mabl/skills/mabl-version-compare/SKILL.md) | Say what changed between two versions of a test or flow, separating real changes from reorganization. |
 | [`mabl-test-edit-verify`](plugins/mabl/skills/mabl-test-edit-verify/SKILL.md) | Certify an edit against its intent and the prior version instead of trusting one green run; never edits or merges. |
 | [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Triage a failed run from its artifacts, then reproduce and verify the fix step by step in a live Chrome. |
-| [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Find, screen, and run the existing tests a code change reaches, and report the gaps; never starts a plan run itself. |
+| [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Find, screen, and run the tests a change reaches; diagnose failures before proposing test updates, and report coverage gaps. Never starts a plan run itself. |
 
 ### MCP servers
 
