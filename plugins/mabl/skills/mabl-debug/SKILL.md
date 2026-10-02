@@ -25,7 +25,7 @@ MIN_MABL_CLI_VERSION=2.111.0
 command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
 [ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
 
-mabl auth info    # verify you're logged in (run `mabl auth login --auto` if not)
+mabl auth info    # verify you're logged in (if not: mabl auth login --auto; no browser but $MABL_API_KEY set: mabl auth activate-key "\\$MABL_API_KEY")
 ```
 
 > **Command + flag discovery.** Don't guess flag names — ask the CLI.
