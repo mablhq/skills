@@ -13,7 +13,7 @@ without re-deriving any of it from run history.
 ````markdown
 ## Test impact analysis
 
-**Scope** — storefront web app · storefront-qa workspace · shop.qa.example.com · deployed build `9f4c1ab` (release 2026.09.02-3) · PR #482 @ `9f4c1ab` · scope: plan *Nightly regression* (15/19 in scope)
+**Scope** — storefront web app · storefront-qa workspace · mabl branch: feat-x · shop.qa.example.com · deployed build `9f4c1ab` (release 2026.09.02-3) · PR #482 @ `9f4c1ab` · scope: plan *Nightly regression* (15/19 in scope)
 **Analysis** — 19 candidates, 2 gaps · `moreMayExist: false` · `runContextIncomplete: false`
 
 **Validated (13)**

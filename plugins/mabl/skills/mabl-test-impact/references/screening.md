@@ -173,7 +173,7 @@ preflight stated for the change, checked against the test's `defaults`: a `defau
 group already pinned from history puts the test in that group; a recorded `environmentId` or
 `credentialsId` naming something *other* than the stated target is a question for the user, not a
 tie-break; and `defaults` that record nothing leave the stated target standing. A test authored on
-the branch for the change under review has the clearest target of all — the deployment that serves
+your mabl branch has the clearest target of all — the deployment that serves
 the change. Either way the row says the target came from intent and `defaults`, not from history.
 
 `tests run` reports the target it resolved, however you specified it, near the top of its output — in
@@ -339,7 +339,7 @@ Banding costs a `get_mabl_test_steps` read per test; not banding costs the test.
 the candidates you actually intend to dispatch, in this order — **candidates without a history
 baseline first, then `role: validates`, then the rest** — and be explicit in the report about how many
 you left unbanded and why. No-history candidates come first because nothing else can screen them and
-they arrive last: a test authored on a branch for the change under review has no history to read and,
+they arrive last: a test authored on your mabl branch has no history to read and,
 having been found by search rather than by a modeled relationship, usually no `role` either, which
 puts it at the back of a `validates`-first read order and then into the bottom band by the shortcut.
 Two ways to lose the same test; reading it first closes both.

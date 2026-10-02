@@ -5,6 +5,12 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.10.2] - 2026-10-02
+### Changed
+- `mabl-test-impact` now looks for an open mabl branch named like your git branch. It uses that
+  branch to analyze, run, and list tests by label, and the report's Scope line says which one.
+  Without a match it uses master. Before, it used a branch only when the change named one.
+
 ## [1.10.1] - 2026-09-30
 ### Changed
 - `mabl-test-impact` CI modes pass the mabl branch to `analyze_test_impact` as `branch` when the

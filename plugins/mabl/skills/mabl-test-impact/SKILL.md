@@ -1,6 +1,6 @@
 ---
 name: mabl-test-impact
-allowed-tools: Read, Bash(mabl *), Bash(npm install -g @mablhq/mabl-cli*), Bash(lsof *), Bash(ss *), Bash(xargs --version), mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__get_mabl_test_run_failure_reason, mcp__plugin_mabl_mabl__get_mabl_test_run_failure_reason, mcp__mabl__run_mabl_test_cloud, mcp__plugin_mabl_mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local, mcp__plugin_mabl_mabl__run_mabl_test_local
+allowed-tools: Read, Bash(mabl *), Bash(npm install -g @mablhq/mabl-cli*), Bash(lsof *), Bash(ss *), Bash(xargs --version), Bash(git branch --show-current), mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__list_mabl_branches, mcp__plugin_mabl_mabl__list_mabl_branches, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__get_mabl_test_run_failure_reason, mcp__plugin_mabl_mabl__get_mabl_test_run_failure_reason, mcp__mabl__run_mabl_test_cloud, mcp__plugin_mabl_mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local, mcp__plugin_mabl_mabl__run_mabl_test_local
 description: >-
   Find, screen, run, and report on the EXISTING mabl end-to-end tests covering a product-code change, after unit tests pass and before opening a PR, or check what already covers an area. For designing NEW coverage for an area use mabl-test-coverage-design; for a test your change intentionally broke use mabl-test-edit. Not for docs, config, or pure refactors. Surfaces coverage gaps; authors against them only as an opt-in handoff to mabl-test-authoring. Triggers on "which mabl tests should I run for this change", "what mabl tests are impacted by this change", "validate this change against mabl", "what covers this area before I add tests". Also fires on first-time setup and missing prerequisites: "set up test impact analysis", "check my test impact setup", "is test impact analysis working", "analyze_test_impact is missing", "test impact analysis is not enabled".
 ---
@@ -72,7 +72,7 @@ Use these words, in these spellings, in the run plan and the report alike.
 Unless the request says otherwise, run this loop end to end. What this list adds is the order, and
 where you are and aren't expected to stop.
 
-1. **Preflight.** Resolve and state the six values every later step depends on, before you promise
+1. **Preflight.** Resolve and state the seven values every later step depends on, before you promise
    a result rather than after.
 2. **Analyze.** One `analyze_test_impact` call per application, unioned across applications, read
    as judgment rather than re-curated.
@@ -85,7 +85,7 @@ where you are and aren't expected to stop.
 7. **Offer.** Surface each coverage gap *together with* an offer to author against it. Authoring
    is opt-in; staying silent about the gap is not an option.
 
-**Decide these yourself — but only once the preflight's six scope values are stated: resolved, or
+**Decide these yourself — but only once the preflight's seven scope values are stated: resolved, or
 explicitly marked provisional where the table says they can't be resolved yet (credentials, the
 ids behind run scope). Until then you have none of it:** retry one transient 5xx (**Read the
 results as judgment**); resolve a deployment ambiguity from the stated validation target (**Scope
@@ -111,7 +111,7 @@ there is anything to find.
 
 ## 3. Preflight
 
-**State these six in one block before your first analysis call**, resolved rather than assumed:
+**State these seven in one block before your first analysis call**, resolved rather than assumed:
 
 | | Resolve it with | If you get it wrong |
 |---|---|---|
@@ -121,6 +121,11 @@ there is anything to find.
 | **Credentials** | **Provisional here, pinned when you scope the call**: the authoritative one comes from run history, which doesn't exist until the analysis returns. `list_mabl_credentials` names them | The browser signs in as someone else and writes to their account |
 | **Run mode** | `local CLI` · `cloud` · `CI advisory (analysis only)` (**Run it**) | You validate deployed code while believing you validated your branch |
 | **Run scope** | The user's words, settled here; the ids they resolve to in **Screen before you run**. `list_mabl_environments` and `list_mabl_plans` fill in named values | You run tests nobody asked about, or skip the ones they did ask for |
+| **mabl branch** | The current git branch (`git branch --show-current`); empty, `main`, `master`, or a name outside `[A-Za-z0-9][A-Za-z0-9._/-]*` means master, no lookup. Else find an open mabl branch of that name in the workspace above: `mabl branches describe '<name>' --name -w <workspace-id>`, or `list_mabl_branches` without the CLI. A lookup that errors is not "not found": say so and ask. State `mabl branch: <name>`, `master`, or `master (<name> not found)` | Tests written or repaired on your mabl branch are analyzed and run at their master version: a new test reads as a gap, a repaired one is judged by its old steps |
+
+**Use the mabl branch everywhere**, for every test: `branch` on `analyze_test_impact`,
+`run_mabl_test_cloud`, `get_mabl_test_steps`, and the label-scope `list_mabl_tests`; `--mabl-branch`
+on `mabl tests run` and `tests export`. A test with no version on it runs master anyway. On master, pass none.
 
 Every one fails the same way — not with an error, but with a plausible answer about something you
 didn't mean — so a value you correct three steps later invalidates every step before it. Two can't
@@ -310,7 +315,7 @@ survives. The default, `all impacted`, resolves to everything and changes nothin
 |---|---|
 | **All impacted** (default) | Nothing to resolve; the impacted set is the scope |
 | **Plan(s), by id or name** | A name resolves first: page `list_mabl_plans` and match the exact name; zero or more than one match is a question for the user, not a guess. Then `get_mabl_plan` per id — the union of `execution_stages[].tests[].journey_id`, with any trailing `:N` version suffix stripped so the ids compare with `testId`. Pass `includePlans: true` on the analysis too, so the run plan can show membership |
-| **Label set** | `list_mabl_tests` with `labels`, `applicationId`, and `limit: 200`. **A label or application filter never returns `nextCursor`**, so a page that filled the limit comes back `truncated: true` with nothing to continue it — an incomplete scope, not a finished one (`references/screening.md`). When the change under review names a mabl branch, call it once with that `branch` too and union the results, or a test authored on the branch for this change is wrongly reported out of scope |
+| **Label set** | `list_mabl_tests` with `labels`, `applicationId`, and `limit: 200`. **A label or application filter never returns `nextCursor`**, so a page that filled the limit comes back `truncated: true` with nothing to continue it — an incomplete scope, not a finished one (`references/screening.md`). With a mabl branch, pass `branch` too, or a test authored on it is wrongly reported out of scope |
 | **Explicit ids** | Includes narrow: the scope set is the impacted set ∩ the ids named. Excludes subtract, and they subtract **last** — after the scope, the default, and any critical set — with each excluded test reported `not run · out of scope · excluded` |
 
 **`labels` is any-of, not all-of.** Two labels return the union, not the intersection, so a scope
@@ -428,11 +433,6 @@ any workflow. Each reads off `runContext`:
   A candidate with no history is banded by reading its steps (**Side-effect bands**), and the triage
   shortcut ("side effects not verified") must never sweep it into the bottom band: that is the
   actual skip path for the test a dev wrote *for this change*.
-- **A test created on a branch runs at its branch version.** When the candidate was authored on a
-  branch — `list_mabl_tests` takes a `branch` filter, and the PR you're validating usually names
-  it — pass that `branch` to `run_mabl_test_cloud`, and `--mabl-branch` to `mabl tests run` and
-  `tests export`, and name the branch in the row. Without it you run the master version, which for
-  a test authored on the branch predates the change: the reverse of what you meant to validate.
 
 **Local runs have two more gates** — does step 1 navigate, and, when neither `--url` nor `--run-id`
 supplies the url, is `defaults.urlSet` true — with the certificate a local target needs:
@@ -733,7 +733,7 @@ the report says nothing ran (`references/ci-advisory.md`).
 
 ```
 ## Test impact analysis
-Scope:      <application> · <workspace> · <deployment> · <what ran: see below> · <PR @ commit sha> · scope: <plan names | labels | all impacted> (<in-scope>/<impacted> in scope)
+Scope:      <application> · <workspace> · mabl branch: <name | master | master (<name> not found)> · <deployment> · <what ran: see below> · <PR @ commit sha> · scope: <plan names | labels | all impacted> (<in-scope>/<impacted> in scope)
 Analysis:   <N> candidates, <N> gaps · moreMayExist: <bool> · runContextIncomplete: <bool>
 Validated:  <test> — passed | failed · <cause>
 Previously: <test> — passed · carried from <sha>   (follow-up commits only; never counted in Validated)
