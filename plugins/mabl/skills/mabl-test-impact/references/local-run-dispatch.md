@@ -122,7 +122,7 @@ export MABL_WS=<workspace-id>
 # When set, every dispatch passes --mabl-branch, so a candidate authored on that
 # branch runs its branch version instead of the master version that predates the
 # change (SKILL.md, Preflight). Tests with no edits on it run master regardless.
-export MABL_BRANCH=""   # set to the preflight's mabl branch
+export MABL_BRANCH=''   # the preflight's mabl branch, single-quoted
 
 # Screened ids, split by side-effect band (SKILL.md, Side-effect bands). Only three
 # lists exist because only three things are dispatchable: read-only, contained, and

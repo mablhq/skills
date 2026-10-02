@@ -7,7 +7,9 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 
 ## [1.10.2] - 2026-10-02
 ### Changed
-- `mabl-test-impact` now analyzes and runs on the mabl branch named like your git branch, when one is open, and says which it used. Without one it uses master. Before, only tests you knew were authored on a branch ran there.
+- `mabl-test-impact` now looks for an open mabl branch named like your git branch. It uses that
+  branch to analyze, run, and list tests by label, and the report's Scope line says which one.
+  Without a match it uses master. Before, it used a branch only when the change named one.
 
 ## [1.10.1] - 2026-09-30
 ### Changed
