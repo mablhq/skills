@@ -21,10 +21,10 @@ installed CLI is authoritative over any of them.
   wave, and the flag is never yours to add (`SKILL.md`, **Hard gates**); a site note that permits
   it goes on the `mabl` command lines below.
 - **Every test runs at its master version unless you say otherwise.** `tests run` takes
-  `--mabl-branch`; without it a candidate authored on the branch for the change under review runs the
-  version from before the change. The recipe carries the branch on every dispatch when `MABL_BRANCH`
-  is set, and a test with no edits on that branch still runs its master version, so setting it costs
-  nothing for the rest of the wave.
+  `--mabl-branch`; without it a candidate authored on your mabl branch runs the version from before
+  the change. The recipe carries the branch on every dispatch when `MABL_BRANCH` is set, and a test
+  with no edits on that branch still runs its master version, so setting it costs nothing for the
+  rest of the wave.
 - The CLI runs its own test set **sequentially**. For real parallelism, fan out one process per test,
   not one CLI invocation with many.
 - **The artifacts directory is not your failure forensics.** The runner prints an artifacts path on
@@ -118,11 +118,11 @@ export MABL_URL="https://<registered-local-origin>:PORT" MABL_CRED=<credentials-
 # REPORTING only -- the credential still decides where the browser operates.
 export MABL_WS=<workspace-id>
 
-# The mabl branch the change under review names, if any; empty otherwise.
+# The mabl branch from the preflight, if any; empty on master.
 # When set, every dispatch passes --mabl-branch, so a candidate authored on that
 # branch runs its branch version instead of the master version that predates the
-# change (SKILL.md, Hard gates). Tests with no edits on it run master regardless.
-export MABL_BRANCH=""   # set to the branch name when the change names one
+# change (SKILL.md, Preflight). Tests with no edits on it run master regardless.
+export MABL_BRANCH=""   # set to the preflight's mabl branch
 
 # Screened ids, split by side-effect band (SKILL.md, Side-effect bands). Only three
 # lists exist because only three things are dispatchable: read-only, contained, and

@@ -3,7 +3,7 @@
 Read this after a first pass, when you want the next one to stop re-asking — or when the preflight in
 `SKILL.md` sent you here because project memory carries notes for this skill.
 
-The workflow re-derives the six scope values in `SKILL.md`'s **Preflight** every run. On a first pass
+The workflow re-derives the seven scope values in `SKILL.md`'s **Preflight** every run. On a first pass
 that derivation is the work; on every later pass it is friction, because the answers don't change. The
 fix needs no new mechanism: **record the answers in project memory** — a short section in the file
 your agent already reads (`CLAUDE.md`, `AGENTS.md`, or their equivalent), or a doc that file points
