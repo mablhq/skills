@@ -1,0 +1,3 @@
+# Type files Claude Code writes when the plugin is loaded from this folder
+plugins/mabl/.claude-plugin/types/
+plugins/mabl/mod/tsconfig.json

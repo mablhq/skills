@@ -162,6 +162,10 @@ The agent pulls the step trace, inspects screenshots, DOM, network, and console 
 
 The agent uses mabl's failure analysis and run artifacts to decide whether it's a test bug (missing wait, stale selector) or an app regression, and tells you who owns the fix — with evidence.
 
+## Live mabl view (Claude Code)
+
+In Claude Code, the plugin also adds a live view of the mabl work your agent does. Each test authoring session, cloud run, plan run, deployment, debug session, test impact analysis, and branch gets its own tab, updated while it runs; `/mabl` lists them all, and a band above the prompt counts what is still running. Most buttons open a result in your browser, or put the next command (debug a failed run, run an impacted test in the cloud, author a test for a coverage gap) in your prompt for you to send. Two act right away: **Rerun** on a failed test run, and **Send** on an authoring session's question. In `/config`, **Show test authoring steps in tab** adds the live step list of each test authoring session.
+
 ## Learn more
 
 - [mabl](https://www.mabl.com) — product overview

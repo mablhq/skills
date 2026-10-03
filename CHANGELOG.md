@@ -5,6 +5,17 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.11.0] - 2026-10-03
+### Added
+- Claude Code only: a live mabl view inside the terminal. The plugin watches the mabl tools and
+  `mabl` CLI commands your agent runs and opens a tab per item: test authoring sessions (with an
+  optional live step list, step groups and flows included, and an answer box when the agent asks a
+  question), cloud test runs, plan runs, deployments, debug sessions (step tree with the cursor),
+  test impact analyses (impacted tests, gaps, and the runs dispatched for them), and branches.
+  Buttons open results in the browser or put a follow-up command in your prompt; **Rerun** and the
+  answer box act right away. A band above the prompt counts what is running. Two settings in `/config` turn on the live step list and set how
+  often it refreshes.
+
 ## [1.10.2] - 2026-10-02
 ### Changed
 - `mabl-test-impact` now looks for an open mabl branch named like your git branch. It uses that
