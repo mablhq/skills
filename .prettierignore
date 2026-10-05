@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+node_modules
+# Only the mod is formatted; keep editors off skills, docs and workflows.
+/*
+!/plugins/
+/plugins/*
+!/plugins/mabl/
+/plugins/mabl/*
+!/plugins/mabl/mod/

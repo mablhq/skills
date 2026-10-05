@@ -1,16 +1,16 @@
-import type { Elements, RenderElement } from 'claude-code'
+import type {Elements, RenderElement} from 'claude-code';
 
-import type { MablEntities, MablEntity, MablEntityKind } from '../types'
-import type { CallRecord, EntityUpdate } from './util'
+import type {MablEntities, MablEntity, MablEntityKind} from '../types';
+import type {CallRecord, EntityUpdate} from './util';
 
 /** The mod's settings, from the manifest's `userConfig`. */
 export type Settings = {
-  showSessionSteps: boolean
-  stepsPollMs: number
-}
+  showSessionSteps: boolean;
+  stepsPollMs: number;
+};
 
 /** An MCP result, flattened: structured content (or the JSON in its text) and the text itself. */
-export type ToolResult = { isError: boolean; structured: unknown; text: string }
+export type ToolResult = {isError: boolean; structured: unknown; text: string};
 
 /**
  * What a feature may do while polling. `register.tsx` builds these from `$`;
@@ -18,70 +18,104 @@ export type ToolResult = { isError: boolean; structured: unknown; text: string }
  */
 export type Ops = {
   /** `isErrorExpected`: the caller reads an error result as data, so it is not a failed check. */
-  callTool: (server: string, tool: string, args: Record<string, unknown>, options?: { isErrorExpected?: boolean }) => Promise<ToolResult>
-  run: (argv: readonly string[], timeoutMs?: number) => Promise<{ exitCode: number; stdout: string; stderr: string }>
+  callTool: (
+    server: string,
+    tool: string,
+    args: Record<string, unknown>,
+    options?: {isErrorExpected?: boolean},
+  ) => Promise<ToolResult>;
+  run: (
+    argv: readonly string[],
+    timeoutMs?: number,
+  ) => Promise<{exitCode: number; stdout: string; stderr: string}>;
   /** Modified time of a file, or undefined when it is missing. */
-  mtime: (path: string) => Promise<number | undefined>
+  mtime: (path: string) => Promise<number | undefined>;
   /** A file's text, or undefined when it cannot be read. */
-  read: (path: string) => Promise<string | undefined>
+  read: (path: string) => Promise<string | undefined>;
   /** The user's home directory. */
-  home: string
-  now: () => Promise<number>
-}
+  home: string;
+  now: () => Promise<number>;
+};
 
 /** What a feature's poll found: entity changes, and new detail data (undefined keeps the old). */
-export type PollResult = { updates: EntityUpdate[]; detail?: unknown }
+export type PollResult = {updates: EntityUpdate[]; detail?: unknown};
 
 /** What a pane's buttons and inputs may do: closures over `$`, fire-and-forget except `callTool`. */
 export type Actions = {
   /** Puts text in the prompt box as a draft for the person to send. */
-  fillPrompt: (text: string) => void
+  fillPrompt: (text: string) => void;
   /** Calls an MCP tool on the person's behalf, then records the entities the result names. */
-  callTool: (server: string, tool: string, args: Record<string, unknown>) => Promise<ToolResult>
+  callTool: (
+    server: string,
+    tool: string,
+    args: Record<string, unknown>,
+  ) => Promise<ToolResult>;
   /** Adds or updates entities, as if a tool call had named them. */
-  track: (updates: EntityUpdate[]) => void
+  track: (updates: EntityUpdate[]) => void;
   /** Polls one entity again on the next tick. */
-  pollNow: (entityId: string) => void
+  pollNow: (entityId: string) => void;
   /** Opens an entity's own tab. */
-  openTab: (entity: MablEntity) => void
+  openTab: (entity: MablEntity) => void;
   /** Opens an https URL in the person's browser. */
-  openUrl: (url: string) => void
+  openUrl: (url: string) => void;
   /** Changes an entity's stored detail, e.g. a tab's own UI state; the tab redraws. */
-  updateDetail: (entityId: string, change: (detail: unknown) => unknown) => void
-}
+  updateDetail: (
+    entityId: string,
+    change: (detail: unknown) => unknown,
+  ) => void;
+};
 
 /** The elements a feature draws with, from `$.ui.resolve(e)`. `Input` is missing on mobile. */
-export type Els = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button' | 'Link'> & {
-  Input?: Elements['terminal']['Input']
-  Select?: Elements['terminal']['Select']
-}
+export type Els = Pick<
+  Elements['terminal'],
+  'Box' | 'Text' | 'Button' | 'Link'
+> & {
+  Input?: Elements['terminal']['Input'];
+  Select?: Elements['terminal']['Select'];
+};
 
 export type RenderContext = {
-  entity: MablEntity
-  detail: unknown
+  entity: MablEntity;
+  detail: unknown;
   /** Every entity, so a tab can show related ones (a plan run's test runs, a branch's tests). */
-  entities: MablEntities
+  entities: MablEntities;
   /** Rows and columns the pane may use. */
-  rows: number
-  columns: number
-  settings: Settings
-  actions: Actions
-}
+  rows: number;
+  columns: number;
+  settings: Settings;
+  actions: Actions;
+};
 
 export type Feature = {
   /** The entity kinds this feature owns: their polls and their tabs. */
-  kinds: readonly MablEntityKind[]
+  kinds: readonly MablEntityKind[];
   /** Kinds that get their own tab. A subset of `kinds`. */
-  tabKinds: readonly MablEntityKind[]
+  tabKinds: readonly MablEntityKind[];
   /** Entities a finished mabl tool call names. Pure; `register.tsx` calls it for every mabl call. */
-  capture: (call: CallRecord) => EntityUpdate[]
+  capture: (call: CallRecord) => EntityUpdate[];
   /** How long until the next poll, or undefined when the entity needs no more polling. */
-  pollMs: (entity: MablEntity, detail: unknown, settings: Settings) => number | undefined
-  poll?: (ops: Ops, entity: MablEntity, detail: unknown, settings: Settings) => Promise<PollResult>
+  pollMs: (
+    entity: MablEntity,
+    detail: unknown,
+    settings: Settings,
+  ) => number | undefined;
+  poll?: (
+    ops: Ops,
+    entity: MablEntity,
+    detail: unknown,
+    settings: Settings,
+  ) => Promise<PollResult>;
   /** True when the item is done and "Clear finished" may drop it. */
-  isFinished: (entity: MablEntity, detail: unknown, entities: MablEntities) => boolean
+  isFinished: (
+    entity: MablEntity,
+    detail: unknown,
+    entities: MablEntities,
+  ) => boolean;
   /** Status changes worth a toast, e.g. "failed". */
-  announces?: (before: MablEntity | undefined, after: MablEntity) => string | undefined
-  tabTitle: (entity: MablEntity) => string
-  render: (els: Els, context: RenderContext) => RenderElement
-}
+  announces?: (
+    before: MablEntity | undefined,
+    after: MablEntity,
+  ) => string | undefined;
+  tabTitle: (entity: MablEntity) => string;
+  render: (els: Els, context: RenderContext) => RenderElement;
+};

@@ -1,0 +1,17 @@
+{
+  "name": "mabl-skills-dev",
+  "private": true,
+  "description": "Lint and format tooling for this repo. Not part of any plugin.",
+  "scripts": {
+    "check": "eslint --max-warnings 0 plugins/mabl/mod && prettier --check plugins/mabl/mod",
+    "fix": "eslint --fix plugins/mabl/mod && prettier --write plugins/mabl/mod"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "prettier": "3.5.3",
+    "typescript": "5.6.3",
+    "typescript-eslint": "8.65.0"
+  }
+}
