@@ -23,7 +23,7 @@
   "userConfig": {
     "showSessionSteps": {
       "type": "boolean",
-      "title": "Show test authoring steps in tab",
+      "title": "Show mabl results in side panel",
       "description": "Polls each running test authoring session for the steps it has generated (step groups and flows included) and shows them in its tab.",
       "default": false
     },

@@ -383,7 +383,7 @@ export const authoringFeature: Feature = {
             <Button key={`ask-claude-${entity.id}`} label="Ask Claude" onPress={() => actions.fillPrompt(`Read the open question on mabl test authoring session ${entity.id} with mabl_authoring_status, then answer it with mabl_authoring_answer. My guidance: `)} />
           </Box>
         )}
-        {!settings.showSessionSteps && <Text dimColor>Turn on "Show test authoring steps in tab" in /config to see the steps.</Text>}
+        {!settings.showSessionSteps && <Text dimColor>Turn on "Show mabl results in side panel" in /config to see the steps.</Text>}
         {settings.showSessionSteps && !steps && <Text dimColor>Waiting for the first steps…</Text>}
         {steps && steps.entries.length === 0 && <Text dimColor>No steps yet.</Text>}
         {lines.map(line => (
