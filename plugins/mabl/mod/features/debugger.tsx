@@ -295,7 +295,8 @@ export const debuggerFeature: Feature = {
     return (
       <Box flexDirection="column">
         <Text bold>
-          {entity.name ?? entity.testId ?? entity.id} · {entity.status ?? 'unknown'}
+          {entity.name ?? entity.testId ?? entity.id}
+          {entity.status ? ` · ${entity.status}` : ''}
         </Text>
         <Text dimColor>
           {entity.id}

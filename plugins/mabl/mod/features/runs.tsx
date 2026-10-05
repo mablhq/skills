@@ -539,10 +539,11 @@ const renderDeployment = (
   const { Box, Text } = els
   const tests = detail?.tests
   const lines: RenderElement[] = (detail?.planRuns ?? []).flatMap(planRun => {
-    const status = planRun.status ?? 'unknown'
+    const counts = [planRun.testRunCount !== undefined && `${planRun.testRunCount} tests`, `${planRun.failedTotal} failed`].filter(Boolean).join(', ')
     const head = (
       <Text wrap="truncate-end">
-        {markOf(planState(planRun.status))} {planRun.planName ?? planRun.planId ?? planRun.planRunId ?? 'plan'} ({planRun.testRunCount ?? '?'} tests, {planRun.failedTotal} failed) · {status}
+        {markOf(planState(planRun.status))} {planRun.planName ?? planRun.planId ?? planRun.planRunId ?? 'plan'} ({counts})
+        {planRun.status ? ` · ${planRun.status}` : ''}
         {planRun.isRetry ? ' · retry' : ''}
       </Text>
     )
@@ -607,7 +608,7 @@ const renderPlanRun = (els: Els, entity: MablEntity, detail: PlanRunDetail | und
 
     return (
       <Box gap={1}>
-        <Text wrap="truncate-end">{`${markOf(state)} ${name} · ${state ?? 'unknown'}`}</Text>
+        <Text wrap="truncate-end">{`${markOf(state)} ${name}${state ? ` · ${state}` : ''}`}</Text>
         {openButton(els, actions, `open-${run.id}`, testRunUrl(base, entity.workspaceId, run.id))}
       </Box>
     )

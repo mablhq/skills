@@ -367,7 +367,8 @@ export const authoringFeature: Feature = {
     return (
       <Box flexDirection="column">
         <Text bold>
-          {entity.name ?? entity.id} · {entity.status ?? 'unknown'}
+          {entity.name ?? entity.id}
+          {entity.status ? ` · ${entity.status}` : ''}
           {steps ? ` · ${steps.stepCount} steps` : ''}
         </Text>
         {entity.url && <Link href={entity.url} label="Open in mabl" />}

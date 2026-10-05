@@ -323,8 +323,14 @@ export const targetText = (detail: ImpactDetail): string => {
     : "Infer the target (deployment and credential) from the test's latest passing run, and tell me which one you picked."
 }
 
-const scopeOf = (impactId: string, detail: ImpactDetail, workspaceId?: string): string =>
-  `test impact analysis ${impactId} (workspace ${workspaceId ?? detail.workspaceId ?? 'unknown'}, application ${detail.applicationId ?? 'unknown'})`
+const scopeOf = (impactId: string, detail: ImpactDetail, workspaceId?: string): string => {
+  const known = [
+    (workspaceId ?? detail.workspaceId) && `workspace ${workspaceId ?? detail.workspaceId}`,
+    detail.applicationId && `application ${detail.applicationId}`,
+  ].filter(Boolean)
+
+  return `test impact analysis ${impactId}${known.length > 0 ? ` (${known.join(', ')})` : ''}`
+}
 
 export const cloudPrompt = (impactId: string, detail: ImpactDetail, test: ImpactTest, workspaceId?: string): string =>
   `${skillCommand('mabl-test-impact')} Run the mabl test "${test.testName}" (${test.testId}) in the cloud for ${scopeOf(impactId, detail, workspaceId)}. ${targetText(detail)} Screen it first (hard gates, side-effect band), dispatch it with run_mabl_test_batch_cloud and impactSessionId ${impactId} so the run links to the analysis, and ask me before running anything outside the read-only or contained bands.`
@@ -364,7 +370,8 @@ export const impactFeature: Feature = {
       return (
         <Box flexDirection="column">
           <Text bold>
-            {entity.name ?? entity.id} · {entity.status ?? 'unknown'}
+            {entity.name ?? entity.id}
+            {entity.status ? ` · ${entity.status}` : ''}
           </Text>
           <Text dimColor>The analysis details are not loaded in this session.</Text>
         </Box>

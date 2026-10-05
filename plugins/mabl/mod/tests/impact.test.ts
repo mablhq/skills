@@ -148,6 +148,9 @@ assert.match(targetText(pinned), /deployment "Prod" https:\/\/app\.example\.com 
 const test1 = detail.tests[0]!
 assert.match(cloudPrompt('imp1-as', pinned, test1, WS), /^\/mabl:mabl-test-impact Run the mabl test "Checkout - Shipping address" \(t1-j\) in the cloud for test impact analysis imp1-as \(workspace ws1-w, application app1-a\)\. Target: deployment "Prod"/)
 assert.match(cloudPrompt('imp1-as', pinned, test1, WS), /impactSessionId imp1-as/)
+const bare = { ...withTargets, workspaceId: undefined, applicationId: undefined }
+assert.ok(!cloudPrompt('imp1-as', bare, test1).includes('unknown'), 'a missing workspace or application is left out, not printed as unknown')
+assert.match(cloudPrompt('imp1-as', bare, test1), /for test impact analysis imp1-as\. /)
 assert.match(debugPrompt('imp1-as', withTargets, test1, WS), /^\/mabl:mabl-debug Start a local debug session for the mabl test "Checkout - Shipping address" \(t1-j\)/)
 assert.match(createPrompt('imp1-as', withTargets, 'Expiry date validation', WS), /^\/mabl:mabl-test-authoring Create one mabl test that covers this gap .*"Expiry date validation"\. Infer the mabl branch/)
 
