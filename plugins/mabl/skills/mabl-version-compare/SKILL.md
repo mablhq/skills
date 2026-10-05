@@ -107,8 +107,8 @@ For the CLI lane:
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
 MIN_MABL_CLI_VERSION=2.119.0
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
+command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli@2.136.25
+[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@2.136.25
 
 mabl auth login --auto   # one-time OAuth in browser — required before any command
 mabl auth info           # verify you're logged in and the token hasn't expired
@@ -119,7 +119,7 @@ version check can pass on a build that predates them:
 
 ```bash
 mabl tests compare --help 2>&1 | grep -qw -- --output \
-  || echo "This mabl CLI cannot produce a structured diff — 'mabl tests compare --output json' is missing. Upgrade: npm install -g @mablhq/mabl-cli@latest"
+  || echo "This mabl CLI cannot produce a structured diff — 'mabl tests compare --output json' is missing. Upgrade: npm install -g @mablhq/mabl-cli@2.136.25"
 ```
 
 If the probe fails and the MCP lane is closed too, say so and stop.
