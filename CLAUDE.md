@@ -112,6 +112,8 @@ When you add a skill or change a skill's CLI usage, re-check its `MIN_MABL_CLI_V
 
 Every install names an exact CLI version, never a bare package or `@latest` — the Claude plugin directory rejects anything that could run code newer than what was reviewed. The same goes for any `npx` package, in `.mcp.json` or in prose. To move the CLI pin, change `@mablhq/mabl-cli@<version>` everywhere in one PR; it must stay at or above every skill's `MIN_MABL_CLI_VERSION`.
 
+`.github/workflows/bump-pins.yml` does this every morning for `chrome-devtools-mcp` and `@mablhq/mabl-cli`. When npm has a newer release, it opens (or refreshes) one PR that moves every pin, bumps the plugin patch version, and adds the CHANGELOG entry. It requests review from the logins in the `PIN_BUMP_REVIEWERS` repo variable, and opens no PR when the pins already match npm. A new pinned package goes in the `PACKAGES` list in `.github/scripts/bump-pins.mjs`.
+
 ## Validation
 
 Run these before pushing (CI runs the same checks on every PR via `.github/workflows/validate-plugin.yml`):

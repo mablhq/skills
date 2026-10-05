@@ -1,0 +1,63 @@
+name: Bump pinned packages
+
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  # PRs opened with GITHUB_TOKEN don't trigger pull_request workflows, so this
+  # job dispatches the plugin validation on the bump branch itself.
+  actions: write
+
+concurrency:
+  group: bump-pins
+
+env:
+  BRANCH: automation/bump-pins
+
+jobs:
+  bump:
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Move pins to the latest npm releases
+        id: bump
+        run: node .github/scripts/bump-pins.mjs
+      - name: Open or update the bump PR
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ steps.bump.outputs.title }}
+          BODY_FILE: ${{ steps.bump.outputs.body_file }}
+          # Comma-separated GitHub logins, set under Settings → Variables.
+          REVIEWERS: ${{ vars.PIN_BUMP_REVIEWERS }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -C "$BRANCH"
+          git commit -am "$TITLE"
+          git push --force origin "$BRANCH"
+          pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$TITLE" --body-file "$BODY_FILE"
+          else
+            gh pr create --base main --head "$BRANCH" --title "$TITLE" --body-file "$BODY_FILE" \
+              ${REVIEWERS:+--reviewer "$REVIEWERS"}
+          fi
+          gh workflow run validate-plugin.yml --ref "$BRANCH"
+      - name: Close a bump PR that main has caught up with
+        if: steps.bump.outputs.changed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr close "$pr" --delete-branch --comment 'main already pins the latest releases.'
+          fi

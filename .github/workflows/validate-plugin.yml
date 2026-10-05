@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Dispatched by bump-pins.yml, whose bot-opened PRs don't trigger pull_request.
+  workflow_dispatch:
 
 # Every step only reads the checkout, so read-only is the whole grant.
 permissions:
