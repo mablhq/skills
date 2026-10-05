@@ -23,8 +23,8 @@ Create mabl browser or API tests through a plan-then-generate workflow.
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
 MIN_MABL_CLI_VERSION=2.124.30
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
+command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli@2.136.25
+[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@2.136.25
 
 mabl auth login --auto   # one-time OAuth in browser — required before any command
 mabl auth info    # verify you're logged in and the token hasn't expired
@@ -353,7 +353,7 @@ version check can pass on a build that predates them:
 # Match --step as a whole word: a plain substring search also matches the
 # older --step-run-id flag, so it would pass on a CLI that can't do this.
 mabl agent debug artifact --help 2>&1 | grep -qE '(^|[[:space:]])--step([[:space:]]|$)' \
-  || echo "This mabl CLI cannot validate an authored test — 'mabl agent debug artifact --step' is missing. Upgrade: npm install -g @mablhq/mabl-cli@latest"
+  || echo "This mabl CLI cannot validate an authored test — 'mabl agent debug artifact --step' is missing. Upgrade: npm install -g @mablhq/mabl-cli@2.136.25"
 ```
 
 If that prints the warning, stop here and report the test **unverified**, naming

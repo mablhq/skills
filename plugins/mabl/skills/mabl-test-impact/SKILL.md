@@ -23,8 +23,8 @@ first `mabl` command, not before the workflow:
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
 MIN_MABL_CLI_VERSION=2.132.3
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
+command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli@2.136.25
+[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@2.136.25
 ```
 
 That check, the dispatch script in `references/local-run-dispatch.md`, and any `curl` (the

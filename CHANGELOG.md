@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.11.0] - 2026-10-03
+## [1.11.0] - 2026-10-05
 ### Added
 - Claude Code only: a live mabl view inside the terminal. The plugin watches the mabl tools and
   `mabl` CLI commands your agent runs and opens a tab per item: test authoring sessions (with an
@@ -15,6 +15,12 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   Buttons open results in the browser or put a follow-up command in your prompt; **Rerun** and the
   answer box act right away. A band above the prompt counts what is running. Two settings in `/config` turn on the live step list and set how
   often it refreshes.
+
+## [1.10.3] - 2026-10-05
+### Changed
+- Skills install the mabl CLI at an exact version (`@mablhq/mabl-cli@2.136.25`) instead of the
+  bare package or `@latest`, so every install runs the same reviewed CLI. The README's MCP
+  examples now show `chrome-devtools-mcp@1.10.1`, matching the shipped config.
 
 ## [1.10.2] - 2026-10-02
 ### Changed
