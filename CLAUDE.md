@@ -104,11 +104,13 @@ Use this canonical block, adjusting `MIN_MABL_CLI_VERSION` to the oldest CLI ver
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
 MIN_MABL_CLI_VERSION=2.111.0
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@latest
+command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli@2.136.25
+[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@2.136.25
 ```
 
 When you add a skill or change a skill's CLI usage, re-check its `MIN_MABL_CLI_VERSION`.
+
+Every install names an exact CLI version, never a bare package or `@latest` — the Claude plugin directory rejects anything that could run code newer than what was reviewed. The same goes for any `npx` package, in `.mcp.json` or in prose. To move the CLI pin, change `@mablhq/mabl-cli@<version>` everywhere in one PR; it must stay at or above every skill's `MIN_MABL_CLI_VERSION`.
 
 ## Validation
 
