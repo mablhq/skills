@@ -46,7 +46,9 @@ export const mergeHistory = (
   now: number,
 ): HistoryItem[] => {
   const byId = new Map(readHistory(previous).map((item) => [item.id, item]));
-  for (const entity of Object.values(entities)) {
+  for (const entity of Object.values(entities).filter(
+    (candidate) => !candidate.parentId,
+  )) {
     const seenAt = Math.max(
       num(entity.updatedAt) ?? now,
       byId.get(entity.id)?.seenAt ?? 0,

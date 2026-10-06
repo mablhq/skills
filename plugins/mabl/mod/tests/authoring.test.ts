@@ -76,6 +76,7 @@ test('authoring', async () => {
     mtime: async () => undefined,
     read: async () => undefined,
     home: '/home',
+    serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
     now: async () => 1,
   };
   const settings: Settings = {showSessionSteps: true, stepsPollMs: 15_000};

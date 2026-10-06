@@ -81,13 +81,13 @@ test('authoring-answer', async () => {
     mcpServer: 'mabl-alt',
     updatedAt: 1,
   };
-  assert.deepEqual(answerCall(entity, paused.pause, '  alice  '), {
+  assert.deepEqual(answerCall(entity, paused.pause, '  alice  ', 'mabl-alt'), {
     server: 'mabl-alt',
     args: {sessionId: 's1-as', text: 'alice', expectedLoopNumber: 2},
   });
-  assert.equal(answerCall(entity, paused.pause, '   '), undefined);
+  assert.equal(answerCall(entity, paused.pause, '   ', 'mabl-alt'), undefined);
   assert.equal(
-    answerCall(entity, {question: 'q'}, 'x'),
+    answerCall(entity, {question: 'q'}, 'x', 'mabl-alt'),
     undefined,
     'no loop number, no answer',
   );
@@ -96,8 +96,9 @@ test('authoring-answer', async () => {
       {...entity, mcpServer: undefined, cli: 'mabl'},
       paused.pause,
       'x',
+      'plugin:mabl:mabl',
     )?.server,
-    'mabl',
+    'plugin:mabl:mabl',
   );
 
   // The answer tool's results, MCP and CLI
@@ -156,6 +157,7 @@ test('authoring-answer', async () => {
     mtime: async () => undefined,
     read: async () => undefined,
     home: '/home',
+    serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
     now: async () => 100,
   });
   const steps: Settings = {showSessionSteps: true, stepsPollMs: 15_000};
@@ -308,6 +310,8 @@ test('authoring-answer', async () => {
       pollNow: (id) => void polled.push(id),
       openTab: () => {},
       openUrl: () => {},
+      notify: () => undefined,
+      serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
       updateDetail: () => {},
     };
     const context = {
@@ -361,4 +365,27 @@ test('authoring-answer', async () => {
   };
 
   await main();
+});
+
+test('CLI answers and initiations name their session and test', () => {
+  const [answered] = captureAuthoring({
+    tool: 'Bash',
+    args: {
+      command: 'mabl agent authoring answer s9-as "use the staging login"',
+    },
+    text: '{"sessionStatus":"queued"}',
+  });
+  assert.equal(answered?.id, 's9-as', 'the session id is positional');
+  const [initiated] = captureAuthoring({
+    tool: 'Bash',
+    args: {
+      command: `mabl agent authoring initiate --test-information '{"test_id":"t7-j","test_case":"x; y"}'`,
+    },
+    text: '{"sessionId":"s7-as"}',
+  });
+  assert.equal(
+    initiated?.testId,
+    't7-j',
+    'the test id sits inside quoted JSON',
+  );
 });

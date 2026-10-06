@@ -266,6 +266,7 @@ test('branches', async () => {
       mtime: async () => undefined,
       read: async () => undefined,
       home: '/home',
+      serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
       now: async () => 1,
     };
     const polled = await branchesFeature.poll!(
@@ -347,6 +348,8 @@ test('branches', async () => {
       pollNow: () => {},
       openTab: () => {},
       openUrl: () => {},
+      notify: () => undefined,
+      serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
       updateDetail: () => {},
     };
     const tree = branchesFeature.render(els, {

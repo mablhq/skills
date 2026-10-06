@@ -27,7 +27,7 @@ test('debugger', async () => {
 
   const [started] = captureDebugger(
     bash(
-      'mabl-alt agent debug session start abc-j --headless 2>&1',
+      'npx -y @mablhq/mabl-cli@2.136.25 agent debug session start abc-j --headless 2>&1',
       'Warning: something\n{"sessionId":"mabl-debug-1","testId":"abc-j","browser":"chromium","stepCount":12}\n',
     ),
   );
@@ -37,7 +37,7 @@ test('debugger', async () => {
     testId: 'abc-j',
     name: 'abc-j',
     status: 'started',
-    cli: 'mabl-alt',
+    cli: 'npx -y @mablhq/mabl-cli@2.136.25',
   });
   assert.deepEqual(
     captureDebugger(bash('mabl agent debug session start abc-j &', '')),
@@ -273,7 +273,7 @@ test('debugger', async () => {
   const entity: MablEntity = {
     kind: 'debug',
     id: 'mabl-debug-1',
-    cli: 'mabl-alt',
+    cli: 'npx -y @mablhq/mabl-cli@2.136.25',
     status: 'started',
     updatedAt: 0,
   };
@@ -295,6 +295,7 @@ test('debugger', async () => {
       return mtime;
     },
     home: '/home/me',
+    serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
     now: async () => 0,
   });
 
@@ -319,7 +320,9 @@ test('debugger', async () => {
       steps: [],
     });
     assert.deepEqual(changed[0], [
-      'mabl-alt',
+      'npx',
+      '-y',
+      '@mablhq/mabl-cli@2.136.25',
       'agent',
       'debug',
       'session',
@@ -388,6 +391,8 @@ test('debugger', async () => {
       pollNow: () => {},
       openTab: () => {},
       openUrl: () => {},
+      notify: () => undefined,
+      serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
       updateDetail: () => {},
     };
     const els = {
@@ -420,9 +425,20 @@ test('debugger', async () => {
     }
     (button.props.onPress as () => void)();
     assert.deepEqual(filled, [
-      'mabl-alt agent debug session run-step mabl-debug-1',
+      'npx -y @mablhq/mabl-cli@2.136.25 agent debug session run-step mabl-debug-1',
     ]);
     const texts = flat(tree).filter((node) => node.tag === 'Text');
     assert.equal(texts.length, 2 + 4);
   })();
+});
+
+test('step lists parse after a CLI warning line', () => {
+  for (const warning of ['Unsupported Node.js version', '[WARN] old Node']) {
+    assert.equal(
+      parseSteps(`${warning}\n[{"id":"s1","index":0,"description":"Click"}]`)
+        .length,
+      1,
+      warning,
+    );
+  }
 });

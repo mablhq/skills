@@ -20,6 +20,7 @@ import {
   contextNote,
   entityLines,
   isMablTool,
+  mablUrl,
   mergeEntities,
   structuredOf,
   tabIdFor,
@@ -38,6 +39,11 @@ const OVERVIEW = 'mabl-overview';
 const TICK_MS = 3_000;
 const CALL_TIMEOUT_MS = 60_000;
 const TAB_TITLE_MAX = 40;
+const MAX_BACKOFF_MS = 10 * 60_000;
+const MAX_POLLS_IN_FLIGHT = 4;
+// An item with no progress in this long is checked at the slowest rate; the debugger only stats a local file.
+const STALE_AFTER_MS = 2 * 60 * 60_000;
+const MABL_SERVER = 'mabl';
 const FEATURES: readonly Feature[] = [
   authoringFeature,
   basicFeature,
@@ -113,24 +119,32 @@ const summarize = (
 
 let settings: Settings = {showSessionSteps: false, stepsPollMs: 15_000};
 let home = '';
-let isPolling = false;
+let mablServer = MABL_SERVER;
 let needsReplay = false;
 const nextPollAt = new Map<string, number>();
+const pollsInFlight = new Set<string>();
+const failedPolls = new Map<string, number>();
+const pollErrors = new Map<string, string>();
+const progressAt = new Map<string, number>();
 
-const opsFor = (
-  $: Engine,
-  onToolError: (message: string) => void = () => undefined,
-): Ops => ({
+/** The MCP server to call for an item: the one that started it, else the plugin's mabl server. */
+const serverFor = (entity: Pick<MablEntity, 'mcpServer'>): string =>
+  entity.mcpServer ?? mablServer;
+
+const opsFor = ($: Engine, onError: (message: string) => void): Ops => ({
   callTool: async (server, tool, args, options) => {
     const result = toolResult(await $.mcp.call(server, tool, args));
     if (result.isError && !options?.isErrorExpected) {
-      onToolError(`${tool}: ${result.text}`);
+      onError(`${tool}: ${result.text}`);
     }
 
     return result;
   },
   run: async (argv, timeoutMs = 30_000) => {
     const {exitCode, stdout, stderr} = await $.process.run(argv, {timeoutMs});
+    if (exitCode !== 0) {
+      onError(`${argv.slice(0, 4).join(' ')}: exit ${exitCode}`);
+    }
 
     return {exitCode, stdout, stderr};
   },
@@ -138,23 +152,30 @@ const opsFor = (
     (await $.fs.stat(path).catch(() => undefined))?.mtimeMs,
   read: async (path) => $.fs.read(path).catch(() => undefined),
   home,
+  serverFor,
   now: () => $.clock.now(),
 });
 
-const isOpenable = (url: string): boolean => /^https:\/\/[!-~]+$/.test(url);
+const BROWSER_OPENERS: readonly (readonly string[])[] = [
+  ['open'],
+  ['xdg-open'],
+  ['rundll32', 'url.dll,FileProtocolHandler'],
+];
 
 const openUrl = async ($: Engine, url: string): Promise<void> => {
-  if (!isOpenable(url)) {
+  const href = mablUrl(url);
+  if (!href) {
     return;
   }
-  const opened = await $.process
-    .run(['open', url], {timeoutMs: 10_000})
-    .catch(() => undefined);
-  if (opened?.exitCode !== 0) {
-    await $.process
-      .run(['xdg-open', url], {timeoutMs: 10_000})
-      .catch(() => $.ui.toast(`Could not open ${url}`));
+  for (const opener of BROWSER_OPENERS) {
+    const opened = await $.process
+      .run([...opener, href], {timeoutMs: 10_000})
+      .catch(() => undefined);
+    if (opened?.exitCode === 0) {
+      return;
+    }
   }
+  $.ui.toast(`mabl: could not open ${href}.`);
 };
 
 const withTimeout = <T,>($: Engine, work: Promise<T>): Promise<T> =>
@@ -165,12 +186,13 @@ const withTimeout = <T,>($: Engine, work: Promise<T>): Promise<T> =>
     }),
   ]);
 
+/** Records the updates; true when anything changed. */
 const apply = async (
   $: Engine,
   updates: readonly EntityUpdate[],
-): Promise<void> => {
+): Promise<boolean> => {
   if (updates.length === 0) {
-    return;
+    return false;
   }
   const now = await $.clock.now();
   let before: MablEntities = {};
@@ -181,6 +203,11 @@ const apply = async (
 
     return after;
   });
+  if (after === before) {
+    return false;
+  }
+  // One call can start many runs; one tab per kind is enough, the rest are in the overview.
+  const openedKinds = new Set<string>();
   for (const id of new Set(updates.map((change) => change.id))) {
     const entity = after[id];
     if (!entity) {
@@ -192,7 +219,8 @@ const apply = async (
     }
     if (!before[id]) {
       nextPollAt.set(id, 0);
-      if (hasTab(entity) && !entity.parentId) {
+      if (hasTab(entity) && !entity.parentId && !openedKinds.has(entity.kind)) {
+        openedKinds.add(entity.kind);
         void openTab($, entity);
       }
     }
@@ -201,14 +229,15 @@ const apply = async (
     HISTORY_KEY,
     mergeHistory(await $.store.get(HISTORY_KEY), after, now),
   );
+
+  return true;
 };
 
-const captureAll = async ($: Engine, call: CallRecord): Promise<void> => {
-  await apply(
+const captureAll = async ($: Engine, call: CallRecord): Promise<boolean> =>
+  apply(
     $,
     FEATURES.flatMap((feature) => feature.capture(call)),
   );
-};
 
 const setDetail = async (
   $: Engine,
@@ -219,7 +248,9 @@ const setDetail = async (
 };
 
 const actionsFor = ($: Engine): Actions => ({
-  fillPrompt: (text) => void $.prompt.fill({text}),
+  fillPrompt: (text) => void $.prompt.fill({text, mode: 'insert'}),
+  notify: (text) => $.ui.toast(text),
+  serverFor,
   callTool: async (server, tool, args) => {
     const result = toolResult(await $.mcp.call(server, tool, args));
     if (!result.isError) {
@@ -244,53 +275,92 @@ const actionsFor = ($: Engine): Actions => ({
     })),
 });
 
-const poll = async ($: Engine): Promise<void> => {
-  if (isPolling) {
-    return;
-  }
-  isPolling = true;
+const showPollErrors = async ($: Engine): Promise<void> => {
+  const at = await $.clock.now();
+  await update($, lastPoll, () => ({
+    at,
+    error: pollErrors.values().next().value,
+  }));
+};
+
+const pollOne = async (
+  $: Engine,
+  poll: NonNullable<Feature['poll']>,
+  entity: MablEntity,
+  detail: unknown,
+  waitMs: number,
+): Promise<void> => {
+  let error: string | undefined;
+  const ops = opsFor($, (message) => {
+    error = message.slice(0, 120);
+  });
   try {
-    const all = await read($, entities);
-    const allDetails = await read($, details);
-    const now = await $.clock.now();
-    let error: string | undefined;
-    const ops = opsFor($, (message) => {
-      error = message.slice(0, 120);
-    });
-    let isAnyPolled = false;
-    for (const entity of Object.values(all)) {
-      const feature = featureOf(entity);
-      const waitMs = feature.poll
-        ? feature.pollMs(entity, allDetails[entity.id], settings)
-        : undefined;
-      if (
-        !feature.poll ||
-        waitMs === undefined ||
-        (nextPollAt.get(entity.id) ?? 0) > now
-      ) {
-        continue;
-      }
-      nextPollAt.set(entity.id, now + waitMs);
-      isAnyPolled = true;
-      try {
-        const result = await withTimeout(
-          $,
-          feature.poll(ops, entity, allDetails[entity.id], settings),
-        );
-        await apply($, result.updates);
-        if (result.detail !== undefined) {
-          await setDetail($, entity.id, result.detail);
-        }
-      } catch (failure) {
-        error = `${entity.id}: ${String(failure).slice(0, 120)}`;
-      }
+    const result = await withTimeout($, poll(ops, entity, detail, settings));
+    if (!(await read($, entities))[entity.id]) {
+      return;
     }
-    if (isAnyPolled) {
-      const at = await $.clock.now();
-      await update($, lastPoll, () => ({at, error}));
+    const isChanged = await apply($, result.updates);
+    if (result.detail !== undefined) {
+      await setDetail($, entity.id, result.detail);
     }
-  } finally {
-    isPolling = false;
+    if (isChanged || result.detail !== undefined) {
+      progressAt.set(entity.id, await $.clock.now());
+    }
+  } catch (failure) {
+    error = String(failure).slice(0, 120);
+  }
+  const failures = error ? (failedPolls.get(entity.id) ?? 0) + 1 : 0;
+  failedPolls.set(entity.id, failures);
+  if (error) {
+    pollErrors.set(entity.id, `${entity.id}: ${error}`);
+    nextPollAt.set(
+      entity.id,
+      (await $.clock.now()) + Math.min(waitMs * 2 ** failures, MAX_BACKOFF_MS),
+    );
+  } else {
+    pollErrors.delete(entity.id);
+  }
+  await showPollErrors($);
+};
+
+const poll = async ($: Engine): Promise<void> => {
+  const all = await read($, entities);
+  const allDetails = await read($, details);
+  const now = await $.clock.now();
+  const pollable = new Set<string>();
+  for (const entity of Object.values(all)) {
+    const feature = featureOf(entity);
+    const waitMs = feature.poll
+      ? feature.pollMs(entity, allDetails[entity.id], settings)
+      : undefined;
+    if (!feature.poll || waitMs === undefined) {
+      continue;
+    }
+    pollable.add(entity.id);
+    if (
+      pollsInFlight.size >= MAX_POLLS_IN_FLIGHT ||
+      pollsInFlight.has(entity.id) ||
+      (nextPollAt.get(entity.id) ?? 0) > now
+    ) {
+      continue;
+    }
+    const lastProgress = Math.max(
+      entity.updatedAt,
+      progressAt.get(entity.id) ?? 0,
+    );
+    const isStale =
+      entity.kind !== 'debug' && now - lastProgress > STALE_AFTER_MS;
+    const wait = isStale ? Math.max(waitMs, MAX_BACKOFF_MS) : waitMs;
+    nextPollAt.set(entity.id, now + wait);
+    pollsInFlight.add(entity.id);
+    void pollOne($, feature.poll, entity, allDetails[entity.id], wait).finally(
+      () => pollsInFlight.delete(entity.id),
+    );
+  }
+  const finished = [...pollErrors.keys()].filter((id) => !pollable.has(id));
+  if (finished.length > 0) {
+    finished.forEach((id) => pollErrors.delete(id));
+    await showPollErrors($);
   }
 };
 
@@ -326,6 +396,7 @@ const clearFinished = async ($: Engine): Promise<void> => {
 
 const clearAll = async ($: Engine): Promise<void> => {
   await dropEntities($, () => false);
+  pollErrors.clear();
   await update($, lastPoll, () => null);
 };
 
@@ -336,7 +407,15 @@ export const register: Register = (on, options) => {
   };
 
   on('session.start', async ($, e, next) => {
-    home = (await $.env.get('HOME')) ?? '';
+    home = (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? '';
+    void $.mcp
+      .connect(MABL_SERVER)
+      .then((connected) => {
+        if (connected.isConnected) {
+          mablServer = connected.server;
+        }
+      })
+      .catch(() => undefined);
     await $.command.register({
       name: 'mabl',
       description: 'Show the mabl items this session touched',
@@ -438,8 +517,8 @@ export const register: Register = (on, options) => {
     const els: Els = $.ui.resolve(e);
     const all = await read($, entities);
     const allDetails = await read($, details);
-    const rows = e.viewport?.rows ?? 24;
-    const columns = e.viewport?.columns ?? 100;
+    const rows = e.props.scroll.bodyRows;
+    const columns = e.props.bodyColumns;
 
     if (e.requestId !== OVERVIEW) {
       const entity = Object.values(all).find(
@@ -505,7 +584,7 @@ export const register: Register = (on, options) => {
                     onPress={() => openTab($, entity)}
                   />
                 )}
-                {entity.url && (
+                {mablUrl(entity.url) && (
                   <Button
                     key={`url-${tabIdFor(entity)}`}
                     label="Open in mabl"
@@ -527,7 +606,7 @@ export const register: Register = (on, options) => {
                     {KIND_LABEL[item.kind]} · {item.name ?? item.id}
                     {item.status ? ` · ${item.status}` : ''}
                   </Text>
-                  {item.url && (
+                  {mablUrl(item.url) && (
                     <Button
                       key={`recent-${item.kind}-${item.id}`}
                       label="Open"

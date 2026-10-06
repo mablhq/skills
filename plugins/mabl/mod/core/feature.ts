@@ -34,6 +34,8 @@ export type Ops = {
   read: (path: string) => Promise<string | undefined>;
   /** The user's home directory. */
   home: string;
+  /** The MCP server to call for an item: the one that started it, else the plugin's mabl server. */
+  serverFor: (entity: Pick<MablEntity, 'mcpServer'>) => string;
   now: () => Promise<number>;
 };
 
@@ -42,8 +44,11 @@ export type PollResult = {updates: EntityUpdate[]; detail?: unknown};
 
 /** What a pane's buttons and inputs may do: closures over `$`, fire-and-forget except `callTool`. */
 export type Actions = {
-  /** Puts text in the prompt box as a draft for the person to send. */
+  /** Puts text in the prompt box as a draft for the person to send, keeping what they typed. */
   fillPrompt: (text: string) => void;
+  /** Shows a short message, e.g. that a button's call failed. */
+  notify: (text: string) => void;
+  serverFor: Ops['serverFor'];
   /** Calls an MCP tool on the person's behalf, then records the entities the result names. */
   callTool: (
     server: string,
@@ -56,7 +61,7 @@ export type Actions = {
   pollNow: (entityId: string) => void;
   /** Opens an entity's own tab. */
   openTab: (entity: MablEntity) => void;
-  /** Opens an https URL in the person's browser. */
+  /** Opens a mabl.com URL in the person's browser; any other URL is ignored. */
   openUrl: (url: string) => void;
   /** Changes an entity's stored detail, e.g. a tab's own UI state; the tab redraws. */
   updateDetail: (

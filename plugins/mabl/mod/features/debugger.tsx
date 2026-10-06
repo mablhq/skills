@@ -1,6 +1,16 @@
 import type {MablEntity} from '../types';
 import type {Feature, Ops, PollResult} from '../core/feature';
-import {cliArgv, field, list, mablCall, num, obj, str} from '../core/util';
+import {
+  cliArgv,
+  field,
+  lastJson,
+  list,
+  mablCall,
+  num,
+  obj,
+  parseJson,
+  str,
+} from '../core/util';
 import type {CallRecord, EntityUpdate} from '../core/util';
 
 const POLL_MS = 3_000;
@@ -47,20 +57,6 @@ export const sessionFile = (home: string, sessionId: string): string =>
   `${home}/.mabl/debug/${sessionId}/session.json`;
 
 const unquote = (token: string): string => token.replace(/^["']|["']$/g, '');
-
-const lastJson = (text: string): Record<string, unknown> => {
-  for (const line of text.split('\n').reverse()) {
-    if (line.trim().startsWith('{')) {
-      try {
-        return obj(JSON.parse(line));
-      } catch {
-        continue;
-      }
-    }
-  }
-
-  return {};
-};
 
 const runSummary = (text: string): string | undefined => {
   const results = [
@@ -155,12 +151,10 @@ export const captureDebugger = (call: CallRecord): EntityUpdate[] => {
 
 /** `list-steps -o json` output as steps with a tree depth, from the dot position or else the parent chain. */
 export const parseSteps = (stdout: string): DebugStep[] => {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(stdout);
-  } catch {
-    return [];
-  }
+  // The CLI may print a warning line before the JSON array.
+  const raw = parseJson(
+    stdout.slice(Math.max(0, stdout.search(/^\s*\[\s*(?:[{\]]|$)/m))),
+  );
   const depthById = new Map<string, number>();
 
   return list(raw).flatMap((step, order) => {

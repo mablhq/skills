@@ -221,7 +221,7 @@ test('runs', async () => {
   {
     const [json] = captureRuns({
       tool: 'Bash',
-      args: {command: 'mabl-alt deployments create -a a1-a --output json'},
+      args: {command: 'mabl deployments create -a a1-a --output json'},
       text: JSON.stringify({
         id: 'd3-v',
         href: `${BASE}/workspaces/${WS}/output/deployments/d3-v`,
@@ -229,7 +229,7 @@ test('runs', async () => {
     });
     assert.deepEqual(
       [json?.kind, json?.id, json?.workspaceId, json?.cli],
-      ['deployment', 'd3-v', WS, 'mabl-alt'],
+      ['deployment', 'd3-v', WS, 'mabl'],
     );
     const [plain] = captureRuns({
       tool: 'Bash',
@@ -503,6 +503,7 @@ test('runs', async () => {
     mtime: async () => undefined,
     read: async () => undefined,
     home: '/',
+    serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
     now: async () => 0,
   });
 
@@ -646,6 +647,8 @@ test('runs', async () => {
         pollNow: () => undefined,
         openTab: () => undefined,
         openUrl: () => undefined,
+        notify: () => undefined,
+        serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
         updateDetail: () => undefined,
       },
     });
@@ -729,4 +732,28 @@ test('runs', async () => {
       'https://app.mabl.com/workspaces/ws/test/journey-runs/a-jr',
     ]);
   })();
+});
+
+test('a deployment the server no longer finds is final', async () => {
+  const notFoundDeployment = await pollRuns(
+    {
+      callTool: async () => ({
+        isError: true,
+        structured: {status: 'not_found'},
+        text: 'not found',
+      }),
+      run: async () => ({exitCode: 0, stdout: '', stderr: ''}),
+      mtime: async () => undefined,
+      read: async () => undefined,
+      home: '/',
+      serverFor: () => 'mabl',
+      now: async () => 0,
+    },
+    {kind: 'deployment', id: 'd9-v', workspaceId: 'w-w', updatedAt: 0},
+    undefined,
+  );
+  assert.deepEqual(notFoundDeployment.updates, [
+    {kind: 'deployment', id: 'd9-v', status: 'not found'},
+  ]);
+  assert.ok(isFinalStatus('not found'));
 });

@@ -4,17 +4,18 @@ import type {MablEntities, MablEntity} from '../types';
 import type {Actions, Els, Feature, Ops, PollResult} from '../core/feature';
 import {
   appBaseFromUrl,
+  didSucceed,
   field,
   flag,
   hashOf,
   KIND_LABEL,
   list,
   mablCall,
-  mcpServerFor,
   num,
   obj,
   parseJson,
   skillCommand,
+  stateOf,
   str,
   withWorkspace,
 } from '../core/util';
@@ -34,6 +35,7 @@ const FINAL_STATES = new Set([
   'succeeded',
   'terminated',
   'cancelled',
+  'not found',
 ]);
 const QUEUED_STATUSES = new Set([
   'queued',
@@ -140,10 +142,6 @@ const withHash = <T extends object>(detail: T): T & {hash: string} => ({
   ...detail,
   hash: hashOf(detail),
 });
-
-/** The state word of a status: `failed (2 of 40 tests)` is `failed`. */
-export const stateOf = (status?: string): string | undefined =>
-  status?.split(' (')[0];
 
 export const isFinalStatus = (status?: string): boolean =>
   FINAL_STATES.has(stateOf(status) ?? '');
@@ -485,10 +483,9 @@ const fromMcp = (
         ? args.testIds.length
         : undefined;
       const planName =
-        str(args.planName) ??
-        (name === 'run_mabl_test_batch_cloud' && testCount
+        name === 'run_mabl_test_batch_cloud' && testCount
           ? `batch of ${testCount} tests`
-          : undefined);
+          : undefined;
 
       return [
         {
@@ -544,7 +541,7 @@ const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
           status: 'started',
           testId: tests[0]?.[2],
           url: match.startsWith('https://') ? match : undefined,
-          workspaceId: workspaceId ?? flag(sub, 'workspace-id'),
+          workspaceId: workspaceId ?? flag(sub, 'workspace-id', 'w'),
           cli,
         });
       }
@@ -562,7 +559,7 @@ const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
             kind: 'deployment',
             id,
             url,
-            workspaceId: workspaceId ?? flag(sub, 'workspace-id'),
+            workspaceId: workspaceId ?? flag(sub, 'workspace-id', 'w'),
             status: 'started',
             cli,
             impactSessionId: flag(sub, 'impact-session-id'),
@@ -602,11 +599,16 @@ const pollDeployment = async (
   before?: DeploymentDetail,
 ): Promise<PollResult> => {
   const result = await ops.callTool(
-    mcpServerFor(entity),
+    ops.serverFor(entity),
     'get_mabl_deployment_status',
     {workspaceId, deploymentId: entity.id},
   );
-  if (result.isError || str(obj(result.structured).status) === 'not_found') {
+  if (str(obj(result.structured).status) === 'not_found') {
+    return {
+      updates: [{kind: 'deployment', id: entity.id, status: 'not found'}],
+    };
+  }
+  if (result.isError) {
     return {updates: []};
   }
   const detail = deploymentDetail(result.structured);
@@ -642,10 +644,14 @@ const pollPlanRun = async (
   workspaceId: string,
   before?: PlanRunDetail,
 ): Promise<PollResult> => {
-  const result = await ops.callTool(mcpServerFor(entity), 'get_mabl_plan_run', {
-    planRunId: entity.id,
-    workspaceId,
-  });
+  const result = await ops.callTool(
+    ops.serverFor(entity),
+    'get_mabl_plan_run',
+    {
+      planRunId: entity.id,
+      workspaceId,
+    },
+  );
   if (result.isError) {
     return {updates: []};
   }
@@ -679,10 +685,14 @@ const pollRun = async (
   workspaceId: string,
   before?: RunDetail,
 ): Promise<PollResult> => {
-  const result = await ops.callTool(mcpServerFor(entity), 'get_mabl_test_run', {
-    testRunId: entity.id,
-    workspaceId,
-  });
+  const result = await ops.callTool(
+    ops.serverFor(entity),
+    'get_mabl_test_run',
+    {
+      testRunId: entity.id,
+      workspaceId,
+    },
+  );
   if (result.isError) {
     return {updates: []};
   }
@@ -819,7 +829,7 @@ const failureButtons = (
   entity: MablEntity,
   testRunId: string,
 ): RenderElement[] => {
-  const server = mcpServerFor(entity);
+  const server = actions.serverFor(entity);
   const {workspaceId} = entity;
 
   return [
@@ -836,9 +846,16 @@ const failureButtons = (
             key={`rerun-${testRunId}`}
             label="Rerun"
             onPress={() =>
-              void actions
-                .callTool(server, 'rerun_mabl_test', {testRunId, workspaceId})
-                .catch(() => undefined)
+              void didSucceed(
+                actions.callTool(server, 'rerun_mabl_test', {
+                  testRunId,
+                  workspaceId,
+                }),
+              ).then((isStarted) => {
+                if (!isStarted) {
+                  actions.notify(`mabl: could not rerun ${testRunId}.`);
+                }
+              })
             }
           />,
         ]

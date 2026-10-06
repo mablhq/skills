@@ -6,7 +6,7 @@ import {
   hashOf,
   list,
   mablCall,
-  mcpServerFor,
+  mablUrl,
   num,
   obj,
   str,
@@ -212,7 +212,7 @@ const pollBranch = async (
   detail: unknown,
 ): Promise<PollResult> => {
   const result = await ops.callTool(
-    mcpServerFor(entity),
+    ops.serverFor(entity),
     'get_mabl_branch_merge_status',
     {workspaceId: entity.workspaceId, from: entity.name ?? entity.id},
     {isErrorExpected: true},
@@ -249,26 +249,21 @@ export const branchesFeature: Feature = {
       ? merge.diverged.slice(0, MAX_DIVERGED_SHOWN)
       : [];
     const room = Math.max(3, rows - 6 - diverged.length);
+    const branchHref = mablUrl(entity.url);
+    const branchesHref =
+      base && entity.workspaceId
+        ? mablUrl(`${base}/workspaces/${entity.workspaceId}/train/branches`)
+        : undefined;
 
     return (
       <Box flexDirection="column">
         <Text bold>
           Branch {name} · {entity.status ?? 'open'}
         </Text>
-        {entity.url ? (
-          <Link href={entity.url} label="Open branch in mabl" />
+        {branchHref ? (
+          <Link href={branchHref} label="Open branch in mabl" />
         ) : (
-          base &&
-          entity.workspaceId && (
-            <Link
-              href={
-                new URL(
-                  `${base}/workspaces/${entity.workspaceId}/train/branches`,
-                ).href
-              }
-              label="Branches in mabl"
-            />
-          )
+          branchesHref && <Link href={branchesHref} label="Branches in mabl" />
         )}
         {!entity.workspaceId && (
           <Text dimColor>
@@ -279,39 +274,47 @@ export const branchesFeature: Feature = {
           <Text dimColor>Checking merge status…</Text>
         )}
         {merge && <Text wrap="wrap">{mergeSummary(merge)}</Text>}
-        {diverged.map((item) => (
-          <Box gap={1}>
-            <Text dimColor>
-              {'  '}
-              {item.type} {item.name}
-            </Text>
-            {base && entity.workspaceId && (
-              <Link
-                href={compareUrl(
-                  base,
-                  entity.workspaceId,
-                  merge?.to ?? DEFAULT_TARGET,
-                  name,
-                  item,
-                )}
-                label="Compare"
-              />
-            )}
-          </Box>
-        ))}
+        {diverged.map((item) => {
+          const href =
+            base && entity.workspaceId
+              ? mablUrl(
+                  compareUrl(
+                    base,
+                    entity.workspaceId,
+                    merge?.to ?? DEFAULT_TARGET,
+                    name,
+                    item,
+                  ),
+                )
+              : undefined;
+
+          return (
+            <Box gap={1}>
+              <Text dimColor>
+                {'  '}
+                {item.type} {item.name}
+              </Text>
+              {href && <Link href={href} label="Compare" />}
+            </Box>
+          );
+        })}
         <Text bold>Tests and flows on this branch</Text>
         {members.length === 0 && (
           <Text dimColor>None tracked in this session yet.</Text>
         )}
-        {members.slice(0, room).map((member) => (
-          <Box gap={1}>
-            <Text>
-              {KIND_LABEL[member.kind]} {member.name ?? member.id}
-              {member.status ? ` · ${member.status}` : ''}
-            </Text>
-            {member.url && <Link href={member.url} label="Open" />}
-          </Box>
-        ))}
+        {members.slice(0, room).map((member) => {
+          const href = mablUrl(member.url);
+
+          return (
+            <Box gap={1}>
+              <Text>
+                {KIND_LABEL[member.kind]} {member.name ?? member.id}
+                {member.status ? ` · ${member.status}` : ''}
+              </Text>
+              {href && <Link href={href} label="Open" />}
+            </Box>
+          );
+        })}
         {members.length > room && (
           <Text dimColor>… {members.length - room} more</Text>
         )}

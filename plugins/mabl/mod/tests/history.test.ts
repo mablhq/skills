@@ -99,3 +99,18 @@ test('history', async () => {
     ['t1-j', 'r1-jr'],
   );
 });
+
+test('child runs stay out of Recent', () => {
+  const history = mergeHistory(
+    [],
+    {
+      'p1-pr': {kind: 'planRun', id: 'p1-pr', updatedAt: 1},
+      'r1-jr': {kind: 'run', id: 'r1-jr', parentId: 'p1-pr', updatedAt: 2},
+    },
+    3,
+  );
+  assert.deepEqual(
+    history.map((item) => item.id),
+    ['p1-pr'],
+  );
+});

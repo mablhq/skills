@@ -2,14 +2,15 @@ import type {MablEntity, SessionSteps, StepEntry} from '../types';
 import type {Feature, Ops, PollResult, Settings} from '../core/feature';
 import {
   cliArgv,
+  didSucceed,
   field,
   flag,
   hashOf,
+  lastJson,
   mablCall,
-  mcpServerFor,
+  mablUrl,
   num,
   obj,
-  parseJson,
   str,
   withWorkspace,
 } from '../core/util';
@@ -53,9 +54,6 @@ export const isRunning = (entity: MablEntity): boolean =>
   entity.kind === 'authoring' &&
   !entity.isLocal &&
   !TERMINAL_STATUSES.has(entity.status ?? '');
-
-/** The JSON object a CLI command printed, else an empty object. */
-const jsonFields = (text: string): Fields => obj(parseJson(text));
 
 const fromStatus = (
   sessionId: string,
@@ -129,7 +127,7 @@ const fromMcp = (
             (name === 'mabl_authoring_merge' ? 'merge' : undefined),
           status: isLocal ? 'local' : 'queued',
           testId: str(info.testId) ?? str(args.testId),
-          branch: str(info.branch) ?? str(args.sourceBranch),
+          branch: str(info.branch) ?? str(args.targetBranch),
           url: field(data, text, 'viewTaskUrl', 'View task'),
           workspaceId: str(args.workspaceId),
           isLocal,
@@ -162,18 +160,18 @@ const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
         id: sessionId,
         status: isLocal ? 'local' : 'queued',
         url: field({}, text, 'viewTaskUrl'),
-        testId: flag(sub, 'test-information')?.match(
-          /"test_id"\s*:\s*"([^"]+)"/,
-        )?.[1],
+        testId: sub.match(/\\?"test_id\\?"\s*:\s*\\?"([^"\\]+)/)?.[1],
         isLocal,
         cli,
       },
     ];
   }
   if (/^agent\s+authoring\s+(status|answer)\b/.test(sub)) {
-    const sessionId = flag(sub, 'session-id');
+    const sessionId =
+      flag(sub, 'session-id') ??
+      sub.match(/^agent\s+authoring\s+answer\s+([\w-]+)/)?.[1];
 
-    return sessionId ? fromStatus(sessionId, jsonFields(text), text) : [];
+    return sessionId ? fromStatus(sessionId, lastJson(text), text) : [];
   }
 
   return [];
@@ -239,7 +237,13 @@ export const flowStepTexts = (structured: unknown): string[] => {
   return Array.isArray(steps)
     ? steps
         .map(obj)
-        .map((step) => str(step.description) ?? str(step.step_type) ?? 'step')
+        .map(
+          (step) =>
+            str(step.description) ??
+            str(step.target_description) ??
+            str(step.step_type) ??
+            'step',
+        )
     : [];
 };
 
@@ -387,7 +391,7 @@ const pollStatus = async (
   if (exitCode !== 0) {
     return {updates: []};
   }
-  const data = jsonFields(stdout);
+  const data = lastJson(stdout);
 
   return {
     updates: fromStatus(entity.id, data, stdout),
@@ -419,14 +423,13 @@ const pollSteps = async (
   entity: MablEntity,
   detail: AuthoringDetail,
 ): Promise<PollResult> => {
-  const server = mcpServerFor(entity);
+  const server = ops.serverFor(entity);
   let entries: StepEntry[] = [];
   let cursor: string | undefined;
   let page: StepsPage | undefined;
   for (let pageIndex = 0; pageIndex < MAX_STEP_PAGES; pageIndex++) {
     const result = await ops.callTool(server, 'get_mabl_authoring_steps', {
       sessionId: entity.id,
-      limit: 500,
       ...(cursor ? {cursor} : {}),
     });
     if (result.isError) {
@@ -494,12 +497,13 @@ export const answerCall = (
   entity: MablEntity,
   pause: Pause | undefined,
   value: string,
+  server: string,
 ): {server: string; args: Record<string, unknown>} | undefined => {
   const text = value.trim();
 
   return text && pause?.loopNumber !== undefined
     ? {
-        server: mcpServerFor(entity),
+        server,
         args: {
           sessionId: entity.id,
           text,
@@ -551,13 +555,23 @@ export const authoringFeature: Feature = {
           isRunning(entity),
         )
       : [];
+    const href = mablUrl(entity.url);
     const answer = (value: string): void => {
-      const call = answerCall(entity, question, value);
+      const call = answerCall(
+        entity,
+        question,
+        value,
+        actions.serverFor(entity),
+      );
       if (call) {
-        void actions
-          .callTool(call.server, 'mabl_authoring_answer', call.args)
-          .catch(() => undefined)
-          .then(() => actions.pollNow(entity.id));
+        void didSucceed(
+          actions.callTool(call.server, 'mabl_authoring_answer', call.args),
+        ).then((isSent) => {
+          if (!isSent) {
+            actions.notify('mabl: could not send the answer; try again.');
+          }
+          actions.pollNow(entity.id);
+        });
       }
     };
 
@@ -568,7 +582,7 @@ export const authoringFeature: Feature = {
           {entity.status ? ` · ${entity.status}` : ''}
           {steps ? ` · ${steps.stepCount} steps` : ''}
         </Text>
-        {entity.url && <Link href={entity.url} label="Open in mabl" />}
+        {href && <Link href={href} label="Open in mabl" />}
         {question && (
           <Box flexDirection="column" marginTop={1} marginBottom={1}>
             <Text bold>

@@ -43,7 +43,7 @@ export const captureBasic = (call: CallRecord): EntityUpdate[] => {
             {
               kind: 'flow',
               id: flowId,
-              name: str(args.name),
+              name: str(data.name) ?? str(data.flowName),
               branch: str(data.branch),
               workspaceId: str(args.workspaceId),
               status: parsed.name === 'create_mabl_flow' ? 'created' : 'edited',
