@@ -127,9 +127,11 @@ node --test .github/scripts/lib/frontmatter.test.mjs    # the frontmatter reader
 node --test .github/scripts/lib/line-ceiling.test.mjs   # the SKILL.md line ceiling
 node --test .github/scripts/lib/allowed-tools.test.mjs  # allowed-tools MCP name pairing
 node .github/scripts/validate-skills.mjs               # skill frontmatter, description budget, line ceiling, allowed-tools pairing, sibling dependency declarations
+claude plugin test plugins/mabl                         # the Claude-only mod in plugins/mabl/mod (its tests/*.test.ts)
+pnpm install && pnpm check                              # ESLint + Prettier on the mod (`pnpm fix` applies the fixes)
 ```
 
-`scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (we ship no hooks), not an error.
+`scripts/validate-template.mjs` is vendored verbatim from [`cursor/plugin-template`](https://github.com/cursor/plugin-template) — it's the validator the Cursor team's submission checklist runs. Keep it in sync if that upstream script changes. Its "no hooks/hooks.json" line is an expected warning (the Claude-only mod declares its hooks in `plugins/mabl/mod/hooks.json`), not an error.
 
 To test the Claude plugin end to end: `claude --plugin-dir <this repo>` in any project, or `/plugin marketplace add <this repo path>` + `/plugin install mabl@mabl`.
 

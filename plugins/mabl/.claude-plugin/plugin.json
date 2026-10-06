@@ -1,7 +1,7 @@
 {
   "name": "mabl",
   "description": "Independent verification for agentic development using the world's most advanced testing harness. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
-  "version": "1.10.3",
+  "version": "1.11.0",
   "author": {
     "name": "mabl",
     "email": "support@mabl.com",
@@ -17,5 +17,27 @@
     "test-automation",
     "debugging",
     "mabl"
-  ]
+  ],
+  "hooks": "./mod/hooks.json",
+  "types": "./mod/types/index.d.ts",
+  "userConfig": {
+    "showSessionSteps": {
+      "type": "boolean",
+      "title": "Show mabl results in side panel",
+      "description": "Polls each running test authoring session for the steps it has generated (step groups and flows included) and shows them in its tab.",
+      "default": false
+    },
+    "stepsPollSeconds": {
+      "type": "string",
+      "title": "Test authoring steps refresh (seconds)",
+      "description": "How often to fetch the steps of a running test authoring session. Each fetch downloads the whole session.",
+      "default": "15",
+      "options": [
+        "10",
+        "15",
+        "30",
+        "60"
+      ]
+    }
+  }
 }
