@@ -285,7 +285,7 @@ const showPollErrors = async ($: Engine): Promise<void> => {
 
 const pollOne = async (
   $: Engine,
-  poll: NonNullable<Feature['poll']>,
+  pollFeature: NonNullable<Feature['poll']>,
   entity: MablEntity,
   detail: unknown,
   waitMs: number,
@@ -295,7 +295,10 @@ const pollOne = async (
     error = message.slice(0, 120);
   });
   try {
-    const result = await withTimeout($, poll(ops, entity, detail, settings));
+    const result = await withTimeout(
+      $,
+      pollFeature(ops, entity, detail, settings),
+    );
     if (!(await read($, entities))[entity.id]) {
       return;
     }
