@@ -5,6 +5,17 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.12.0] - 2026-10-06
+### Added
+- Claude Code only: every passed or failed test run in the live view now has **Re-run**,
+  **Debug**, and **Edit**. **Edit** puts a request in your prompt for your agent to edit that
+  test, and waits for you to say what to change. Lists of test runs have **All**, **Failed**,
+  and **Passed** filters.
+### Changed
+- Claude Code only: the live mabl view now opens a tab when your agent looks up a deployment,
+  plan run, or test run, not only when it starts one. Asking "how did that deployment go?"
+  shows its results the same way a deployment your agent started does.
+
 ## [1.11.0] - 2026-10-05
 ### Added
 - Claude Code only: a live mabl view inside the terminal. The plugin watches the mabl tools and

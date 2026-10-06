@@ -5,6 +5,7 @@ import type {Actions, Els, Feature, Ops, PollResult} from '../core/feature';
 import {
   appBaseFromUrl,
   didSucceed,
+  ENTITY_ID,
   field,
   flag,
   hashOf,
@@ -57,6 +58,7 @@ export type Counts = {
 
 export type FailedRun = {
   testRunId: string;
+  testId?: string;
   testName?: string;
   browser?: string;
   error?: string;
@@ -265,6 +267,7 @@ const failedRun = (raw: Fields): FailedRun[] => {
     ? [
         {
           testRunId,
+          testId: str(raw.testId),
           testName: str(raw.testName),
           browser: str(raw.browser),
           error: str(raw.failureError),
@@ -422,6 +425,17 @@ const testRunsOf = (
       : [];
   });
 
+/** An item the agent looked up: tracked like one it started, and its poll fills in the rest. */
+const lookedUp = (
+  kind: RunsDetail['kind'],
+  id: unknown,
+  origin: Origin,
+): EntityUpdate[] => {
+  const itemId = str(id);
+
+  return itemId ? [{kind, id: itemId, ...origin}] : [];
+};
+
 const fromMcp = (
   name: string,
   server: string,
@@ -510,6 +524,20 @@ const fromMcp = (
     }
     case 'rerun_mabl_test':
       return testRunsOf(data, origin);
+    case 'get_mabl_deployment':
+      return list(data.deploymentEvents).flatMap((event) =>
+        lookedUp('deployment', event.id, origin),
+      );
+    case 'get_mabl_deployment_status':
+      return lookedUp(
+        'deployment',
+        obj(data.deployment).deploymentId ?? args.deploymentId,
+        origin,
+      );
+    case 'get_mabl_plan_run':
+      return lookedUp('planRun', args.planRunId, origin);
+    case 'get_mabl_test_run':
+      return lookedUp('run', args.testRunId, origin);
     default:
       return [];
   }
@@ -823,16 +851,90 @@ export const clipTo = <T,>(
   return [...items.slice(0, room), more(items.length - room)];
 };
 
-const failureButtons = (
+const RUN_FILTERS = ['all', 'failed', 'passed'] as const;
+type RunFilter = (typeof RUN_FILTERS)[number];
+const FILTER_LABEL: Record<RunFilter, string> = {
+  all: 'All',
+  failed: 'Failed',
+  passed: 'Passed',
+};
+
+/** The list filter a tab's view holds; `all` until the person picks another. */
+const filterOf = (view: unknown): RunFilter =>
+  RUN_FILTERS.find((filter) => filter === obj(view).filter) ?? 'all';
+
+const isShown = (filter: RunFilter, state?: string): boolean =>
+  filter === 'all' || state === filter;
+
+const hasResult = (state?: string): boolean =>
+  state === 'passed' || state === 'failed';
+
+const safeId = (id?: string): string | undefined =>
+  id && ENTITY_ID.test(id) ? id : undefined;
+
+const filterBar = (
+  {Box, Button}: Els,
+  actions: Actions,
+  entity: MablEntity,
+  current: RunFilter,
+): RenderElement => (
+  <Box gap={1}>
+    {RUN_FILTERS.map((filter) => (
+      <Button
+        key={`filter-${filter}`}
+        label={FILTER_LABEL[filter]}
+        variant={filter === current ? 'primary' : 'secondary'}
+        onPress={() => actions.setView(entity.id, {filter})}
+      />
+    ))}
+  </Box>
+);
+
+/** A draft for the person to finish with the change they want; never sent for them. */
+const editPrompt = (
+  testId: string,
+  testRunId: string,
+  workspaceId?: string,
+): string =>
+  `${skillCommand('mabl-test-edit')} Edit mabl test ${testId}${workspaceId ? ` in workspace ${workspaceId}` : ''} on the branch and URL of its test run ${testRunId}: `;
+
+type RunRef = {testRunId: string; testId?: string};
+
+const runButtons = (
   {Button}: Els,
   actions: Actions,
   entity: MablEntity,
-  testRunId: string,
+  run: RunRef,
 ): RenderElement[] => {
-  const server = actions.serverFor(entity);
-  const {workspaceId} = entity;
+  // Ids from mabl results go into prompts and tool calls, so only well-formed ones get buttons.
+  const testRunId = safeId(run.testRunId);
+  const testId = safeId(run.testId);
+  const workspaceId = safeId(entity.workspaceId);
+  if (!testRunId) {
+    return [];
+  }
 
   return [
+    ...(workspaceId
+      ? [
+          <Button
+            key={`rerun-${testRunId}`}
+            label="Re-run"
+            onPress={() =>
+              void didSucceed(
+                actions.callTool(actions.serverFor(entity), 'rerun_mabl_test', {
+                  testRunId,
+                  workspaceId,
+                }),
+              ).then((isStarted) => {
+                if (!isStarted) {
+                  actions.notify(`mabl: could not re-run ${testRunId}.`);
+                }
+              })
+            }
+          />,
+        ]
+      : []),
     <Button
       key={`debug-${testRunId}`}
       label="Debug"
@@ -840,22 +942,13 @@ const failureButtons = (
         actions.fillPrompt(`${skillCommand('mabl-debug')} ${testRunId}`)
       }
     />,
-    ...(workspaceId
+    ...(testId
       ? [
           <Button
-            key={`rerun-${testRunId}`}
-            label="Rerun"
+            key={`edit-${testRunId}`}
+            label="Edit"
             onPress={() =>
-              void didSucceed(
-                actions.callTool(server, 'rerun_mabl_test', {
-                  testRunId,
-                  workspaceId,
-                }),
-              ).then((isStarted) => {
-                if (!isStarted) {
-                  actions.notify(`mabl: could not rerun ${testRunId}.`);
-                }
-              })
+              actions.fillPrompt(editPrompt(testId, testRunId, workspaceId))
             }
           />,
         ]
@@ -863,7 +956,7 @@ const failureButtons = (
   ];
 };
 
-type FailureLine = {testRunId: string; text: string; href?: string};
+type RunLine = RunRef & {text: string; href?: string; state?: string};
 
 const openButton = (
   {Button}: Els,
@@ -876,19 +969,19 @@ const openButton = (
     <Button key={key} label={label} onPress={() => actions.openUrl(href)} />
   ) : undefined;
 
-const failureLine = (
+const runLine = (
   els: Els,
   actions: Actions,
   entity: MablEntity,
-  failure: FailureLine,
+  run: RunLine,
 ): RenderElement => {
   const {Box, Text} = els;
 
   return (
     <Box gap={1}>
-      <Text wrap="truncate-end">{failure.text}</Text>
-      {openButton(els, actions, `open-${failure.testRunId}`, failure.href)}
-      {failureButtons(els, actions, entity, failure.testRunId)}
+      <Text wrap="truncate-end">{run.text}</Text>
+      {openButton(els, actions, `open-${run.testRunId}`, run.href)}
+      {hasResult(run.state) && runButtons(els, actions, entity, run)}
     </Box>
   );
 };
@@ -915,6 +1008,7 @@ const renderDeployment = (
   entities: MablEntities,
   rows: number,
   actions: Actions,
+  filter: RunFilter,
 ): RenderElement => {
   const {Box, Text} = els;
   const tests = detail?.tests;
@@ -933,50 +1027,57 @@ const renderDeployment = (
         {planRun.isRetry ? ' · retry' : ''}
       </Text>
     );
+    // Under a filter, a plan run with no matching test runs drops out unless the plan itself matches.
+    const withHead = (rows: RenderElement[]): RenderElement[] =>
+      rows.length > 0 || isShown(filter, planState(planRun.status))
+        ? [head, ...rows]
+        : [];
     const children = childRuns(planRun.planRunId, entities);
     if (children.length > 0) {
       const errors = new Map(
         planRun.failedTestRuns.map((run) => [run.testRunId, run.error]),
       );
 
-      return [
-        head,
-        ...children.map((child) => {
-          const state = stateOf(child.status);
-          const name = child.name ?? child.testId ?? child.id;
-          if (state === 'failed') {
-            return failureLine(els, actions, entity, {
+      return withHead(
+        children
+          .filter((child) => isShown(filter, stateOf(child.status)))
+          .map((child) => {
+            const state = stateOf(child.status);
+            const name = child.name ?? child.testId ?? child.id;
+            const outcome =
+              state === 'failed'
+                ? (errors.get(child.id) ?? 'failed')
+                : (state ?? 'queued');
+
+            return runLine(els, actions, entity, {
               testRunId: child.id,
-              text: `   ${markOf(state)} ${name} · ${errors.get(child.id) ?? 'failed'}`,
+              testId: child.testId,
+              state,
+              text: `   ${markOf(state)} ${name} · ${outcome}`,
               href: child.url,
             });
-          }
-
-          return (
-            <Box gap={1}>
-              <Text wrap="truncate-end">{`   ${markOf(state)} ${name} · ${state ?? 'queued'}`}</Text>
-              {openButton(els, actions, `open-${child.id}`, child.url)}
-            </Box>
-          );
-        }),
-      ];
+          }),
+      );
     }
-    const failures = planRun.failedTestRuns.map((run) =>
-      failureLine(els, actions, entity, {
-        testRunId: run.testRunId,
-        text: `   ✖ ${run.testName ?? run.testRunId} · ${run.error ?? 'failed'}`,
-        href: run.appHref,
-      }),
-    );
+    const failures = isShown(filter, 'failed')
+      ? planRun.failedTestRuns.map((run) =>
+          runLine(els, actions, entity, {
+            testRunId: run.testRunId,
+            testId: run.testId,
+            state: 'failed',
+            text: `   ✖ ${run.testName ?? run.testRunId} · ${run.error ?? 'failed'}`,
+            href: run.appHref,
+          }),
+        )
+      : [];
     const hidden = planRun.failedTotal - planRun.failedTestRuns.length;
 
-    return [
-      head,
+    return withHead([
       ...failures,
-      ...(hidden > 0
+      ...(hidden > 0 && failures.length > 0
         ? [<Text dimColor>{`   … ${hidden} more failed`}</Text>]
         : []),
-    ];
+    ]);
   });
 
   return (
@@ -996,7 +1097,13 @@ const renderDeployment = (
       {entity.workspaceId && !detail && !isFinalStatus(entity.status) && (
         <Text dimColor>Waiting for the first status…</Text>
       )}
-      {clipTo(lines, Math.max(3, rows - 3), (hidden) => (
+      {detail &&
+        detail.planRuns.length > 0 &&
+        filterBar(els, actions, entity, filter)}
+      {detail && lines.length === 0 && filter !== 'all' && (
+        <Text dimColor>No {filter} test runs.</Text>
+      )}
+      {clipTo(lines, Math.max(3, rows - 4), (hidden) => (
         <Text dimColor>{`… ${hidden} more`}</Text>
       ))}
     </Box>
@@ -1009,36 +1116,28 @@ const renderPlanRun = (
   detail: PlanRunDetail | undefined,
   rows: number,
   actions: Actions,
+  filter: RunFilter,
 ): RenderElement => {
   const {Box, Text} = els;
   const counts = detail?.counts;
   const base = appBaseOrDefault(entity.url);
-  const lines = sortRows(detail?.testRuns ?? []).map((run) => {
-    const state = runState(run.status);
-    const name = run.testName ?? run.id;
-    if (state === 'failed') {
+  const lines = sortRows(detail?.testRuns ?? [])
+    .filter((run) => isShown(filter, runState(run.status)))
+    .map((run) => {
+      const state = runState(run.status);
+      const name = run.testName ?? run.id;
       const why =
         [run.failingStep, run.error].filter(Boolean).join(': ') || 'failed';
+      const outcome = state === 'failed' ? why : state;
 
-      return failureLine(els, actions, entity, {
+      return runLine(els, actions, entity, {
         testRunId: run.id,
-        text: `${markOf(state)} ${name} · ${why}`,
+        testId: run.testId,
+        state,
+        text: `${markOf(state)} ${name}${outcome ? ` · ${outcome}` : ''}`,
         href: testRunUrl(base, entity.workspaceId, run.id),
       });
-    }
-
-    return (
-      <Box gap={1}>
-        <Text wrap="truncate-end">{`${markOf(state)} ${name}${state ? ` · ${state}` : ''}`}</Text>
-        {openButton(
-          els,
-          actions,
-          `open-${run.id}`,
-          testRunUrl(base, entity.workspaceId, run.id),
-        )}
-      </Box>
-    );
-  });
+    });
 
   return (
     <Box flexDirection="column">
@@ -1062,7 +1161,13 @@ const renderPlanRun = (
       {entity.workspaceId && !detail && !isFinalStatus(entity.status) && (
         <Text dimColor>Waiting for the first status…</Text>
       )}
-      {clipTo(lines, Math.max(3, rows - 4), (hidden) => (
+      {detail &&
+        detail.testRuns.length > 0 &&
+        filterBar(els, actions, entity, filter)}
+      {detail && lines.length === 0 && filter !== 'all' && (
+        <Text dimColor>No {filter} test runs.</Text>
+      )}
+      {clipTo(lines, Math.max(3, rows - 5), (hidden) => (
         <Text dimColor>{`… ${hidden} more`}</Text>
       ))}
     </Box>
@@ -1078,7 +1183,8 @@ const renderRun = (
   const {Box, Text} = els;
   const duration = formatDuration(detail?.durationMs);
   const href = entity.url ?? detail?.appHref;
-  const isFailed = stateOf(entity.status) === 'failed';
+  const state = stateOf(entity.status);
+  const isFailed = state === 'failed';
 
   return (
     <Box flexDirection="column">
@@ -1102,8 +1208,13 @@ const renderRun = (
       {isFailed && detail?.failureSummary && (
         <Text>{detail.failureSummary}</Text>
       )}
-      {isFailed && (
-        <Box gap={1}>{failureButtons(els, actions, entity, entity.id)}</Box>
+      {hasResult(state) && (
+        <Box gap={1}>
+          {runButtons(els, actions, entity, {
+            testRunId: entity.id,
+            testId: entity.testId ?? detail?.testId,
+          })}
+        </Box>
       )}
     </Box>
   );
@@ -1118,6 +1229,7 @@ export const runsFeature: Feature = {
   isFinished: (entity) => isFinalStatus(entity.status),
   announces: (before, after) =>
     !after.parentId &&
+    before?.status !== undefined &&
     isFinalStatus(after.status) &&
     stateOf(after.status) !== stateOf(before?.status)
       ? `mabl ${KIND_LABEL[after.kind].toLowerCase()} ${after.name ?? after.id}: ${after.status}`
@@ -1132,7 +1244,7 @@ export const runsFeature: Feature = {
         return `Run ${entity.name ?? entity.testId ?? entity.id}`;
     }
   },
-  render: (els, {entity, detail, entities, rows, actions}) => {
+  render: (els, {entity, detail, view, entities, rows, actions}) => {
     switch (entity.kind) {
       case 'deployment':
         return renderDeployment(
@@ -1142,6 +1254,7 @@ export const runsFeature: Feature = {
           entities,
           rows,
           actions,
+          filterOf(view),
         );
       case 'planRun':
         return renderPlanRun(
@@ -1150,6 +1263,7 @@ export const runsFeature: Feature = {
           detailOf('planRun', detail),
           rows,
           actions,
+          filterOf(view),
         );
       default:
         return renderRun(els, entity, detailOf('run', detail), actions);

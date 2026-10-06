@@ -63,6 +63,8 @@ export type Actions = {
   openTab: (entity: MablEntity) => void;
   /** Opens a mabl.com URL in the person's browser; any other URL is ignored. */
   openUrl: (url: string) => void;
+  /** Sets a tab's view choice, such as a list filter; the tab redraws. */
+  setView: (entityId: string, view: unknown) => void;
   /** Changes an entity's stored detail, e.g. a tab's own UI state; the tab redraws. */
   updateDetail: (
     entityId: string,
@@ -82,6 +84,8 @@ export type Els = Pick<
 export type RenderContext = {
   entity: MablEntity;
   detail: unknown;
+  /** The tab's view choice from `setView`, if the person made one. */
+  view?: unknown;
   /** Every entity, so a tab can show related ones (a plan run's test runs, a branch's tests). */
   entities: MablEntities;
   /** Rows and columns the pane may use. */
