@@ -339,15 +339,15 @@ test('branches', async () => {
       Box: function Box() {},
       Text: function Text() {},
       Button: function Button() {},
-      Link: function Link() {},
     } as unknown as Els;
+    const opened: string[] = [];
     const actions: Actions = {
       fillPrompt: () => {},
       callTool: async () => result({}),
       track: () => {},
       pollNow: () => {},
       openTab: () => {},
-      openUrl: () => {},
+      openUrl: (url) => void opened.push(url),
       notify: () => undefined,
       setView: () => undefined,
       serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
@@ -368,8 +368,10 @@ test('branches', async () => {
     assert.match(shown, /Test Login · created/);
     assert.match(shown, /Flow Setup/);
     assert.doesNotMatch(shown, /t9-j/);
-    const hrefs = nodes(tree, 'Link').map((link) => link.props.href);
-    assert.deepEqual(hrefs, [
+    for (const button of nodes(tree, 'Button')) {
+      (button.props.onPress as () => void)();
+    }
+    assert.deepEqual(opened, [
       'https://app.mabl.com/workspaces/ws-a/train/branches',
       'https://app.mabl.com/workspaces/ws-a/branches/compare/master...feat-x/tests/t1-j',
       'https://app.mabl.com/workspaces/ws-a/branches/compare/master...feat-x/flows/f1-f',

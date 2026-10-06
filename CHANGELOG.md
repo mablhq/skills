@@ -15,6 +15,8 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - Claude Code only: the live mabl view now opens a tab when your agent looks up a deployment,
   plan run, or test run, not only when it starts one. Asking "how did that deployment go?"
   shows its results the same way a deployment your agent started does.
+- Claude Code only: authoring session and branch tabs open mabl pages with buttons, like the run
+  tabs. Terminals without clickable links no longer show the raw URL.
 
 ## [1.11.0] - 2026-10-05
 ### Added

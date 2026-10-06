@@ -73,10 +73,7 @@ export type Actions = {
 };
 
 /** The elements a feature draws with, from `$.ui.resolve(e)`. `Input` is missing on mobile. */
-export type Els = Pick<
-  Elements['terminal'],
-  'Box' | 'Text' | 'Button' | 'Link'
-> & {
+export type Els = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'> & {
   Input?: Elements['terminal']['Input'];
   Select?: Elements['terminal']['Select'];
 };

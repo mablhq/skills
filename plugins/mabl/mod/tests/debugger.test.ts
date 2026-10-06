@@ -400,7 +400,6 @@ test('debugger', async () => {
       Box: 'Box',
       Text: 'Text',
       Button: 'Button',
-      Link: 'Link',
     } as never;
     type Node = {
       tag: string;

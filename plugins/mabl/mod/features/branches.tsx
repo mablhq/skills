@@ -1,5 +1,6 @@
 import type {MablEntities, MablEntity} from '../types';
 import type {Feature, Ops, PollResult, ToolResult} from '../core/feature';
+import {openButton} from '../core/ui';
 import {
   KIND_LABEL,
   appBaseFromUrl,
@@ -240,7 +241,7 @@ export const branchesFeature: Feature = {
   poll: pollBranch,
   isFinished: isDone,
   tabTitle: (entity) => `Branch ${entity.name ?? entity.id}`,
-  render: ({Box, Link, Text}, {entity, detail, entities, rows}) => {
+  render: ({Box, Button, Text}, {entity, detail, entities, rows, actions}) => {
     const name = entity.name ?? entity.id;
     const {merge} = branchDetail(detail);
     const base = appBaseFor(entity, entities);
@@ -260,11 +261,21 @@ export const branchesFeature: Feature = {
         <Text bold>
           Branch {name} · {entity.status ?? 'open'}
         </Text>
-        {branchHref ? (
-          <Link href={branchHref} label="Open branch in mabl" />
-        ) : (
-          branchesHref && <Link href={branchesHref} label="Branches in mabl" />
-        )}
+        {branchHref
+          ? openButton(
+              {Button},
+              actions,
+              'open-branch',
+              branchHref,
+              'Open in mabl',
+            )
+          : openButton(
+              {Button},
+              actions,
+              'open-branches',
+              branchesHref,
+              'Open branches in mabl',
+            )}
         {!entity.workspaceId && (
           <Text dimColor>
             Merge status appears once a mabl call names this branch's workspace.
@@ -294,7 +305,13 @@ export const branchesFeature: Feature = {
                 {'  '}
                 {item.type} {item.name}
               </Text>
-              {href && <Link href={href} label="Compare" />}
+              {openButton(
+                {Button},
+                actions,
+                `compare-${item.id}`,
+                href,
+                'Compare',
+              )}
             </Box>
           );
         })}
@@ -311,7 +328,7 @@ export const branchesFeature: Feature = {
                 {KIND_LABEL[member.kind]} {member.name ?? member.id}
                 {member.status ? ` · ${member.status}` : ''}
               </Text>
-              {href && <Link href={href} label="Open" />}
+              {openButton({Button}, actions, `open-${member.id}`, href)}
             </Box>
           );
         })}

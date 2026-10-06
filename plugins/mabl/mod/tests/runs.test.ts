@@ -629,7 +629,6 @@ test('runs', async () => {
       Box: el('Box'),
       Text: el('Text'),
       Button: el('Button'),
-      Link: el('Link'),
     } as never;
     const tree = runsFeature.render(els, {
       entity: {...deployment, ...polled.updates[0]} as MablEntity,
@@ -936,7 +935,6 @@ test('a deployment filter hides plan runs with nothing to show', () => {
     Box: el('Box'),
     Text: el('Text'),
     Button: el('Button'),
-    Link: el('Link'),
   } as never;
   const walk = (node: unknown): Node[] => {
     const value = node as Node | undefined;
@@ -1021,7 +1019,6 @@ test('run buttons only use well-formed ids', () => {
     Box: el('Box'),
     Text: el('Text'),
     Button: el('Button'),
-    Link: el('Link'),
   } as never;
   const walk = (node: unknown): Node[] => {
     const value = node as Node | undefined;

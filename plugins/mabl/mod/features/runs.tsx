@@ -2,6 +2,7 @@ import type {RenderElement} from 'claude-code';
 
 import type {MablEntities, MablEntity} from '../types';
 import type {Actions, Els, Feature, Ops, PollResult} from '../core/feature';
+import {openButton} from '../core/ui';
 import {
   appBaseFromUrl,
   didSucceed,
@@ -957,17 +958,6 @@ const runButtons = (
 };
 
 type RunLine = RunRef & {text: string; href?: string; state?: string};
-
-const openButton = (
-  {Button}: Els,
-  actions: Actions,
-  key: string,
-  href: string | undefined,
-  label = 'Open',
-): RenderElement | undefined =>
-  href ? (
-    <Button key={key} label={label} onPress={() => actions.openUrl(href)} />
-  ) : undefined;
 
 const runLine = (
   els: Els,

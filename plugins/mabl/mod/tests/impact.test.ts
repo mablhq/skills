@@ -398,7 +398,6 @@ test('impact', async () => {
     const els = {
       Box: 'Box',
       Text: 'Text',
-      Link: 'Link',
       Button: 'Button',
       Select: 'Select',
     } as never;

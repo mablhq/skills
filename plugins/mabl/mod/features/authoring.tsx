@@ -1,5 +1,6 @@
 import type {MablEntity, SessionSteps, StepEntry} from '../types';
 import type {Feature, Ops, PollResult, Settings} from '../core/feature';
+import {openButton} from '../core/ui';
 import {
   cliArgv,
   didSucceed,
@@ -543,7 +544,7 @@ export const authoringFeature: Feature = {
       : undefined,
   tabTitle: (entity) => `Authoring ${entity.name ?? entity.id}`,
   render: (
-    {Box, Button, Input, Link, Text},
+    {Box, Button, Input, Text},
     {entity, detail, rows, settings, actions},
   ) => {
     const {steps, flowSteps = {}, pause} = authoringDetail(detail);
@@ -582,7 +583,13 @@ export const authoringFeature: Feature = {
           {entity.status ? ` · ${entity.status}` : ''}
           {steps ? ` · ${steps.stepCount} steps` : ''}
         </Text>
-        {href && <Link href={href} label="Open in mabl" />}
+        {openButton(
+          {Button},
+          actions,
+          `open-${entity.id}`,
+          href,
+          'Open in mabl',
+        )}
         {question && (
           <Box flexDirection="column" marginTop={1} marginBottom={1}>
             <Text bold>

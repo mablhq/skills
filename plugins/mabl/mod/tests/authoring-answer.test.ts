@@ -289,7 +289,6 @@ test('authoring-answer', async () => {
       Box: function Box() {},
       Text: function Text() {},
       Button: function Button() {},
-      Link: function Link() {},
       Input: function Input() {},
     } as unknown as Els;
     const sent: {
@@ -299,6 +298,7 @@ test('authoring-answer', async () => {
     }[] = [];
     const filled: string[] = [];
     const polled: string[] = [];
+    const opened: string[] = [];
     const actions: Actions = {
       fillPrompt: (value) => void filled.push(value),
       callTool: async (server, tool, args) => {
@@ -309,7 +309,7 @@ test('authoring-answer', async () => {
       track: () => {},
       pollNow: (id) => void polled.push(id),
       openTab: () => {},
-      openUrl: () => {},
+      openUrl: (url) => void opened.push(url),
       notify: () => undefined,
       setView: () => undefined,
       serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
@@ -343,11 +343,35 @@ test('authoring-answer', async () => {
       },
     ]);
     assert.deepEqual(polled, ['s1-as']);
-    const [ask] = nodes(tree, 'Button');
+    const ask = nodes(tree, 'Button').find(
+      (button) => button.props.label === 'Ask Claude',
+    );
     (ask?.props.onPress as () => void)();
     assert.deepEqual(filled, [
       'Read the open question on mabl test authoring session s1-as with mabl_authoring_status, then answer it with mabl_authoring_answer. My guidance: ',
     ]);
+
+    const url = 'https://app.mabl.com/workspaces/w1-w/agents/tasks/s1-as';
+    const linked = authoringFeature.render(els, {
+      ...context,
+      entity: {...entity, url},
+    });
+    (
+      nodes(linked, 'Button').find(
+        (button) => button.props.label === 'Open in mabl',
+      )?.props.onPress as () => void
+    )();
+    assert.deepEqual(opened, [url]);
+    const offsite = authoringFeature.render(els, {
+      ...context,
+      entity: {...entity, url: 'https://evil.example/'},
+    });
+    assert.ok(
+      !nodes(offsite, 'Button').some(
+        (button) => button.props.label === 'Open in mabl',
+      ),
+      'no Open in mabl for a page outside mabl.com',
+    );
 
     const {Input: _input, ...mobile} = els;
     const mobileTree = authoringFeature.render(mobile as Els, context);
