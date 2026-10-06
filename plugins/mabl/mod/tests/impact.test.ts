@@ -388,6 +388,7 @@ test('impact', async () => {
     const actions = {
       fillPrompt: (text: string) => filled.push(text),
       notify: () => undefined,
+      setView: () => undefined,
       serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
       updateDetail: (_id: string, change: (detail: unknown) => unknown) => {
         stored2 = change(stored2);

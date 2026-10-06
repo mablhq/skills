@@ -66,6 +66,8 @@ declare module 'claude-code' {
       entities: MablEntities;
       /** Feature-owned data per entity id; each feature knows its own shape. */
       details: Record<string, unknown>;
+      /** Per-tab view choices, such as a list filter; polls never write them. */
+      views: Record<string, unknown>;
       /** When the last poll finished, and why it failed. */
       lastPoll: {at: number; error?: string} | null;
     };

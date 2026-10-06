@@ -61,6 +61,10 @@ const details = atom(
   {plugin: 'mabl', key: 'details'} as const,
   {} as Record<string, unknown>,
 );
+const views = atom(
+  {plugin: 'mabl', key: 'views'} as const,
+  {} as Record<string, unknown>,
+);
 const lastPoll = atom(
   {plugin: 'mabl', key: 'lastPoll'} as const,
   null as {at: number; error?: string} | null,
@@ -268,6 +272,8 @@ const actionsFor = ($: Engine): Actions => ({
   pollNow: (id) => void nextPollAt.set(id, 0),
   openTab: (entity) => void openTab($, entity),
   openUrl: (url) => void openUrl($, url),
+  setView: (entityId, view) =>
+    void update($, views, (current) => ({...current, [entityId]: view})),
   updateDetail: (entityId, change) =>
     void update($, details, (current) => ({
       ...current,
@@ -383,6 +389,9 @@ const dropEntities = async (
     Object.fromEntries(Object.entries(current).filter(isKept)),
   );
   await update($, details, (current) =>
+    Object.fromEntries(Object.entries(current).filter(isKept)),
+  );
+  await update($, views, (current) =>
     Object.fromEntries(Object.entries(current).filter(isKept)),
   );
 };
@@ -534,6 +543,7 @@ export const register: Register = (on, options) => {
       return featureOf(entity).render(els, {
         entity,
         detail: allDetails[entity.id],
+        view: (await read($, views))[entity.id],
         entities: all,
         rows,
         columns,

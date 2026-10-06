@@ -349,6 +349,7 @@ test('branches', async () => {
       openTab: () => {},
       openUrl: () => {},
       notify: () => undefined,
+      setView: () => undefined,
       serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
       updateDetail: () => {},
     };
