@@ -5,6 +5,7 @@ import {
   hashOf,
   list,
   mablCall,
+  mablUrl,
   obj,
   parseJson,
   skillCommand,
@@ -166,23 +167,14 @@ const STAMP_FIELDS =
 const IMPACTED_TEST_ROW =
   /^- \[(.+?)\]\((https:\/\/[^/\s]+\/workspaces\/([\w-]+)\/train\/tests\/([\w-]+-j)\/current)\)(?: - _(\w+)_)?(?: · (.*))?$/;
 const PULL_REQUEST_LINK = /\[([\w.-]+\/[\w.-]+#\d+)\]\((https:\/\/[^)\s]+)\)/;
-
-// `gh --json` and `--jq` escape the body.
-const unescapeJson = (text: string): string =>
+const CI_AUTHOR = 'github-actions';
+// The CI comment escapes its text as numeric entities. Structure is parsed on the escaped text and each captured field is decoded afterwards, so escaped text cannot add rows or sections. Control, bidi and zero-width characters never reach the terminal.
+const decodeField = (text: string): string =>
   text
-    .replace(/\\u003c/g, '<')
-    .replace(/\\u003e/g, '>')
-    .replace(/\\u0026/g, '&')
-    .replace(/\\r/g, '')
-    .replace(/\\n/g, '\n')
-    .replace(/\\"/g, '"');
-
-// The CI comment escapes its text as numeric entities; decoding only after the stamp is found keeps escaped text from posing as one. Control characters never reach the terminal.
-const unescapeEntities = (text: string): string =>
-  text
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '');
+    .replace(/&#(\d+);/g, (match, code) =>
+      Number(code) <= 0x10ffff ? String.fromCodePoint(Number(code)) : match,
+    )
+    .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, '');
 
 const sectionOf = (text: string, heading: RegExp): string[] => {
   const start = text.search(heading);
@@ -197,22 +189,25 @@ const sectionOf = (text: string, heading: RegExp): string[] => {
 
 type Analysis = {args: Fields; data: Fields};
 
-/** The analysis a CI job posted on a pull request, in the shape `analyze_test_impact` returns. */
-export const parseImpactComment = (text: string): Analysis | undefined => {
-  const unescaped = unescapeJson(text);
-  const stampStart = unescaped.lastIndexOf(STAMP);
-  if (stampStart < 0) {
-    return;
-  }
-  const comment = unescapeEntities(unescaped.slice(stampStart));
+const parseStampedComment = (stamped: string): Analysis | undefined => {
+  const comment = stamped.replace(/\r/g, '');
   const [, revision, sessionId, applicationId] =
     comment.match(STAMP_FIELDS) ?? [];
   const rows = sectionOf(comment, /^\*\*Impacted \(/m).flatMap((line) => {
     const [, testName, viewTestUrl, workspaceId, testId, role, evidence] =
       line.match(IMPACTED_TEST_ROW) ?? [];
 
-    return testId
-      ? [{testName, viewTestUrl, workspaceId, testId, role, evidence}]
+    return testId && mablUrl(viewTestUrl)
+      ? [
+          {
+            testName: decodeField(testName ?? ''),
+            viewTestUrl,
+            workspaceId,
+            testId,
+            role,
+            evidence: decodeField(evidence ?? ''),
+          },
+        ]
       : [];
   });
   if (!sessionId || rows.length === 0) {
@@ -224,7 +219,10 @@ export const parseImpactComment = (text: string): Analysis | undefined => {
   const [, changeDescription] = comment.match(/^> (.+)$/m) ?? [];
 
   return {
-    args: {changeDescription, applicationId},
+    args: {
+      changeDescription: changeDescription && decodeField(changeDescription),
+      applicationId,
+    },
     data: {
       sessionId,
       revision,
@@ -233,13 +231,73 @@ export const parseImpactComment = (text: string): Analysis | undefined => {
       tests: rows,
       moreMayExist: rows.length < declared,
       coverageGaps: sectionOf(comment, /^\*\*Coverage gaps \(/m).flatMap(
-        (line) => line.match(/^\d+\. (.+)$/)?.[1] ?? [],
+        (line) => {
+          const gap = line.match(/^\d+\. (.+)$/)?.[1];
+
+          return gap ? decodeField(gap) : [];
+        },
       ),
       references: pullRequestId
         ? [{type: 'pull_request', id: pullRequestId, url: pullRequestUrl}]
         : [],
     },
   };
+};
+
+type PostedComment = {login?: string; body: string; isBare?: boolean};
+
+const itemsOf = (value: unknown): unknown[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  const comments = obj(value).comments;
+
+  return Array.isArray(comments) ? comments : [value];
+};
+
+/** `gh` JSON output (one document, or one object per line) as comments; undefined for text that is not JSON. */
+const postedComments = (text: string): PostedComment[] | undefined => {
+  const trimmed = text.trim();
+  if (!/^[[{"]/.test(trimmed)) {
+    return;
+  }
+  const whole = parseJson(trimmed);
+  const values =
+    whole === undefined
+      ? trimmed
+          .split('\n')
+          .filter((line) => line.trim() !== '')
+          .map((line) => parseJson(line))
+      : [whole];
+  if (values.some((value) => value === undefined)) {
+    return [];
+  }
+
+  return values.flatMap((value) =>
+    typeof value === 'string'
+      ? [{body: value, isBare: true}]
+      : itemsOf(value).flatMap((item) => {
+          const body = str(obj(item).body);
+
+          return body === undefined
+            ? []
+            : [{login: str(obj(obj(item).author).login), body}];
+        }),
+  );
+};
+
+/** The analysis a CI job posted on a pull request, in the shape `analyze_test_impact` returns. */
+export const parseImpactComment = (text: string): Analysis | undefined => {
+  const comments = postedComments(text) ?? [{body: text, isBare: true}];
+  for (const {login, body, isBare} of comments.reverse()) {
+    const stampStart = body.lastIndexOf(STAMP);
+    if (stampStart >= 0 && (isBare || login === CI_AUTHOR)) {
+      const analysis = parseStampedComment(body.slice(stampStart));
+      if (analysis) {
+        return analysis;
+      }
+    }
+  }
 };
 
 const analysisOf = (
