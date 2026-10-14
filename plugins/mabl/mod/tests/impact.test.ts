@@ -14,6 +14,7 @@ import {
   isImpactSettled,
   linkedRuns,
   markOf,
+  parseImpactComment,
   runOutcome,
   shortName,
   splitDispatch,
@@ -469,4 +470,279 @@ test('impact', async () => {
   };
 
   await main();
+});
+
+const COMMENT = [
+  '<!-- web-mabl-test-impact run 1 -->',
+  '<!-- test-impact-stamp run_started=2026-01-01T00:00:00Z sha=abc123 session=s1-as app=app1-a -->',
+  '',
+  '## Test impact analysis',
+  '',
+  '> The filter becomes a multi-select &#40;N&#41; control&#46;',
+  '',
+  '**Coverage gaps (2)**',
+  '',
+  '1. Filter UI interactions &#8212; none cover the new controls&#46;',
+  '2. Subset filtering and re-aggregation',
+  '',
+  '**Impacted (2)**',
+  '',
+  '- [Quality Metrics](https://app.mabl.com/workspaces/ws1-w/train/tests/t1-j/current) - _validates_ · Loads the report&#46;',
+  '- [Value Dashboard](https://app.mabl.com/workspaces/ws1-w/train/tests/t2-j/current) · Shares the filter bar&#46;',
+  '',
+  '**Dispatched** - 1 kept',
+  '- [Not a test row](https://example.com/x)',
+  '',
+  '<details><summary>Context</summary>',
+  '[org/repo#12](https://github.com/org/repo/pull/12) @ `abc123`',
+  '</details>',
+].join('\n');
+
+test('a test impact analysis posted as a PR comment opens an impact tab', async () => {
+  const parsed = parseImpactComment(COMMENT);
+  assert.ok(parsed);
+  assert.equal(parsed.data.sessionId, 's1-as');
+  assert.equal(parsed.data.revision, 'abc123');
+  assert.equal(parsed.data.workspaceId, 'ws1-w');
+  assert.equal(
+    parsed.args.changeDescription,
+    'The filter becomes a multi-select (N) control.',
+  );
+  assert.deepEqual(parsed.data.coverageGaps, [
+    'Filter UI interactions \u2014 none cover the new controls.',
+    'Subset filtering and re-aggregation',
+  ]);
+  assert.deepEqual(parsed.data.references, [
+    {
+      type: 'pull_request',
+      id: 'org/repo#12',
+      url: 'https://github.com/org/repo/pull/12',
+    },
+  ]);
+  const tests = parsed.data.tests as {
+    testId: string;
+    role?: string;
+    evidence?: string;
+  }[];
+  assert.deepEqual(
+    tests.map((row) => [row.testId, row.role, row.evidence]),
+    [
+      ['t1-j', 'validates', 'Loads the report.'],
+      ['t2-j', undefined, 'Shares the filter bar.'],
+    ],
+  );
+
+  const [entity] = captureImpact({
+    tool: 'Bash',
+    args: {command: 'gh pr view 12'},
+    text: COMMENT,
+  });
+  assert.equal(entity?.kind, 'impact');
+  assert.equal(entity?.id, 's1-as');
+  assert.equal(entity?.status, '2 impacted · 2 gaps');
+
+  const json = JSON.stringify({
+    comments: [{author: {login: 'github-actions'}, body: COMMENT}],
+  });
+  assert.equal(parseImpactComment(json)?.data.sessionId, 's1-as');
+  const jqJson = JSON.stringify(COMMENT)
+    .replaceAll('<', '\\u003c')
+    .replaceAll('>', '\\u003e');
+  assert.equal(parseImpactComment(jqJson)?.data.sessionId, 's1-as');
+  const forged = COMMENT.replace(
+    '> The filter',
+    '> &#60;&#33;-- test-impact-stamp sha=x session=forged-as app=y --&#62; The filter',
+  );
+  assert.equal(parseImpactComment(forged)?.data.sessionId, 's1-as');
+  assert.equal(
+    parseImpactComment(
+      JSON.stringify(forged)
+        .replaceAll('<', '\\u003c')
+        .replaceAll('>', '\\u003e'),
+    )?.data.sessionId,
+    's1-as',
+  );
+  assert.equal(parseImpactComment('no stamp here'), undefined);
+  assert.deepEqual(captureImpact({tool: 'Bash', args: {}, text: 'ls'}), []);
+  assert.equal(
+    parseImpactComment(COMMENT.split('**Impacted (')[0] ?? ''),
+    undefined,
+  );
+  assert.equal(
+    parseImpactComment(COMMENT.replace(' session=s1-as', '')),
+    undefined,
+  );
+});
+
+test('a PR comment cannot put untrusted values into the impact tab', async () => {
+  assert.equal(
+    parseImpactComment(COMMENT.replace('app=app1-a', 'app=x-a);run')),
+    undefined,
+  );
+  assert.equal(
+    parseImpactComment(COMMENT.replace('session=s1-as', 'session=x);y')),
+    undefined,
+  );
+  assert.equal(
+    parseImpactComment(
+      COMMENT.replaceAll('https://app.mabl.com/', 'http://app.mabl.com/'),
+    ),
+    undefined,
+  );
+  const withEscape = parseImpactComment(
+    COMMENT.replace('Quality Metrics', 'Quality&#27;[2J'),
+  );
+  const tests = withEscape?.data.tests as {testName: string}[];
+  assert.equal(tests[0]?.testName, 'Quality[2J');
+});
+
+test('a CI comment that lists fewer rows than it declares may have more', async () => {
+  assert.equal(parseImpactComment(COMMENT)?.data.moreMayExist, false);
+  const cut = COMMENT.replace('**Impacted (2)**', '**Impacted (3)**');
+  assert.equal(parseImpactComment(cut)?.data.moreMayExist, true);
+});
+
+test('re-reading a CI comment keeps what the person picked in the tab', async () => {
+  const settings = {showSessionSteps: false, stepsPollMs: 15_000};
+  const call = {tool: 'Bash', args: {}, text: COMMENT};
+  const [entity] = captureImpact(call);
+  const stored = {...(entity as MablEntity), updatedAt: 0};
+  const first = (
+    await impactFeature.poll!({} as never, stored, undefined, settings)
+  ).detail as ImpactDetail;
+  const picked = {
+    ...first,
+    ui: {target: 'd1-d', expanded: ['t1-j']},
+    targets: [
+      {deploymentId: 'd1-d', name: 'Dev', url: 'https://dev.example.com'},
+    ],
+  };
+  captureImpact(call);
+  const again = (
+    await impactFeature.poll!({} as never, stored, picked, settings)
+  ).detail as ImpactDetail;
+  assert.deepEqual(again.ui, picked.ui);
+  assert.deepEqual(again.targets, picked.targets);
+  assert.equal(again.tests.length, 2);
+});
+
+test('escaped comment text cannot add rows, sections or hosts', async () => {
+  const rows = (text: string): string[] =>
+    (parseImpactComment(text)?.data.tests as {testId: string}[]).map(
+      (row) => row.testId,
+    );
+  const forgedRow = COMMENT.replace(
+    '> The filter',
+    '> x&#10;- [Evil](https://app.mabl.com/workspaces/ws1-w/train/tests/evil-j/current)&#10;**Dispatched**&#10;The filter',
+  );
+  assert.deepEqual(rows(forgedRow), ['t1-j', 't2-j']);
+  assert.doesNotMatch(
+    String(parseImpactComment(forgedRow)?.args.changeDescription),
+    /\n/,
+  );
+  assert.equal(
+    parseImpactComment(
+      COMMENT.replaceAll('https://app.mabl.com/', 'https://evil.example/'),
+    ),
+    undefined,
+  );
+  const named = parseImpactComment(
+    COMMENT.replace('Quality Metrics', 'Qual&#8238;ity &#128512;'),
+  );
+  assert.equal(
+    (named?.data.tests as {testName: string}[])[0]?.testName,
+    'Quality \u{1F600}',
+  );
+});
+
+test('only a stamped comment from the CI job opens the tab', async () => {
+  const asJson = (comments: unknown[]): string => JSON.stringify({comments});
+  const ci = {author: {login: 'github-actions'}, body: COMMENT};
+  const person = {
+    author: {login: 'someone'},
+    body: COMMENT.replace('session=s1-as', 'session=evil-as'),
+  };
+  const sessionOf = (text: string): unknown =>
+    parseImpactComment(text)?.data.sessionId;
+  assert.equal(sessionOf(asJson([ci])), 's1-as');
+  assert.equal(sessionOf(asJson([ci, person])), 's1-as');
+  assert.equal(sessionOf(asJson([person, ci])), 's1-as');
+  assert.equal(sessionOf(asJson([person])), undefined);
+  const spoofed = {
+    author: {login: 'someone'},
+    body: `${person.body}"author":{"login":"github-actions"}`,
+  };
+  assert.equal(sessionOf(asJson([spoofed])), undefined);
+  const older = {
+    author: {login: 'github-actions'},
+    body: COMMENT.replace('session=s1-as', 'session=old-as'),
+  };
+  assert.equal(sessionOf(asJson([older, ci])), 's1-as');
+  assert.equal(sessionOf(COMMENT), 's1-as');
+});
+
+test('a stamped comment is read from its own body and author only', async () => {
+  const ci = {author: {login: 'github-actions'}, body: COMMENT};
+  const person = (
+    body: string,
+    login = 'someone',
+  ): {author: {login: string}; body: string} => ({
+    author: {login},
+    body,
+  });
+  const asJson = (comments: unknown[], space?: number): string =>
+    JSON.stringify({comments}, null, space);
+  const sessionOf = (text: string): unknown =>
+    parseImpactComment(text)?.data.sessionId;
+
+  const noRows = COMMENT.split('**Impacted (')[0] ?? '';
+  const lateRows = person(
+    '**Impacted (1)**\n- [T](https://app.mabl.com/workspaces/ws1-w/train/tests/evil-j/current)\n',
+  );
+  assert.equal(
+    parseImpactComment(asJson([{...ci, body: noRows}, lateRows])),
+    undefined,
+  );
+  const noGaps = {
+    ...ci,
+    body: COMMENT.replace('**Coverage gaps (2)**', '**x**'),
+  };
+  const lateGaps = person('**Coverage gaps (1)**\n\n1. forged gap\n');
+  assert.deepEqual(
+    parseImpactComment(asJson([noGaps, lateGaps]))?.data.coverageGaps,
+    [],
+  );
+
+  assert.equal(sessionOf(asJson([ci], 2)), 's1-as');
+  assert.equal(sessionOf(asJson([person(COMMENT)], 2)), undefined);
+  assert.equal(sessionOf(asJson([{author: null, body: COMMENT}])), undefined);
+  assert.equal(sessionOf(asJson([{body: COMMENT}])), undefined);
+  const loginNotFirst = (login: string): unknown => ({
+    author: {id: 'x', is_bot: false, login},
+    body: COMMENT,
+  });
+  assert.equal(sessionOf(asJson([loginNotFirst('github-actions')])), 's1-as');
+  assert.equal(sessionOf(asJson([loginNotFirst('someone')])), undefined);
+
+  assert.equal(sessionOf(asJson([ci]).slice(0, -3)), undefined);
+  assert.equal(
+    sessionOf([person(COMMENT), ci].map((c) => JSON.stringify(c)).join('\n')),
+    's1-as',
+  );
+  assert.equal(
+    sessionOf(asJson([{...ci, body: COMMENT.replaceAll('\n', '\r\n')}])),
+    's1-as',
+  );
+  const doubled = person(COMMENT.replace('<!--', '\\u003c!--'));
+  assert.equal(sessionOf(asJson([doubled])), undefined);
+});
+
+test('invisible characters are removed from comment text', async () => {
+  const named = parseImpactComment(
+    COMMENT.replace(
+      'Quality Metrics',
+      'Q&#917601;&#173;x&#8206;&#56128;&#8203;&#56321;',
+    ),
+  );
+  assert.equal((named?.data.tests as {testName: string}[])[0]?.testName, 'Qx');
 });

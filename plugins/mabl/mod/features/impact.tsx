@@ -5,6 +5,7 @@ import {
   hashOf,
   list,
   mablCall,
+  mablUrl,
   obj,
   parseJson,
   skillCommand,
@@ -159,18 +160,166 @@ export const shortName = (text: string, words = NAME_WORDS): string => {
 export const plural = (count: number, noun: string): string =>
   `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-export const captureImpact = (call: CallRecord): EntityUpdate[] => {
+// The format of the comment the test impact CI job posts; keep in sync with that job.
+const STAMP = '<!-- test-impact-stamp ';
+const STAMP_FIELDS =
+  /\bsha=([\w-]{1,64}) session=([\w-]{1,64}) app=([\w-]{1,64})(?=\s)/;
+const IMPACTED_TEST_ROW =
+  /^- \[(.+?)\]\((https:\/\/[^/\s]+\/workspaces\/([\w-]+)\/train\/tests\/([\w-]+-j)\/current)\)(?: - _(\w+)_)?(?: · (.*))?$/;
+const PULL_REQUEST_LINK = /\[([\w.-]+\/[\w.-]+#\d+)\]\((https:\/\/[^)\s]+)\)/;
+const CI_AUTHOR = 'github-actions';
+// The CI comment escapes its text as numeric entities. Structure is parsed on the escaped text and each captured field is decoded afterwards, so escaped text cannot add rows or sections. Control, bidi and zero-width characters never reach the terminal.
+const decodeField = (text: string): string =>
+  text
+    .replace(/&#(\d+);/g, (match, code) =>
+      Number(code) <= 0x10ffff ? String.fromCodePoint(Number(code)) : match,
+    )
+    .replace(/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/gu, '');
+
+const sectionOf = (text: string, heading: RegExp): string[] => {
+  const start = text.search(heading);
+  if (start < 0) {
+    return [];
+  }
+  const [, ...lines] = text.slice(start).split('\n');
+  const end = lines.findIndex((line) => line.startsWith('**'));
+
+  return end < 0 ? lines : lines.slice(0, end);
+};
+
+type Analysis = {args: Fields; data: Fields};
+
+const parseStampedComment = (stamped: string): Analysis | undefined => {
+  const comment = stamped.replace(/\r/g, '');
+  const [, revision, sessionId, applicationId] =
+    comment.match(STAMP_FIELDS) ?? [];
+  const rows = sectionOf(comment, /^\*\*Impacted \(/m).flatMap((line) => {
+    const [, testName, viewTestUrl, workspaceId, testId, role, evidence] =
+      line.match(IMPACTED_TEST_ROW) ?? [];
+
+    return testId && mablUrl(viewTestUrl)
+      ? [
+          {
+            testName: decodeField(testName ?? ''),
+            viewTestUrl,
+            workspaceId,
+            testId,
+            role,
+            evidence: decodeField(evidence ?? ''),
+          },
+        ]
+      : [];
+  });
+  if (!sessionId || rows.length === 0) {
+    return;
+  }
+  const [, pullRequestId, pullRequestUrl] =
+    comment.match(PULL_REQUEST_LINK) ?? [];
+  const declared = Number(comment.match(/^\*\*Impacted \((\d+)\)/m)?.[1]);
+  const [, changeDescription] = comment.match(/^> (.+)$/m) ?? [];
+
+  return {
+    args: {
+      changeDescription: changeDescription && decodeField(changeDescription),
+      applicationId,
+    },
+    data: {
+      sessionId,
+      revision,
+      applicationId,
+      workspaceId: rows[0]?.workspaceId,
+      tests: rows,
+      moreMayExist: rows.length < declared,
+      coverageGaps: sectionOf(comment, /^\*\*Coverage gaps \(/m).flatMap(
+        (line) => {
+          const gap = line.match(/^\d+\. (.+)$/)?.[1];
+
+          return gap ? decodeField(gap) : [];
+        },
+      ),
+      references: pullRequestId
+        ? [{type: 'pull_request', id: pullRequestId, url: pullRequestUrl}]
+        : [],
+    },
+  };
+};
+
+type PostedComment = {login?: string; body: string; isBare?: boolean};
+
+const itemsOf = (value: unknown): unknown[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  const comments = obj(value).comments;
+
+  return Array.isArray(comments) ? comments : [value];
+};
+
+/** `gh` JSON output (one document, or one object per line) as comments; undefined for text that is not JSON. */
+const postedComments = (text: string): PostedComment[] | undefined => {
+  const trimmed = text.trim();
+  if (!/^[[{"]/.test(trimmed)) {
+    return;
+  }
+  const whole = parseJson(trimmed);
+  const values =
+    whole === undefined
+      ? trimmed
+          .split('\n')
+          .filter((line) => line.trim() !== '')
+          .map((line) => parseJson(line))
+      : [whole];
+  if (values.some((value) => value === undefined)) {
+    return [];
+  }
+
+  return values.flatMap((value) =>
+    typeof value === 'string'
+      ? [{body: value, isBare: true}]
+      : itemsOf(value).flatMap((item) => {
+          const body = str(obj(item).body);
+
+          return body === undefined
+            ? []
+            : [{login: str(obj(obj(item).author).login), body}];
+        }),
+  );
+};
+
+/** The analysis a CI job posted on a pull request, in the shape `analyze_test_impact` returns. */
+export const parseImpactComment = (text: string): Analysis | undefined => {
+  const comments = postedComments(text) ?? [{body: text, isBare: true}];
+  for (const {login, body, isBare} of comments.reverse()) {
+    const stampStart = body.lastIndexOf(STAMP);
+    if (stampStart >= 0 && (isBare || login === CI_AUTHOR)) {
+      const analysis = parseStampedComment(body.slice(stampStart));
+      if (analysis) {
+        return analysis;
+      }
+    }
+  }
+};
+
+const analysisOf = (
+  call: CallRecord,
+): (Analysis & {server?: string}) | undefined => {
   const parsed = mablCall(call);
-  if (parsed?.source !== 'mcp' || parsed.name !== 'analyze_test_impact') {
+  if (parsed?.source === 'mcp' && parsed.name === 'analyze_test_impact') {
+    return {args: call.args, data: resultData(call), server: parsed.server};
+  }
+
+  return call.tool === 'Bash' ? parseImpactComment(call.text) : undefined;
+};
+
+export const captureImpact = (call: CallRecord): EntityUpdate[] => {
+  const analysis = analysisOf(call);
+  if (!analysis || !Array.isArray(analysis.data.tests)) {
     return [];
   }
-  const data = resultData(call);
-  if (!Array.isArray(data.tests)) {
-    return [];
-  }
-  const detail = toImpactDetail(call.args, data);
+  const {data} = analysis;
+  const detail = toImpactDetail(analysis.args, data);
   const id =
-    str(data.sessionId) ?? `impact-${hashOf(call.args).replace(':', '-')}`;
+    str(data.sessionId) ?? `impact-${hashOf(analysis.args).replace(':', '-')}`;
   const reference = detail.references[0];
   captured.set(id, detail);
 
@@ -183,7 +332,7 @@ export const captureImpact = (call: CallRecord): EntityUpdate[] => {
         : (reference?.id ?? reference?.url),
       status: `${detail.tests.length} impacted · ${plural(detail.gaps.length, 'gap')}`,
       workspaceId: str(data.workspaceId),
-      mcpServer: parsed.server,
+      mcpServer: analysis.server,
       url: undefined,
     }),
   ];
@@ -498,12 +647,15 @@ export const impactFeature: Feature = {
     captured.has(entity.id) || needsTargets(detail) ? 0 : undefined,
   poll: async (ops, entity, detail) => {
     const parked = captured.get(entity.id);
+    const impact = detail as ImpactDetail | undefined;
     if (parked) {
       captured.delete(entity.id);
 
-      return {updates: [], detail: parked};
+      return {
+        updates: [],
+        detail: {...parked, ui: impact?.ui, targets: impact?.targets},
+      };
     }
-    const impact = detail as ImpactDetail | undefined;
     if (!impact?.tests || !impact.applicationId || impact.targets) {
       return {updates: []};
     }
@@ -625,7 +777,9 @@ export const impactFeature: Feature = {
       if (tests.length === 0) {
         continue;
       }
-      const isOpen = ui.groups?.[group.key] ?? group.isOpen;
+      const isOpen =
+        ui.groups?.[group.key] ??
+        (group.isOpen || tests.length === impact.tests.length);
       push(
         <Button
           key={`group-${group.key}`}
