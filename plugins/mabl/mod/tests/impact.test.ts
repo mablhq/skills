@@ -14,6 +14,7 @@ import {
   isImpactSettled,
   linkedRuns,
   markOf,
+  parseImpactComment,
   runOutcome,
   shortName,
   splitDispatch,
@@ -469,4 +470,139 @@ test('impact', async () => {
   };
 
   await main();
+});
+
+const COMMENT = [
+  '<!-- web-mabl-test-impact run 1 -->',
+  '<!-- test-impact-stamp run_started=2026-01-01T00:00:00Z sha=abc123 session=s1-as app=app1-a -->',
+  '',
+  '## Test impact analysis',
+  '',
+  '> The filter becomes a multi-select &#40;N&#41; control&#46;',
+  '',
+  '**Coverage gaps (2)**',
+  '',
+  '1. Filter UI interactions &#8212; none cover the new controls&#46;',
+  '2. Subset filtering and re-aggregation',
+  '',
+  '**Impacted (2)**',
+  '',
+  '- [Quality Metrics](https://app.mabl.com/workspaces/ws1-w/train/tests/t1-j/current) - _validates_ · Loads the report&#46;',
+  '- [Value Dashboard](https://app.mabl.com/workspaces/ws1-w/train/tests/t2-j/current) · Shares the filter bar&#46;',
+  '',
+  '**Dispatched** - 1 kept',
+  '- [Not a test row](https://example.com/x)',
+  '',
+  '<details><summary>Context</summary>',
+  '[org/repo#12](https://github.com/org/repo/pull/12) @ `abc123`',
+  '</details>',
+].join('\n');
+
+test('a test impact analysis posted as a PR comment opens an impact tab', async () => {
+  const parsed = parseImpactComment(COMMENT);
+  assert.ok(parsed);
+  assert.equal(parsed.data.sessionId, 's1-as');
+  assert.equal(parsed.data.revision, 'abc123');
+  assert.equal(parsed.data.workspaceId, 'ws1-w');
+  assert.equal(
+    parsed.args.changeDescription,
+    'The filter becomes a multi-select (N) control.',
+  );
+  assert.deepEqual(parsed.data.coverageGaps, [
+    'Filter UI interactions \u2014 none cover the new controls.',
+    'Subset filtering and re-aggregation',
+  ]);
+  assert.deepEqual(parsed.data.references, [
+    {
+      type: 'pull_request',
+      id: 'org/repo#12',
+      url: 'https://github.com/org/repo/pull/12',
+    },
+  ]);
+  const tests = parsed.data.tests as {
+    testId: string;
+    role?: string;
+    evidence?: string;
+  }[];
+  assert.deepEqual(
+    tests.map((row) => [row.testId, row.role, row.evidence]),
+    [
+      ['t1-j', 'validates', 'Loads the report.'],
+      ['t2-j', undefined, 'Shares the filter bar.'],
+    ],
+  );
+
+  const [entity] = captureImpact({
+    tool: 'Bash',
+    args: {command: 'gh pr view 12'},
+    text: COMMENT,
+  });
+  assert.equal(entity?.kind, 'impact');
+  assert.equal(entity?.id, 's1-as');
+  assert.equal(entity?.status, '2 impacted · 2 gaps');
+
+  const json = JSON.stringify({comments: [{body: COMMENT}]});
+  assert.equal(parseImpactComment(json)?.data.sessionId, 's1-as');
+  assert.equal(parseImpactComment('no stamp here'), undefined);
+  assert.deepEqual(captureImpact({tool: 'Bash', args: {}, text: 'ls'}), []);
+  assert.equal(
+    parseImpactComment(COMMENT.split('**Impacted (')[0] ?? ''),
+    undefined,
+  );
+  assert.equal(
+    parseImpactComment(COMMENT.replace(' session=s1-as', '')),
+    undefined,
+  );
+});
+
+test('a PR comment cannot put untrusted values into the impact tab', async () => {
+  assert.equal(
+    parseImpactComment(COMMENT.replace('app=app1-a', 'app=x-a);run')),
+    undefined,
+  );
+  assert.equal(
+    parseImpactComment(COMMENT.replace('session=s1-as', 'session=x);y')),
+    undefined,
+  );
+  assert.equal(
+    parseImpactComment(
+      COMMENT.replaceAll('https://app.mabl.com/', 'http://app.mabl.com/'),
+    ),
+    undefined,
+  );
+  const withEscape = parseImpactComment(
+    COMMENT.replace('Quality Metrics', 'Quality&#27;[2J'),
+  );
+  const tests = withEscape?.data.tests as {testName: string}[];
+  assert.equal(tests[0]?.testName, 'Quality[2J');
+});
+
+test('a CI comment that lists fewer rows than it declares may have more', async () => {
+  assert.equal(parseImpactComment(COMMENT)?.data.moreMayExist, false);
+  const cut = COMMENT.replace('**Impacted (2)**', '**Impacted (3)**');
+  assert.equal(parseImpactComment(cut)?.data.moreMayExist, true);
+});
+
+test('re-reading a CI comment keeps what the person picked in the tab', async () => {
+  const settings = {showSessionSteps: false, stepsPollMs: 15_000};
+  const call = {tool: 'Bash', args: {}, text: COMMENT};
+  const [entity] = captureImpact(call);
+  const stored = {...(entity as MablEntity), updatedAt: 0};
+  const first = (
+    await impactFeature.poll!({} as never, stored, undefined, settings)
+  ).detail as ImpactDetail;
+  const picked = {
+    ...first,
+    ui: {target: 'd1-d', expanded: ['t1-j']},
+    targets: [
+      {deploymentId: 'd1-d', name: 'Dev', url: 'https://dev.example.com'},
+    ],
+  };
+  captureImpact(call);
+  const again = (
+    await impactFeature.poll!({} as never, stored, picked, settings)
+  ).detail as ImpactDetail;
+  assert.deepEqual(again.ui, picked.ui);
+  assert.deepEqual(again.targets, picked.targets);
+  assert.equal(again.tests.length, 2);
 });

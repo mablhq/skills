@@ -159,18 +159,104 @@ export const shortName = (text: string, words = NAME_WORDS): string => {
 export const plural = (count: number, noun: string): string =>
   `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-export const captureImpact = (call: CallRecord): EntityUpdate[] => {
+// The format of the comment the test impact CI job posts; keep in sync with that job.
+const STAMP = '<!-- test-impact-stamp ';
+const STAMP_FIELDS =
+  /\bsha=([\w-]{1,64}) session=([\w-]{1,64}) app=([\w-]{1,64})(?=\s)/;
+const IMPACTED_TEST_ROW =
+  /^- \[(.+?)\]\((https:\/\/[^/\s]+\/workspaces\/([\w-]+)\/train\/tests\/([\w-]+-j)\/current)\)(?: - _(\w+)_)?(?: · (.*))?$/;
+const PULL_REQUEST_LINK = /\[([\w.-]+\/[\w.-]+#\d+)\]\((https:\/\/[^)\s]+)\)/;
+
+// `gh --json` escapes the body and the CI comment escapes punctuation as numeric entities; control characters never reach the terminal.
+const unescapeComment = (text: string): string =>
+  text
+    .replace(/\\u003c/g, '<')
+    .replace(/\\u003e/g, '>')
+    .replace(/\\u0026/g, '&')
+    .replace(/\\r/g, '')
+    .replace(/\\n/g, '\n')
+    .replace(/\\"/g, '"')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '');
+
+const sectionOf = (text: string, heading: RegExp): string[] => {
+  const start = text.search(heading);
+  if (start < 0) {
+    return [];
+  }
+  const [, ...lines] = text.slice(start).split('\n');
+  const end = lines.findIndex((line) => line.startsWith('**'));
+
+  return end < 0 ? lines : lines.slice(0, end);
+};
+
+type Analysis = {args: Fields; data: Fields};
+
+/** The analysis a CI job posted on a pull request, in the shape `analyze_test_impact` returns. */
+export const parseImpactComment = (text: string): Analysis | undefined => {
+  const stampStart = text.lastIndexOf(STAMP);
+  if (stampStart < 0) {
+    return;
+  }
+  const comment = unescapeComment(text.slice(stampStart));
+  const [, revision, sessionId, applicationId] =
+    comment.match(STAMP_FIELDS) ?? [];
+  const rows = sectionOf(comment, /^\*\*Impacted \(/m).flatMap((line) => {
+    const [, testName, viewTestUrl, workspaceId, testId, role, evidence] =
+      line.match(IMPACTED_TEST_ROW) ?? [];
+
+    return testId
+      ? [{testName, viewTestUrl, workspaceId, testId, role, evidence}]
+      : [];
+  });
+  if (!sessionId || rows.length === 0) {
+    return;
+  }
+  const [, pullRequestId, pullRequestUrl] =
+    comment.match(PULL_REQUEST_LINK) ?? [];
+  const declared = Number(comment.match(/^\*\*Impacted \((\d+)\)/m)?.[1]);
+  const [, changeDescription] = comment.match(/^> (.+)$/m) ?? [];
+
+  return {
+    args: {changeDescription, applicationId},
+    data: {
+      sessionId,
+      revision,
+      applicationId,
+      workspaceId: rows[0]?.workspaceId,
+      tests: rows,
+      moreMayExist: rows.length < declared,
+      coverageGaps: sectionOf(comment, /^\*\*Coverage gaps \(/m).flatMap(
+        (line) => line.match(/^\d+\. (.+)$/)?.[1] ?? [],
+      ),
+      references: pullRequestId
+        ? [{type: 'pull_request', id: pullRequestId, url: pullRequestUrl}]
+        : [],
+    },
+  };
+};
+
+const analysisOf = (
+  call: CallRecord,
+): (Analysis & {server?: string}) | undefined => {
   const parsed = mablCall(call);
-  if (parsed?.source !== 'mcp' || parsed.name !== 'analyze_test_impact') {
+  if (parsed?.source === 'mcp' && parsed.name === 'analyze_test_impact') {
+    return {args: call.args, data: resultData(call), server: parsed.server};
+  }
+
+  return call.tool === 'Bash' ? parseImpactComment(call.text) : undefined;
+};
+
+export const captureImpact = (call: CallRecord): EntityUpdate[] => {
+  const analysis = analysisOf(call);
+  if (!analysis || !Array.isArray(analysis.data.tests)) {
     return [];
   }
-  const data = resultData(call);
-  if (!Array.isArray(data.tests)) {
-    return [];
-  }
-  const detail = toImpactDetail(call.args, data);
+  const {data} = analysis;
+  const detail = toImpactDetail(analysis.args, data);
   const id =
-    str(data.sessionId) ?? `impact-${hashOf(call.args).replace(':', '-')}`;
+    str(data.sessionId) ?? `impact-${hashOf(analysis.args).replace(':', '-')}`;
   const reference = detail.references[0];
   captured.set(id, detail);
 
@@ -183,7 +269,7 @@ export const captureImpact = (call: CallRecord): EntityUpdate[] => {
         : (reference?.id ?? reference?.url),
       status: `${detail.tests.length} impacted · ${plural(detail.gaps.length, 'gap')}`,
       workspaceId: str(data.workspaceId),
-      mcpServer: parsed.server,
+      mcpServer: analysis.server,
       url: undefined,
     }),
   ];
@@ -498,12 +584,15 @@ export const impactFeature: Feature = {
     captured.has(entity.id) || needsTargets(detail) ? 0 : undefined,
   poll: async (ops, entity, detail) => {
     const parked = captured.get(entity.id);
+    const impact = detail as ImpactDetail | undefined;
     if (parked) {
       captured.delete(entity.id);
 
-      return {updates: [], detail: parked};
+      return {
+        updates: [],
+        detail: {...parked, ui: impact?.ui, targets: impact?.targets},
+      };
     }
-    const impact = detail as ImpactDetail | undefined;
     if (!impact?.tests || !impact.applicationId || impact.targets) {
       return {updates: []};
     }
