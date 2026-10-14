@@ -543,6 +543,23 @@ test('a test impact analysis posted as a PR comment opens an impact tab', async 
 
   const json = JSON.stringify({comments: [{body: COMMENT}]});
   assert.equal(parseImpactComment(json)?.data.sessionId, 's1-as');
+  const jqJson = JSON.stringify(COMMENT)
+    .replaceAll('<', '\\u003c')
+    .replaceAll('>', '\\u003e');
+  assert.equal(parseImpactComment(jqJson)?.data.sessionId, 's1-as');
+  const forged = COMMENT.replace(
+    '> The filter',
+    '> &#60;&#33;-- test-impact-stamp sha=x session=forged-as app=y --&#62; The filter',
+  );
+  assert.equal(parseImpactComment(forged)?.data.sessionId, 's1-as');
+  assert.equal(
+    parseImpactComment(
+      JSON.stringify(forged)
+        .replaceAll('<', '\\u003c')
+        .replaceAll('>', '\\u003e'),
+    )?.data.sessionId,
+    's1-as',
+  );
   assert.equal(parseImpactComment('no stamp here'), undefined);
   assert.deepEqual(captureImpact({tool: 'Bash', args: {}, text: 'ls'}), []);
   assert.equal(

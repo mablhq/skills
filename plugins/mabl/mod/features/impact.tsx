@@ -167,15 +167,19 @@ const IMPACTED_TEST_ROW =
   /^- \[(.+?)\]\((https:\/\/[^/\s]+\/workspaces\/([\w-]+)\/train\/tests\/([\w-]+-j)\/current)\)(?: - _(\w+)_)?(?: · (.*))?$/;
 const PULL_REQUEST_LINK = /\[([\w.-]+\/[\w.-]+#\d+)\]\((https:\/\/[^)\s]+)\)/;
 
-// `gh --json` escapes the body and the CI comment escapes punctuation as numeric entities; control characters never reach the terminal.
-const unescapeComment = (text: string): string =>
+// `gh --json` and `--jq` escape the body.
+const unescapeJson = (text: string): string =>
   text
     .replace(/\\u003c/g, '<')
     .replace(/\\u003e/g, '>')
     .replace(/\\u0026/g, '&')
     .replace(/\\r/g, '')
     .replace(/\\n/g, '\n')
-    .replace(/\\"/g, '"')
+    .replace(/\\"/g, '"');
+
+// The CI comment escapes its text as numeric entities; decoding only after the stamp is found keeps escaped text from posing as one. Control characters never reach the terminal.
+const unescapeEntities = (text: string): string =>
+  text
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '');
@@ -195,11 +199,12 @@ type Analysis = {args: Fields; data: Fields};
 
 /** The analysis a CI job posted on a pull request, in the shape `analyze_test_impact` returns. */
 export const parseImpactComment = (text: string): Analysis | undefined => {
-  const stampStart = text.lastIndexOf(STAMP);
+  const unescaped = unescapeJson(text);
+  const stampStart = unescaped.lastIndexOf(STAMP);
   if (stampStart < 0) {
     return;
   }
-  const comment = unescapeComment(text.slice(stampStart));
+  const comment = unescapeEntities(unescaped.slice(stampStart));
   const [, revision, sessionId, applicationId] =
     comment.match(STAMP_FIELDS) ?? [];
   const rows = sectionOf(comment, /^\*\*Impacted \(/m).flatMap((line) => {
@@ -714,7 +719,9 @@ export const impactFeature: Feature = {
       if (tests.length === 0) {
         continue;
       }
-      const isOpen = ui.groups?.[group.key] ?? group.isOpen;
+      const isOpen =
+        ui.groups?.[group.key] ??
+        (group.isOpen || tests.length === impact.tests.length);
       push(
         <Button
           key={`group-${group.key}`}

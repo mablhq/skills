@@ -7,7 +7,7 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 
 ## [1.13.0] - 2026-10-14
 ### Added
-- Claude Code only: a test impact analysis that a CI job posted on a pull request now opens in the live view too, when your agent reads that comment (for example with `gh pr view`). Before, only an analysis your agent ran itself showed up.
+- Claude Code only: a test impact analysis that a CI job posted on a pull request now opens in the live view too, when your agent reads that comment (for example with `gh pr view`). Before, only an analysis your agent ran itself showed up. The test impact skill now tells the agent to print that comment in full, so the live view can open it.
 
 ## [1.12.0] - 2026-10-06
 ### Added
