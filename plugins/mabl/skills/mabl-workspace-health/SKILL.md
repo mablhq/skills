@@ -13,7 +13,7 @@ description: |
   environment issue or a test issue across the suite", or "what can we clean
   out of our test catalog". Takes a workspace id. For ONE failed run use
   mabl-debug; to CHANGE a test use mabl-test-edit.
-allowed-tools: Bash, Read, Write, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__list_mabl_test_versions, mcp__plugin_mabl_mabl__list_mabl_test_versions, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__list_mabl_deployment_events, mcp__plugin_mabl_mabl__list_mabl_deployment_events, mcp__mabl__get_failure_category_report, mcp__plugin_mabl_mabl__get_failure_category_report, mcp__mabl__list_mabl_failure_reasons, mcp__plugin_mabl_mabl__list_mabl_failure_reasons, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__list_mabl_test_run_summaries, mcp__plugin_mabl_mabl__list_mabl_test_run_summaries, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__analyze_mabl_failure, mcp__plugin_mabl_mabl__analyze_mabl_failure, mcp__mabl__list_mabl_test_run_artifacts, mcp__plugin_mabl_mabl__list_mabl_test_run_artifacts, mcp__mabl__get_mabl_test_run_artifact, mcp__plugin_mabl_mabl__get_mabl_test_run_artifact, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__get_mabl_flow_steps, mcp__plugin_mabl_mabl__get_mabl_flow_steps, mcp__mabl__search_mabl_flows, mcp__plugin_mabl_mabl__search_mabl_flows, mcp__mabl__list_mabl_tests_using_flow, mcp__plugin_mabl_mabl__list_mabl_tests_using_flow, mcp__mabl__list_mabl_data_tables, mcp__plugin_mabl_mabl__list_mabl_data_tables, mcp__mabl__get_mabl_data_table, mcp__plugin_mabl_mabl__get_mabl_data_table, mcp__chrome-devtools__new_page, mcp__plugin_mabl_chrome-devtools__new_page, mcp__chrome-devtools__navigate_page, mcp__plugin_mabl_chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__plugin_mabl_chrome-devtools__take_snapshot, mcp__chrome-devtools__take_screenshot, mcp__plugin_mabl_chrome-devtools__take_screenshot, mcp__chrome-devtools__close_page, mcp__plugin_mabl_chrome-devtools__close_page
+allowed-tools: Read, Bash(jq *), mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__list_mabl_test_versions, mcp__plugin_mabl_mabl__list_mabl_test_versions, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__list_mabl_deployment_events, mcp__plugin_mabl_mabl__list_mabl_deployment_events, mcp__mabl__get_failure_category_report, mcp__plugin_mabl_mabl__get_failure_category_report, mcp__mabl__list_mabl_failure_reasons, mcp__plugin_mabl_mabl__list_mabl_failure_reasons, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__analyze_mabl_failure, mcp__plugin_mabl_mabl__analyze_mabl_failure, mcp__mabl__list_mabl_test_run_artifacts, mcp__plugin_mabl_mabl__list_mabl_test_run_artifacts, mcp__mabl__get_mabl_test_run_artifact, mcp__plugin_mabl_mabl__get_mabl_test_run_artifact, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__get_mabl_flow_steps, mcp__plugin_mabl_mabl__get_mabl_flow_steps, mcp__mabl__search_mabl_flows, mcp__plugin_mabl_mabl__search_mabl_flows, mcp__mabl__list_mabl_tests_using_flow, mcp__plugin_mabl_mabl__list_mabl_tests_using_flow, mcp__mabl__list_mabl_data_tables, mcp__plugin_mabl_mabl__list_mabl_data_tables, mcp__mabl__get_mabl_data_table, mcp__plugin_mabl_mabl__get_mabl_data_table, mcp__chrome-devtools__new_page, mcp__plugin_mabl_chrome-devtools__new_page, mcp__chrome-devtools__navigate_page, mcp__plugin_mabl_chrome-devtools__navigate_page, mcp__chrome-devtools__take_snapshot, mcp__plugin_mabl_chrome-devtools__take_snapshot
 ---
 
 # mabl workspace health
@@ -52,7 +52,7 @@ connector is available, exported test results can supply tier totals and trigger
 breakdowns. The export has no backfill, so it only covers dates after it was
 enabled.
 
-Use Bash with `jq` or a short script for the arithmetic. Quality report pages run
+Use `jq` for the arithmetic. Quality report pages run
 to roughly 50 KB each and are often saved to a file; read them back from there
 rather than shrinking the page size.
 
@@ -124,9 +124,23 @@ and `environmentId` for the tier. Page with the cursor until it stops advancing.
 quality metrics rather than volume, so the first page is not the top of the list
 and there is no safe early stop.
 
-Keep per test `testId`, `totalPlanRuns`, `consistentFailRuns`,
-`consistentPassRuns`, `passingPlanRuns` and `passRate`. The report carries no
-totals, so build the tier denominator by summing the pages.
+Keep per test `testId`, `totalPlanRuns`, `consistentPassRuns`,
+`consistentFailRuns`, `flakyPlanRuns`, `passRate` and `runsCapped`. The report
+carries no totals, so build the tier denominator by summing the pages.
+
+**A test's failures are `totalPlanRuns - consistentPassRuns`.** `passRate` counts
+only plan runs where every attempt passed, so a flaky plan run (some attempts
+passed, some failed, counted in `flakyPlanRuns`) costs pass rate exactly as a
+consistent failure does. Using `consistentFailRuns` alone ranks flaky
+high-volume tests too low and understates what fixing them is worth. Keep the
+split between consistent and flaky failures for the report, because it says
+whether a test is broken or unstable.
+
+**Do not read `passingPlanRuns` as a pass count.** It counts runs whose previous
+run passed, which is the denominator for breakage. Use `consistentPassRuns`.
+
+A test with `runsCapped: true` is counted over its newest 50,000 runs only, so
+its numbers are floors.
 
 It excludes tests with fewer than 5 plan runs by default (`minPlanRuns`), so do
 not use it to count dormant tests and do not apply a second run-count filter.
@@ -136,8 +150,9 @@ never passed reports breakage 0 and reliability 1 and scores as healthy.
 
 **Read the status vocabulary before computing any rate.** Run listings can report
 a passing run as `completed` while the filter option is called `passed`, and
-exported data varies by workspace. Group by status over a short window, read the
-values back, then write the rate. A rate filtered on a value that does not exist
+exported data varies by workspace. Pull a short window with
+`list_mabl_test_runs` on a few tests, or from the export, read the status values
+back, then write the rate. A rate filtered on a value that does not exist
 reports a plausible 0 percent with no error.
 
 ## 4. Gate: is there anything to rank?
@@ -155,15 +170,17 @@ sandbox or development workspace these can be nearly every failure.
 
 Treat a test as in development when it was created or last edited within the
 last 7 days, when its name or start URL points at `localhost`, a local dev
-server or a tunnel, or when it ran only once or twice. Get dates from
-`list_mabl_tests` (`createdTime`, `lastUpdatedTime`).
+server or a tunnel. Get dates from `list_mabl_tests` (`createdTime`,
+`lastUpdatedTime`). Run count is no signal here, because the quality report
+already drops tests with fewer than 5 plan runs.
 
 Report these separately with their counts, and rank the rest. Ask before
 excluding them from the headline rate.
 
 ## 6. Band the tests for context
 
-Compute `fail_rate = 1 - passRate` and label each test.
+Compute `fail_rate = 1 - passRate`, which matches the failure count in step 3,
+and label each test.
 
 | Band | fail_rate | Read it as |
 |---|---|---|
@@ -179,15 +196,16 @@ share of tier failures each band carries.
 
 ## 7. Rank by failures contributed
 
-Sort every test with at least one failure by `consistentFailRuns`, highest first.
-Show each row with its band. If the team supplied a candidate list, score it the
+Sort every test with at least one failure by its failures from step 3
+(`totalPlanRuns - consistentPassRuns`), highest first. Show each row with its
+band and its consistent and flaky split. If the team supplied a candidate list, score it the
 same way and compare.
 
 ## 8. Points by depth, and read the curve
 
 Fixing a test that fails F times out of R tier runs moves the tier pass rate by
-roughly F / R. Points at depth N are the sum of `consistentFailRuns` for the top
-N, divided by R, times 100. Build the table at several depths (5, 10, 20, 50 and
+roughly F / R. Points at depth N are the sum of failures (from step 3) for the
+top N, divided by R, times 100. Build the table at several depths (5, 10, 20, 50 and
 so on), let the user pick a cut against the target, and group the cut into waves
 with an owner and a window each.
 
@@ -319,8 +337,10 @@ captured element text that contains data which changes daily, and repeated block
 that belong in a reusable flow. State the date the steps were read, since
 structure is current while run data covers a window.
 
-A failing test with high stability is broken rather than flaky. Stability
-measures alternation, so a test that always fails reads 1.00.
+Read stability and breakage for what they measure. Stability is 1 minus the
+flake rate, so it reflects retries inside a single plan run. Breakage counts pass
+to fail flips across runs. A failing test with high stability fails the same way
+every attempt, which makes it broken rather than flaky.
 
 ## 16. Deliver
 
