@@ -5,6 +5,10 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.14.0] - 2026-10-15
+### Added
+- `mabl-workspace-health`, a read-only audit of one workspace's test suite. It ranks failing tests by the failures they contribute, shows how many pass-rate points fixing the top N would buy, diagnoses each selected test to a root cause with a concrete repair move, and lists what can be cleaned out of the catalog (dormant, duplicated and unlabelled tests, and disabled plans). New and healthy workspaces skip straight to the catalog and quality checks.
+
 ## [1.13.0] - 2026-10-14
 ### Added
 - Claude Code only: a test impact analysis that a CI job posted on a pull request now opens in the live view too, when your agent reads that comment (for example with `gh pr view`). Before, only an analysis your agent ran itself showed up. The test impact skill now tells the agent to print that comment in full, so the live view can open it.
