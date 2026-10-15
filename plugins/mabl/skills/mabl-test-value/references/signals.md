@@ -2,15 +2,22 @@
 
 ## Assertion strength
 
-Read `get_mabl_test_steps` with `detail: "compact"`. Step groups nest their
-children, so count recursively. Expand every reusable flow the test calls with
-`get_mabl_flow_steps` and count its steps too.
+Read `get_mabl_test_steps` with `detail: "compact"`. It returns every flow on
+the test, tagged structural or reusable, so count assertions across all of
+them. Older tests list their reusable flows as flow entries rather than
+`EvaluateFlow` steps, so do not rely on `EvaluateFlow` to find them. Step groups
+nest their children, so count recursively. Use `get_mabl_flow_steps` only for a
+flow the test read did not include.
+
+Built-in tests (the default page-load and link crawl tests) have no authored
+steps. Rate their assertion strength as not applicable rather than weak.
 
 Count:
 
 - **Enabled assertions.** Step types beginning with `Assert`, minus any marked
-  disabled. If the compact read does not show disabled state, read the full step
-  for the assertions that matter and say which tests were checked.
+  disabled. The compact read does not show disabled state for browser steps, so
+  read the full steps (`stepIds` from the compact read) for any test whose
+  rating depends on it, and say which tests were checked.
 - **Content assertions.** Assertions on text, values, attributes other than the
   URL, AI prompts and visual checks. These prove the page shows the right thing.
 - **Shallow assertions.** Assertions that only check the URL, or only that an
@@ -19,9 +26,12 @@ Count:
 
 | Rating | Rule |
 |---|---|
-| Strong | At least one content assertion for each page the test visits, and at least three content assertions overall |
-| Adequate | At least one content assertion, but not on every page visited |
+| Strong | At least three content assertions, and content assertions are at least half of all enabled assertions |
+| Adequate | At least one content assertion |
 | Weak | No content assertions, only shallow ones, or most assertions disabled |
+
+Count from the step data alone. Pages reached by clicking are not visible in it,
+so the rule does not depend on how many pages a test visits.
 
 A test with no assertions at all is weak even when it passes every run.
 
@@ -34,7 +44,9 @@ for failures, `failureCategorization.categoryId`.
 Confirm the status vocabulary first. Runs can report a pass as `completed`
 rather than `passed`.
 
-Sort each environment's runs by time and walk them.
+Drop runs with no `environmentId`, which are local or authoring runs. Group the
+rest by environment and browser, sort each group by time, and walk it. A failure
+on one browser followed by a pass on another is not a recovery.
 
 - **Same-version recovery.** A failure followed by a pass on the same
   `testVersion`. The test did not change, so the application, its data or the
@@ -42,11 +54,22 @@ Sort each environment's runs by time and walk them.
 - **Edit recovery.** A failure followed by a pass only on a newer version. The
   test was wrong, or the application changed and the test was updated to match.
 
-A same-version recovery is a **candidate catch** when its failure category is
-`regression` or `test_implementation`. It is **noise** when the category is
-`environment`, `network` or `timing`, or when screenshots show error pages or a
-page still loading. Confirm the two or three strongest candidate catches per
-test with `get_mabl_test_run_artifact` before calling any test proven.
+Resolve category ids with `list_mabl_failure_reasons`, since workspaces can add
+custom reasons. Then sort each same-version recovery.
+
+- **Candidate catch.** The category is `regression`, or a custom reason that
+  describes an application defect.
+- **Noise.** The category is `environment`, `network` or `timing`. Also
+  `test_implementation`, because a test that was not edited and then passed was
+  not wrong; the failure was most likely flaky.
+- **Unconfirmed.** No category assigned. It counts as a catch only if its
+  screenshots show a fully rendered page with wrong content.
+
+Confirm the two or three strongest candidate catches per test before calling any
+test proven. `get_mabl_test_run` returns the failing step's screenshot URI, and
+`list_mabl_test_run_artifacts` returns every step's. Open them with
+`get_mabl_test_run_artifact`. A confirmed catch shows the page rendered and
+wrong, not an error page or a page still loading.
 
 Report catches as counts with dates. One confirmed catch in the window is
 strong evidence of value. Zero is not evidence against a test, because a stable
@@ -54,9 +77,21 @@ application gives a good test nothing to catch.
 
 ## Gate
 
-A test's gate is the strongest of its enabled plans, in this order. Deployment,
-then schedule, then on demand, then none. Count a plan as a deployment gate only
-when `list_mabl_deployment_events` shows it was triggered in the window.
+Take the gate from what ran, not only from plan settings.
+
+- **Deployment.** A deployment event in the window started a plan run that
+  includes the test. Read the plan runs from `list_mabl_deployment_events`
+  without `summaryOnly`, because `summaryOnly` drops the plan runs that passed.
+  A deployment can run a plan that is now disabled, and an enabled plan with a
+  deployment trigger can go the whole window without firing. Both are worth
+  reporting.
+- **Schedule.** In an enabled plan with a schedule, and the test has plan runs
+  in the window.
+- **On demand.** In an enabled plan with no trigger.
+- **None.** In no enabled plan and not run by any deployment.
+
+`get_mabl_plan` returns environment-and-application ids rather than environment
+ids. Take a test's environments from its run history instead.
 
 ## Cost
 

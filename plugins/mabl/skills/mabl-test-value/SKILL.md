@@ -15,7 +15,7 @@ description: |
   suite", or "which tests are just noise". Takes a workspace id. To raise a
   pass rate use mabl-workspace-health; for ONE failed run use mabl-debug; to
   CHANGE a test use mabl-test-edit.
-allowed-tools: Read, Bash(jq *), mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__list_mabl_deployment_events, mcp__plugin_mabl_mabl__list_mabl_deployment_events, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__list_mabl_test_versions, mcp__plugin_mabl_mabl__list_mabl_test_versions, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__get_mabl_flow_steps, mcp__plugin_mabl_mabl__get_mabl_flow_steps, mcp__mabl__list_mabl_tests_using_flow, mcp__plugin_mabl_mabl__list_mabl_tests_using_flow, mcp__mabl__list_mabl_failure_reasons, mcp__plugin_mabl_mabl__list_mabl_failure_reasons, mcp__mabl__get_mabl_test_run_artifact, mcp__plugin_mabl_mabl__get_mabl_test_run_artifact, mcp__mabl__identify_coverage_gaps, mcp__plugin_mabl_mabl__identify_coverage_gaps
+allowed-tools: Read, Bash(jq *), mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__list_mabl_deployment_events, mcp__plugin_mabl_mabl__list_mabl_deployment_events, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__list_mabl_test_versions, mcp__plugin_mabl_mabl__list_mabl_test_versions, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__get_mabl_flow_steps, mcp__plugin_mabl_mabl__get_mabl_flow_steps, mcp__mabl__list_mabl_tests_using_flow, mcp__plugin_mabl_mabl__list_mabl_tests_using_flow, mcp__mabl__list_mabl_failure_reasons, mcp__plugin_mabl_mabl__list_mabl_failure_reasons, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__list_mabl_test_run_artifacts, mcp__plugin_mabl_mabl__list_mabl_test_run_artifacts, mcp__mabl__get_mabl_test_run_artifact, mcp__plugin_mabl_mabl__get_mabl_test_run_artifact, mcp__mabl__identify_coverage_gaps, mcp__plugin_mabl_mabl__identify_coverage_gaps
 ---
 
 # mabl test value
@@ -91,35 +91,34 @@ default in the report.
    until the cursor stops advancing.
 4. List plans with `list_mabl_plans`. For each enabled plan call
    `get_mabl_plan` and record its triggers (deployment event, schedule and
-   cadence, or none), its environments, and the tests in its stages.
-5. Call `list_mabl_deployment_events` over the window (`summaryOnly: true`,
-   `limit: 100`) to see which plans deployments actually triggered. A plan
-   configured for deployments that never fired gates nothing in practice.
+   cadence, or none) and the tests in its stages. It returns
+   environment-and-application ids rather than environment ids, so take
+   environments from run history.
+5. Call `list_mabl_deployment_events` over the window (`limit: 100`, paging with
+   the cursor) and record which plans each deployment actually ran. Do not pass
+   `summaryOnly`, which drops the plan runs that passed. Call `get_mabl_plan` for
+   any plan a deployment ran that is not in the enabled list, since deployments
+   can run disabled plans.
 
-Join these into one row per test with its enabled plans and its strongest gate.
-
-| Gate | Meaning |
-|---|---|
-| Deployment | In an enabled plan that a deployment event triggered in the window |
-| Schedule | In an enabled plan on a schedule |
-| On demand | In an enabled plan with no trigger |
-| None | In no enabled plan |
+Join these into one row per test with its gate, using the definitions in
+`references/signals.md`. In short, Deployment means a deployment actually ran
+the test in the window, Schedule means a scheduled plan ran it, On demand means
+an enabled plan with no trigger holds it, and None means nothing does. Report
+enabled plans with a trigger that never fired, and deployments that ran no plan,
+since both mean the pipeline is not doing what its settings say.
 
 ## 3. First pass over the whole catalog
 
-Most catalogs are mostly inactive, so sort the cheap cases first and spend the
-expensive reads on what is left.
+Most catalogs are mostly inactive, so decide the cheap cases first and spend the
+expensive reads on what is left. Apply rules 1 to 8 of
+`references/classification.md` to every test, matching critical journeys by
+name and labels only at this stage. Those rules need nothing beyond the
+inventory, and they cover protected, disabled, dormant, never-firing and
+in-development tests.
 
-| Condition | Provisional class |
-|---|---|
-| Disabled test | Retire |
-| Enabled, gate None, no plan runs in the window, not edited for 6 months | Retire |
-| Enabled, gate None, but edited in the last 30 days | Question (being built, or forgotten) |
-| No plan runs in the window but in an enabled plan | Question (the plan does not fire) |
-| Named in intake as protected or run by hand on purpose | Keep, and skip the deeper reads unless asked |
-
-Everything else is an active test and goes through steps 4 to 6. Record the
-counts for each row of the table, since they are often the headline.
+Tests those rules decide are final and skip steps 4 to 6. Everything else is an
+active test. Record the count for each rule, since they are often the
+headline.
 
 ## 4. Value signals for each active test
 
@@ -134,11 +133,10 @@ Read `references/signals.md` for how to compute each one and its pitfalls.
 - **Catch record.** From `list_mabl_test_runs` over the window. A failure that
   clears on the next run **without a new test version** means something outside
   the test changed. A failure that clears only after a new version means the
-  test itself was wrong. Count both. Treat a same-version recovery as a catch
-  only when its category is regression or test implementation and not
-  environment or timing, and confirm the strongest few with
-  `get_mabl_test_run_artifact` screenshots. Never call a test proven valuable on
-  categories alone.
+  test itself was wrong. Count both, matching runs on environment and browser.
+  Treat a same-version recovery as a candidate catch only when it is categorized
+  as a regression, and confirm the strongest few with screenshots. Never call a
+  test proven valuable on categories alone.
 - **Critical journey match.** Match the test to the intake journeys by name,
   labels, and the URLs and pages its steps visit. Where a match is plausible but
   unclear, call `identify_coverage_gaps` with the journey as the requirement and
@@ -166,8 +164,9 @@ mostly the same pages. Find candidates three ways.
 - `search_mabl_tests` with the journey description, which returns tests that
   describe the same behaviour.
 
-For each overlapping group, name the strongest member (best gate, strongest
-assertions, lowest cost) and mark the rest as merge candidates. Read the steps
+For each overlapping group, name the strongest member (a confirmed catch
+first, then best gate, strongest assertions, lowest cost) and mark the rest as
+merge candidates. Read the steps
 of both before calling it overlap, since two tests through the same pages can
 check entirely different things.
 
@@ -180,8 +179,8 @@ there.
 | Class | In short |
 |---|---|
 | Keep | Gates something, checks enough to prove it, and costs little. Or has a confirmed catch |
-| Fix | Worth having, but unstable, expensive to maintain, or too weak to trust yet |
-| Question | Runs and passes, but proves little, gates nothing, or covers nothing anyone named |
+| Fix | Worth having, but unstable, expensive to maintain, too weak to trust, or covering a critical journey while nothing runs it |
+| Question | Runs and proves little, sits in a plan that never fires, is half built, or covers nothing anyone named |
 | Merge | Another test covers the same ground at least as well |
 | Retire | Inactive, disabled, or never passes with nothing depending on it |
 
