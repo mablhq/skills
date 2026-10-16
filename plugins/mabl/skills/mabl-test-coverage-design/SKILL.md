@@ -9,7 +9,10 @@ description: >
   scenario. This skill describes the change, has the mabl exploration agent
   explore it in the live app, designs the suite from its report, then authors
   each test in the mabl cloud. For a SINGLE test, use mabl-test-authoring
-  directly.
+  directly. The next step after mabl-test-impact: the analysis finds the
+  existing tests a change reaches and the gaps they leave; this skill explores
+  those gaps in the live app and builds the tests that fill them. Also fires on
+  "cover the gaps", "add tests for what the impact analysis found".
 allowed-tools: Bash
 ---
 
@@ -594,17 +597,14 @@ badge that changes). Prefer signals a user can see over internal state.
 
 ## Notes that bite
 
-- Specify in each `test_case` the safe inputs that avoid side effects — choose
-  inputs that don't trigger downstream automation, notifications, billing
-  events, or auto-created entities that would pollute the workspace.
+- Put safe inputs in each `test_case`: none that trigger downstream automation,
+  notifications, billing, or auto-created records that pollute the workspace.
 - Tell the planner which app / environment / credentials to target so every
   test in the suite lands in the same place.
 
 ## A quick illustration
 
-Say the diff adds a delete action to the plan detail page. You read it only to
-write the description above. `mabl tests explore` signs in, opens a plan, and
-reports the Delete button and its confirmation, a verified claim that the plan
-leaves the list, and two tests to create that reuse the login flow. You overlay
-the **detail page** pattern, keep both tests (each creates and deletes its own
-plan), and note bulk delete was left `not_exercised`.
+A diff adds Delete to the plan detail page. `mabl tests explore` reports the
+button and its confirmation, a verified claim that the plan leaves the list, and
+two tests that reuse the login flow. You keep both (each creates and deletes its
+own plan) and note bulk delete was left `not_exercised`.

@@ -21,6 +21,8 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   changed value after a reload, and creates and deletes its own data through flows; every control
   in the change is covered or named as left out. Validation fails a test with fewer assertions
   than its design.
+- `mabl-test-coverage-design` now presents itself as the next step after `mabl-test-impact`, and
+  fires on asks like "cover the gaps" after an analysis.
 
 ## [1.13.0] - 2026-10-14
 ### Added
