@@ -23,6 +23,9 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   than its design.
 - `mabl-test-coverage-design` now presents itself as the next step after `mabl-test-impact`, and
   fires on asks like "cover the gaps" after an analysis.
+- `mabl-init` now also writes how to check what a code change affects (test impact analysis) and
+  how to explore a feature or a change before authoring tests (`mabl tests explore`), so the agent
+  knows both exist.
 - `mabl-test-coverage-design` needs mabl CLI 2.138.4 or newer, the first with `mabl tests explore`
   and its `--mode` flag. Every skill now installs that CLI version.
 

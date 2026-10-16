@@ -59,21 +59,16 @@ environments, and URLs together.
 Also call `list_mabl_environments` (same `workspaceId`) to catch environments
 that exist but have no deployment yet (these have a name and id but no URL).
 
-Show the user a table: application → environment → URL. This is the raw
-material for the memory file.
+Show the user a table (application → environment → URL), the raw material for the memory file.
 
-One call (default limit 100) is enough for setup — don't chase pagination. A
-`nextCursor` can come back even when everything already fit on the first page,
-so only fetch another page if the workspace genuinely has more than 100 of
-something.
+One call (default limit 100) is enough. A `nextCursor` can come back even when
+everything fit, so page only when there are genuinely more than 100.
 
-If no applications or environments come back, this workspace isn't set up for
-testing yet. Don't write an empty table — tell the user to add an application
-and a deployment in mabl first (or that tests can still target an ad-hoc URL via
-`urlOverride`), and check they picked the workspace they meant in step 1. Same
-if apps and environments exist but none has a deployment `url`: there's no
-deployment for `run_mabl_test_cloud` to resolve, so tell the user to add one, or
-record that runs must pass `urlOverride`.
+No applications or environments means the workspace isn't set up for testing:
+write no empty table; tell the user to add an application and a deployment (or to
+target an ad-hoc URL via `urlOverride`), and check the workspace from step 1. With
+no deployment `url` at all, tell them to add one or record that runs must pass
+`urlOverride`.
 
 ### 3. Decide how to choose an application & environment
 
@@ -116,9 +111,8 @@ credentials — and only then show the `list_mabl_credentials` list. If a test
 needs no login, store no credential for it.
 
 Per stored credential: **name, ID, and type** plus the note — never a username
-or password (the MCP server never returns those). A credential's *name* can
-embed a test-account username, and this file is committed and shared with your
-team, so it's fine for IDs and names but never a place for real secrets.
+or password. This file is committed and shared, so it holds IDs and names (a name
+can embed a test-account username) but never real secrets.
 
 ### 5. Choose how and where to persist the setup
 
@@ -141,10 +135,9 @@ Ask the user how they want it saved — don't assume a file. Offer:
   `.github/instructions/mabl.instructions.md` with `applyTo`). Pairs naturally
   with the folder-based strategy from step 3 — scope the rule's globs to the
   mapped folders so the right app/environment loads per path.
-- **(c) A skill** — a small `mabl-config` skill (a `SKILL.md` in the client's
-  skills directory, e.g. `.claude/skills/mabl-config/SKILL.md`, or `.agents/skills/mabl-config/SKILL.md` in Devin) the agent
-  invokes on demand. Only pick this if you'd rather it not always be in context
-  — the IDs won't be loaded unless the skill is triggered.
+- **(c) A skill** — a small `mabl-config` skill (e.g. `.claude/skills/mabl-config/SKILL.md`, or `.agents/skills/mabl-config/SKILL.md` in Devin) the agent
+  invokes on demand, for when it shouldn't always be in context: the IDs load only
+  when the skill is triggered.
 
 Default to (a) at the project root. Confirm the format and the resolved path
 with the user before writing.
@@ -166,18 +159,15 @@ wrapper differs:
 - **Rule** → a new rule file with the client's rule frontmatter and the template
   as the body (Cursor `.mdc` with `globs`, Copilot `.instructions.md` with
   `applyTo`). For the folder-based strategy, set the globs to the mapped folders.
-- **Skill** → a `SKILL.md` (e.g. `mabl-config`) whose YAML frontmatter (the
-  `---` block) has a `name` and a **trigger-first `description`**, with the
-  template as the body. The description must fire before any mabl work (e.g.
+- **Skill** → a `SKILL.md` (e.g. `mabl-config`) with YAML frontmatter: a `name`
+  and a **trigger-first `description`** that fires before any mabl work (e.g.
   "Read before creating or running any mabl test in this project — holds the
-  workspace, applications, and credentials to use"). Without frontmatter the
-  skill won't load; without that trigger the IDs won't be in context when tests
-  are later authored — either way it defeats the point of saving them.
+  workspace, applications, and credentials to use"), and the template as the
+  body. Without either, the IDs aren't in context when tests are authored.
 
 ### 7. Confirm and suggest a next step
 
-Summarize what you saved (workspace, number of apps and credentials, file path)
-and suggest a smoke check, e.g.:
+Summarize what you saved (workspace, apps, credentials, path) and suggest a smoke check:
 
 > Try: *"create a mabl test for &lt;a page in your app&gt;"* — I'll use the
 > workspace and app you just configured.
@@ -257,4 +247,14 @@ it creates an empty, non-runnable test envelope.
   mabl resolves the matching deployment/URL automatically. Pass `urlOverride`
   to run against an ad-hoc URL such as a preview deploy.
 - A plan: `run_mabl_plan` with the `planId` (ends in `-p`).
+
+### Check what a code change affects
+`analyze_test_impact` with the change (a PR link or a summary of the diff) and
+the `applicationId` → the existing tests to run, and the coverage gaps.
+
+### Cover a feature or a change
+Explore it first, then author the tests it proposes: `mabl tests explore -a <app id>
+--url <url> --change-description-file change.md` opens a browser on this machine
+(`--mode cloud` uses a mabl cloud browser; `--impact-session <id>` starts from an
+analysis). Its report says what works and which tests and flows to add.
 ```
