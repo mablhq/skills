@@ -21,7 +21,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 |-------|--------------|
 | [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | One-time project setup: records your workspace, apps, environments, and credentials in agent memory. |
 | [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Plan a test in plain language, generate it in the mabl cloud, and check it against what you asked for. |
-| [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Explore a feature like a user and author a suite of self-isolating tests, each checked against the ask. |
+| [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Describe a feature or change, reuse its test impact analysis, have the mabl exploration agent explore it on your machine or in the cloud, and author a suite of self-isolating tests from its report, each checked against the ask. |
 | [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change an existing test through the cheapest lane that works, confirming before it writes to the default branch. |
 | [`mabl-version-compare`](plugins/mabl/skills/mabl-version-compare/SKILL.md) | Say what changed between two versions of a test or flow, separating real changes from reorganization. |
 | [`mabl-test-edit-verify`](plugins/mabl/skills/mabl-test-edit-verify/SKILL.md) | Certify an edit against its intent and the prior version instead of trusting one green run; never edits or merges. |
@@ -125,7 +125,7 @@ gh skill install mablhq/skills mabl-debug
 gh skill install mablhq/skills mabl-test-impact
 ```
 
-`gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging, coverage-design, and test-impact skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
+`gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging and test-impact skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
 
 ```json
 {
