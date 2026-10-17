@@ -15,6 +15,9 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   conversation, or the one a CI job posted on the pull request. With none, it suggests running one
   first with `mabl-test-impact`; its passing tests, failing runs and gaps give the exploration a
   head start.
+- Exploring needs test impact analysis and generative AI on the workspace. When the
+  `analyze_test_impact` tool is missing or refuses, the skill says so and stops instead of
+  starting an exploration that cannot run.
 - The exploration runs in a browser on your machine by default, which also reaches localhost and
   VPN apps, or in a mabl cloud browser with `--mode cloud`.
 - The suite no longer copies the report as it is. Each test covers one behavior, asserts every
