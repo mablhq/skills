@@ -5,6 +5,33 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.14.0] - 2026-10-16
+### Changed
+- `mabl-test-coverage-design` no longer explores the app itself. It describes the change (from
+  a code change, a spec, or a test impact analysis session), runs `mabl tests explore` so the mabl
+  exploration agent explores it in the live app, and designs the suite from the agent's report:
+  what it saw, the selectors that held up, and the tests it proposes, reusing existing flows.
+- It first looks for a test impact analysis that already belongs to the change: one from the
+  conversation, or the one a CI job posted on the pull request. With none, it suggests running one
+  first with `mabl-test-impact`; its passing tests, failing runs and gaps give the exploration a
+  head start.
+- Exploring needs test impact analysis and generative AI on the workspace. When the
+  `analyze_test_impact` tool is missing or refuses, the skill says so and stops instead of
+  starting an exploration that cannot run.
+- The exploration runs in a browser on your machine by default, which also reaches localhost and
+  VPN apps, or in a mabl cloud browser with `--mode cloud`.
+- The suite no longer copies the report as it is. Each test covers one behavior, asserts every
+  changed value after a reload, and creates and deletes its own data through flows; every control
+  in the change is covered or named as left out. Validation fails a test with fewer assertions
+  than its design.
+- `mabl-test-coverage-design` now presents itself as the next step after `mabl-test-impact`, and
+  fires on asks like "cover the gaps" after an analysis.
+- `mabl-init` now also writes how to check what a code change affects (test impact analysis) and
+  how to explore a feature or a change before authoring tests (`mabl tests explore`), so the agent
+  knows both exist.
+- `mabl-test-coverage-design` needs mabl CLI 2.138.4 or newer, the first with `mabl tests explore`
+  and its `--mode` flag. Every skill now installs that CLI version.
+
 ## [1.13.0] - 2026-10-14
 ### Added
 - Claude Code only: a test impact analysis that a CI job posted on a pull request now opens in the live view too, when your agent reads that comment (for example with `gh pr view`). Before, only an analysis your agent ran itself showed up. The test impact skill now tells the agent to print that comment in full, so the live view can open it.

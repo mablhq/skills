@@ -27,7 +27,7 @@ test('debugger', async () => {
 
   const [started] = captureDebugger(
     bash(
-      'npx -y @mablhq/mabl-cli@2.136.25 agent debug session start abc-j --headless 2>&1',
+      'npx -y @mablhq/mabl-cli@2.138.4 agent debug session start abc-j --headless 2>&1',
       'Warning: something\n{"sessionId":"mabl-debug-1","testId":"abc-j","browser":"chromium","stepCount":12}\n',
     ),
   );
@@ -37,7 +37,7 @@ test('debugger', async () => {
     testId: 'abc-j',
     name: 'abc-j',
     status: 'started',
-    cli: 'npx -y @mablhq/mabl-cli@2.136.25',
+    cli: 'npx -y @mablhq/mabl-cli@2.138.4',
   });
   assert.deepEqual(
     captureDebugger(bash('mabl agent debug session start abc-j &', '')),
@@ -273,7 +273,7 @@ test('debugger', async () => {
   const entity: MablEntity = {
     kind: 'debug',
     id: 'mabl-debug-1',
-    cli: 'npx -y @mablhq/mabl-cli@2.136.25',
+    cli: 'npx -y @mablhq/mabl-cli@2.138.4',
     status: 'started',
     updatedAt: 0,
   };
@@ -322,7 +322,7 @@ test('debugger', async () => {
     assert.deepEqual(changed[0], [
       'npx',
       '-y',
-      '@mablhq/mabl-cli@2.136.25',
+      '@mablhq/mabl-cli@2.138.4',
       'agent',
       'debug',
       'session',
@@ -426,7 +426,7 @@ test('debugger', async () => {
     }
     (button.props.onPress as () => void)();
     assert.deepEqual(filled, [
-      'npx -y @mablhq/mabl-cli@2.136.25 agent debug session run-step mabl-debug-1',
+      'npx -y @mablhq/mabl-cli@2.138.4 agent debug session run-step mabl-debug-1',
     ]);
     const texts = flat(tree).filter((node) => node.tag === 'Text');
     assert.equal(texts.length, 2 + 4);
