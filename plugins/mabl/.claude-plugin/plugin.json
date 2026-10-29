@@ -10,6 +10,7 @@
   "homepage": "https://www.mabl.com",
   "repository": "https://github.com/mablhq/skills",
   "license": "MIT",
+  "privacyPolicyUrl": "https://www.mabl.com/privacy",
   "keywords": [
     "testing",
     "e2e",

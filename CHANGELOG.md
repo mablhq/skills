@@ -5,7 +5,7 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.14.0] - 2026-10-16
+## [1.14.0] - 2026-10-29
 ### Changed
 - `mabl-test-coverage-design` no longer explores the app itself. It describes the change (from
   a code change, a spec, or a test impact analysis session), runs `mabl tests explore` so the mabl
@@ -31,6 +31,13 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
   knows both exist.
 - `mabl-test-coverage-design` needs mabl CLI 2.138.4 or newer, the first with `mabl tests explore`
   and its `--mode` flag. Every skill now installs that CLI version.
+
+## [1.13.1] - 2026-10-27
+### Changed
+- The README now lists exactly what the Claude Code live view reads, what its hooks do, which
+  mabl MCP tools it calls and programs it runs on its own, and what it sends where. The Claude
+  manifest names the privacy policy in `privacyPolicyUrl`. The live view's poll timeout helper is
+  rewritten in a form the plugin directory's code check can read. No change in behavior.
 
 ## [1.13.0] - 2026-10-14
 ### Added
