@@ -40,7 +40,7 @@ test('only https mabl.com URLs open', () => {
 test('only the public CLI, run as a command, counts as a mabl call', () => {
   assert.equal(mablCall(bash('mabl tests list'))?.source, 'cli');
   assert.equal(
-    mablCall(bash('npx -y @mablhq/mabl-cli@2.136.25 tests list'))?.source,
+    mablCall(bash('npx -y @mablhq/mabl-cli@2.138.4 tests list'))?.source,
     'cli',
   );
   assert.equal(mablCall(bash('echo "a"; mabl tests list'))?.source, 'cli');
