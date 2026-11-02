@@ -5,6 +5,11 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.13.2] - 2026-11-02
+### Changed
+- Pinned `chrome-devtools-mcp` moves from `1.10.1` to `1.12.0`.
+- Pinned `@mablhq/mabl-cli` moves from `2.136.25` to `2.143.1`.
+
 ## [1.13.1] - 2026-10-27
 ### Changed
 - The README now lists exactly what the Claude Code live view reads, what its hooks do, which
