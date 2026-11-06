@@ -5,6 +5,10 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.15.0] - 2026-11-06
+### Added
+- `mabl-test-value`, a read-only assessment of which tests in a workspace are worth keeping. It weighs what each test protects (its deployment gate, assertion strength, real changes it has caught, and the critical journeys it covers) against what it costs (flakiness, maintenance, run time), sorts the catalog into keep, fix, question, merge and retire with the evidence for each, and flags critical journeys no test protects.
+
 ## [1.13.2] - 2026-11-02
 ### Changed
 - Pinned `chrome-devtools-mcp` moves from `1.10.1` to `1.12.0`.
