@@ -5,9 +5,21 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
-## [1.14.0] - 2026-10-15
+## [1.14.0] - 2026-11-06
 ### Added
 - `mabl-workspace-health`, a read-only audit of one workspace's test suite. It ranks failing tests by the failures they contribute, shows how many pass-rate points fixing the top N would buy, diagnoses each selected test to a root cause with a concrete repair move, and lists what can be cleaned out of the catalog (dormant, duplicated and unlabelled tests, and disabled plans). New and healthy workspaces skip straight to the catalog and quality checks.
+
+## [1.13.2] - 2026-11-02
+### Changed
+- Pinned `chrome-devtools-mcp` moves from `1.10.1` to `1.12.0`.
+- Pinned `@mablhq/mabl-cli` moves from `2.136.25` to `2.143.1`.
+
+## [1.13.1] - 2026-10-27
+### Changed
+- The README now lists exactly what the Claude Code live view reads, what its hooks do, which
+  mabl MCP tools it calls and programs it runs on its own, and what it sends where. The Claude
+  manifest names the privacy policy in `privacyPolicyUrl`. The live view's poll timeout helper is
+  rewritten in a form the plugin directory's code check can read. No change in behavior.
 
 ## [1.13.0] - 2026-10-14
 ### Added

@@ -12,6 +12,7 @@ import type {
   Els,
   Feature,
   Ops,
+  PollResult,
   Settings,
   ToolResult,
 } from './core/feature';
@@ -182,13 +183,17 @@ const openUrl = async ($: Engine, url: string): Promise<void> => {
   $.ui.toast(`mabl: could not open ${href}.`);
 };
 
-const withTimeout = <T,>($: Engine, work: Promise<T>): Promise<T> =>
-  Promise.race([
+function withTimeout(
+  $: Engine,
+  work: Promise<PollResult>,
+): Promise<PollResult> {
+  return Promise.race([
     work,
     $.clock.sleep(CALL_TIMEOUT_MS).then(() => {
       throw new Error(`no answer in ${CALL_TIMEOUT_MS / 1000}s`);
     }),
   ]);
+}
 
 /** Records the updates; true when anything changed. */
 const apply = async (

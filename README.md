@@ -36,8 +36,8 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 | Server | Type | Purpose |
 |--------|------|---------|
 | `mabl` | Hosted (`https://mcp.mabl.com/mcp`) | Structured tools for your workspace: failure analysis with root-cause inference, test details, applications, environments, credentials, and more. |
-| `chrome-for-mabl` | Local (`npx chrome-devtools-mcp@1.10.1`) | Attaches to the Chrome instance that `mabl agent debug session` launches, so the agent can see and drive the live browser while reproducing a failure. |
-| `chrome-devtools` | Local (`npx chrome-devtools-mcp@1.10.1`) | Drives its own real Chrome instance so the agent can explore an app while designing test coverage — not attached to a debug session. |
+| `chrome-for-mabl` | Local (`npx chrome-devtools-mcp@1.12.0`) | Attaches to the Chrome instance that `mabl agent debug session` launches, so the agent can see and drive the live browser while reproducing a failure. |
+| `chrome-devtools` | Local (`npx chrome-devtools-mcp@1.12.0`) | Drives its own real Chrome instance so the agent can explore an app while designing test coverage — not attached to a debug session. |
 
 ## Prerequisites
 
@@ -45,7 +45,7 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 2. The mabl CLI, authenticated:
 
    ```bash
-   npm install -g @mablhq/mabl-cli@2.136.25
+   npm install -g @mablhq/mabl-cli@2.143.1
    mabl auth login --auto
    ```
 
@@ -134,11 +134,11 @@ gh skill install mablhq/skills mabl-workspace-health
   "mcpServers": {
     "chrome-for-mabl": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@1.10.1", "--browserUrl", "http://127.0.0.1:9222"]
+      "args": ["-y", "chrome-devtools-mcp@1.12.0", "--browserUrl", "http://127.0.0.1:9222"]
     },
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@1.10.1"]
+      "args": ["-y", "chrome-devtools-mcp@1.12.0"]
     },
     "mabl": {
       "type": "http",
@@ -169,6 +169,14 @@ The agent uses mabl's failure analysis and run artifacts to decide whether it's 
 In Claude Code, the plugin also adds a live view of the mabl work your agent does. Each test authoring session, cloud run, plan run, deployment, debug session, test impact analysis (including one a CI job posted on a pull request), and branch gets its own tab, updated while it runs. So does a deployment, plan run, or test run your agent only looks up. `/mabl` lists them all, and a band above the prompt counts what is still running. Most buttons open a result in your browser, or put the next command (debug a test run or edit its test, run an impacted test in the cloud, author a test for a coverage gap) in your prompt for you to send. Two act right away: **Re-run** on a passed or failed test run, and **Send** on an authoring session's question. Lists of test runs have **All**, **Failed**, and **Passed** filters. In `/config`, **Show mabl results in side panel** adds the live step list of each test authoring session.
 
 What runs in the background: while an item is running, and once after your agent looks one up, the plugin checks it every few seconds through the `mabl` MCP server, without a permission prompt for those reads. For authoring and debug sessions your agent started with the `mabl` CLI, it re-runs that CLI to check them. **Re-run** starts a new cloud test run, which counts toward your cloud usage, with no confirmation. The plugin keeps the last 50 items (names, ids, links, branches) in Claude Code's plugin storage on your machine, across sessions and projects, and lists them under **Recent**. There is no separate switch: disabling the plugin with `/plugin` turns this off, along with its skills and the mabl MCP server.
+
+Exactly what the live view does on its own, without the model asking:
+
+- **What it reads from the conversation.** It watches your agent's `Bash` calls and `mabl` MCP tool calls, with their output, to recognize mabl items (ids, names, links, statuses). It reads nothing else from the conversation. After Claude Code compacts the conversation, it adds one note listing the items it is tracking, so your agent keeps track of them too.
+- **Hooks.** `tool.call`: after your agent's `Bash` or `mabl` MCP call finishes, it reads the result as above; it never blocks, changes, or reruns the call. `command.run`: it answers only `/mabl`. `session.compact` and `prompt.submit`: after a compaction, it adds that one note before your next prompt; it doesn't read or change your prompt.
+- **MCP tools it calls itself**, all on the `mabl` server: `get_mabl_test_run`, `get_mabl_plan_run`, `get_mabl_deployment_status`, `mabl_authoring_status`, `get_mabl_authoring_steps`, `get_mabl_flow_steps`, `get_mabl_branch_merge_status`, and `list_mabl_applications` to check items. It also calls `rerun_mabl_test` when you click **Re-run**, and `mabl_authoring_answer` when you click **Send**. These send item ids, and for **Send** the answer you typed, to mabl at `https://mcp.mabl.com/mcp`. Nothing is sent anywhere else.
+- **Programs it runs.** The mabl CLI your agent used, either `mabl` or `npx @mablhq/mabl-cli@<exact version>`, only as `agent authoring status --session-id <id>` and `agent debug session list-steps <id> -o json`. To open a mabl link in your browser it runs `open` (macOS), `xdg-open` (Linux), or `rundll32 url.dll,FileProtocolHandler` (Windows), and only for `https://` links on `mabl.com`.
+- **Files it reads.** `~/.mabl/debug/<session id>/session.json`, which the mabl CLI writes for a debug session. It reads the `HOME` or `USERPROFILE` environment variable to find it.
 
 ## Learn more
 
