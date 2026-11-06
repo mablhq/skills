@@ -5,6 +5,10 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.14.0] - 2026-11-06
+### Added
+- `mabl-workspace-health`, a read-only audit of one workspace's test suite. It ranks failing tests by the failures they contribute, shows how many pass-rate points fixing the top N would buy, diagnoses each selected test to a root cause with a concrete repair move, and lists what can be cleaned out of the catalog (dormant, duplicated and unlabelled tests, and disabled plans). New and healthy workspaces skip straight to the catalog and quality checks.
+
 ## [1.13.2] - 2026-11-02
 ### Changed
 - Pinned `chrome-devtools-mcp` moves from `1.10.1` to `1.12.0`.
