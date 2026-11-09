@@ -44,7 +44,7 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 2. The mabl CLI, authenticated:
 
    ```bash
-   npm install -g @mablhq/mabl-cli@2.143.1
+   npm install -g @mablhq/mabl-cli@2.144.10
    mabl auth login --auto
    ```
 
