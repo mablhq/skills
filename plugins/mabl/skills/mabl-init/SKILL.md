@@ -24,9 +24,11 @@ setup where you want it — an agent memory file, a rule, or a skill.
 
 ## Prerequisites
 
-This skill uses the hosted **`mabl` MCP server** (bundled with this plugin) —
-not the mabl CLI. Start by calling `get_current_user` to grab
-`defaultWorkspaceId` (the fallback workspace when the user doesn't pick one).
+This skill uses the hosted **`mabl` MCP server** (bundled with the mabl plugin)
+— not the mabl CLI — and needs a mabl account. First call `get_current_user` to
+grab `defaultWorkspaceId` (the fallback workspace when the user doesn't pick
+one). If `get_current_user` isn't in your tool list, or the call fails, stop and
+write nothing, then tell the user why using `references/cant-reach-mabl.md`.
 
 ## Workflow
 
@@ -62,10 +64,8 @@ that exist but have no deployment yet (these have a name and id but no URL).
 Show the user a table: application → environment → URL. This is the raw
 material for the memory file.
 
-One call (default limit 100) is enough for setup — don't chase pagination. A
-`nextCursor` can come back even when everything already fit on the first page,
-so only fetch another page if the workspace genuinely has more than 100 of
-something.
+One call (default limit 100) is enough — don't chase pagination. A `nextCursor`
+can come back even when everything fit; page only if there are more than 100.
 
 If no applications or environments come back, this workspace isn't set up for
 testing yet. Don't write an empty table — tell the user to add an application

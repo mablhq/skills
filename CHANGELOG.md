@@ -5,6 +5,13 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.13.4] - 2026-11-09
+### Fixed
+- `mabl-init` now explains why it stopped when it can't reach your mabl account. If the
+  `mabl` MCP server isn't connected, it says how to add it or sign in to it, and links the free
+  trial for anyone without an account. Other errors, like a timeout, are reported as they are,
+  not as a sign-in problem.
+
 ## [1.13.3] - 2026-11-09
 ### Changed
 - Pinned `@mablhq/mabl-cli` moves from `2.143.1` to `2.144.10`.
