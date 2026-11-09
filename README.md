@@ -40,7 +40,7 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 
 ## Prerequisites
 
-1. A [mabl account](https://www.mabl.com/registration/signup) (free trial available).
+1. A [mabl account](https://www.mabl.com/trial-registration) (free trial available).
 2. The mabl CLI, authenticated:
 
    ```bash
