@@ -93,6 +93,8 @@ export type ImpactLine = {
 
 // `capture` cannot return detail, so it parks the analysis here and the first poll hands it to the store.
 const captured = new Map<string, ImpactDetail>();
+// A background analysis's start arguments, by session, so its polled result keeps the change description.
+const started = new Map<string, Fields>();
 
 const resultData = (call: CallRecord): Fields => {
   const data = obj(call.structured);
@@ -300,27 +302,73 @@ export const parseImpactComment = (text: string): Analysis | undefined => {
   }
 };
 
+const RESULT_TOOL = 'get_mabl_test_impact_result';
+
 const analysisOf = (
   call: CallRecord,
 ): (Analysis & {server?: string}) | undefined => {
   const parsed = mablCall(call);
-  if (parsed?.source === 'mcp' && parsed.name === 'analyze_test_impact') {
-    return {args: call.args, data: resultData(call), server: parsed.server};
+  if (
+    parsed?.source === 'mcp' &&
+    (parsed.name === 'analyze_test_impact' || parsed.name === RESULT_TOOL)
+  ) {
+    const data = resultData(call);
+    const sessionId = str(data.sessionId) ?? str(call.args.sessionId);
+    const startArgs =
+      parsed.name === RESULT_TOOL && sessionId
+        ? started.get(sessionId)
+        : undefined;
+
+    return {args: {...startArgs, ...call.args}, data, server: parsed.server};
   }
 
   return call.tool === 'Bash' ? parseImpactComment(call.text) : undefined;
 };
 
+/** A background analysis with no result yet: started or polled while running, or failed. */
+const pendingImpact = ({
+  args,
+  data,
+  server,
+}: Analysis & {server?: string}): EntityUpdate[] => {
+  const id = str(data.sessionId);
+  const status = data.done === false ? 'running' : str(data.status);
+  if (!id || (status !== 'running' && status !== 'failed')) {
+    return [];
+  }
+  if (status === 'running') {
+    started.set(id, args);
+  } else {
+    started.delete(id);
+  }
+  const changeDescription = str(args.changeDescription);
+
+  return [
+    withWorkspace({
+      kind: 'impact',
+      id,
+      name: changeDescription ? shortName(changeDescription) : undefined,
+      status,
+      workspaceId: str(data.workspaceId),
+      mcpServer: server,
+    }),
+  ];
+};
+
 export const captureImpact = (call: CallRecord): EntityUpdate[] => {
   const analysis = analysisOf(call);
-  if (!analysis || !Array.isArray(analysis.data.tests)) {
+  if (!analysis) {
     return [];
+  }
+  if (!Array.isArray(analysis.data.tests)) {
+    return pendingImpact(analysis);
   }
   const {data} = analysis;
   const detail = toImpactDetail(analysis.args, data);
   const id =
     str(data.sessionId) ?? `impact-${hashOf(analysis.args).replace(':', '-')}`;
   const reference = detail.references[0];
+  started.delete(id);
   captured.set(id, detail);
 
   return [
@@ -484,6 +532,10 @@ export const wrapText = (
 };
 
 const MAX_APPLICATION_PAGES = 3;
+const PENDING_NOTES: Partial<Record<string, string>> = {
+  running: 'The analysis is running; its results show here when it completes.',
+  failed: 'The analysis failed, so it has no results to show.',
+};
 const INFER_TARGET = 'infer';
 const LOW_QUALITY = 30;
 
@@ -687,7 +739,8 @@ export const impactFeature: Feature = {
             {entity.status ? ` · ${entity.status}` : ''}
           </Text>
           <Text dimColor>
-            The analysis details are not loaded in this session.
+            {PENDING_NOTES[stateOf(entity.status) ?? ''] ??
+              'The analysis details are not loaded in this session.'}
           </Text>
         </Box>
       );

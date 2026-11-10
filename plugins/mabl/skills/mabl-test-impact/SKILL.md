@@ -1,6 +1,6 @@
 ---
 name: mabl-test-impact
-allowed-tools: Read, Bash(mabl *), Bash(npm install -g @mablhq/mabl-cli*), Bash(lsof *), Bash(ss *), Bash(xargs --version), Bash(git branch --show-current), mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__list_mabl_branches, mcp__plugin_mabl_mabl__list_mabl_branches, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__get_mabl_test_run_failure_reason, mcp__plugin_mabl_mabl__get_mabl_test_run_failure_reason, mcp__mabl__run_mabl_test_cloud, mcp__plugin_mabl_mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local, mcp__plugin_mabl_mabl__run_mabl_test_local
+allowed-tools: Read, Bash(mabl *), Bash(npm install -g @mablhq/mabl-cli*), Bash(lsof *), Bash(ss *), Bash(xargs --version), Bash(git branch --show-current), Bash(sleep 30), mcp__mabl__get_current_user, mcp__plugin_mabl_mabl__get_current_user, mcp__mabl__list_mabl_workspaces, mcp__plugin_mabl_mabl__list_mabl_workspaces, mcp__mabl__list_mabl_applications, mcp__plugin_mabl_mabl__list_mabl_applications, mcp__mabl__list_mabl_environments, mcp__plugin_mabl_mabl__list_mabl_environments, mcp__mabl__list_mabl_credentials, mcp__plugin_mabl_mabl__list_mabl_credentials, mcp__mabl__analyze_test_impact, mcp__plugin_mabl_mabl__analyze_test_impact, mcp__mabl__get_mabl_test_impact_result, mcp__plugin_mabl_mabl__get_mabl_test_impact_result, mcp__mabl__search_mabl_tests, mcp__plugin_mabl_mabl__search_mabl_tests, mcp__mabl__list_mabl_tests, mcp__plugin_mabl_mabl__list_mabl_tests, mcp__mabl__list_mabl_branches, mcp__plugin_mabl_mabl__list_mabl_branches, mcp__mabl__get_mabl_test, mcp__plugin_mabl_mabl__get_mabl_test, mcp__mabl__get_mabl_test_steps, mcp__plugin_mabl_mabl__get_mabl_test_steps, mcp__mabl__list_mabl_plans, mcp__plugin_mabl_mabl__list_mabl_plans, mcp__mabl__get_mabl_plan, mcp__plugin_mabl_mabl__get_mabl_plan, mcp__mabl__get_test_quality_report, mcp__plugin_mabl_mabl__get_test_quality_report, mcp__mabl__list_mabl_test_runs, mcp__plugin_mabl_mabl__list_mabl_test_runs, mcp__mabl__get_mabl_test_run, mcp__plugin_mabl_mabl__get_mabl_test_run, mcp__mabl__get_mabl_test_run_failure_reason, mcp__plugin_mabl_mabl__get_mabl_test_run_failure_reason, mcp__mabl__run_mabl_test_cloud, mcp__plugin_mabl_mabl__run_mabl_test_cloud, mcp__mabl__run_mabl_test_local, mcp__plugin_mabl_mabl__run_mabl_test_local
 description: >-
   Find, screen, run, and report on the EXISTING mabl end-to-end tests covering a product-code change, after unit tests pass and before opening a PR, or check what already covers an area. For designing NEW coverage for an area use mabl-test-coverage-design; for a test your change intentionally broke use mabl-test-edit. Not for docs, config, or pure refactors. Surfaces coverage gaps; authors against them only as an opt-in handoff to mabl-test-authoring. Triggers on "which mabl tests should I run for this change", "what mabl tests are impacted by this change", "validate this change against mabl", "what covers this area before I add tests". Also fires on first-time setup and missing prerequisites: "set up test impact analysis", "check my test impact setup", "is test impact analysis working", "analyze_test_impact is missing", "test impact analysis is not enabled".
 ---
@@ -74,8 +74,8 @@ see `references/report.md`). It adds the order, and where you are and aren't exp
 
 1. **Preflight.** Resolve and state the seven values every later step depends on, before you promise
    a result rather than after.
-2. **Analyze.** One `analyze_test_impact` call per application, unioned across applications, read
-   as judgment rather than re-curated.
+2. **Analyze.** One `analyze_test_impact` call per application, polled to its result when it runs
+   in the background, unioned across applications, read as judgment rather than re-curated.
 3. **Screen.** Hard gates, side-effect band, reliability read with its sample context.
 4. **Run.** Canary one test, read what it tells you, then dispatch the read-only and contained
    tests **yourself**. Ask about the shared-state and unverified bands.
@@ -168,8 +168,11 @@ the change finds candidates, and everything downstream works the same on a set f
 (`references/screening.md`). An invented gap list is worse than an absent one, because a reader
 can act on it.
 
-**It is slow by design** — single-digit minutes, with a server-side cap around five and a
-heartbeat built because a call this long would otherwise sit silent. Slow is not a hang.
+**An analysis takes minutes**, with a server-side cap around five; slow is not a hang. Output with
+`done: false` is not the result: call `get_mabl_test_impact_result` with its `sessionId` and
+`workspaceId` every 30 seconds until `done` is true; any other output is the result. A poll is a
+wait, not a retry. A `failed` status ends the analysis: report the tool's `message`. After 12 polls
+(six minutes) without `done`, report the analysis unfinished, with its `sessionId`, and stop.
 
 ## 4. Scope the call
 
@@ -203,15 +206,14 @@ wrong-but-valid `applicationId` doesn't error, it returns a confident, well-form
 for the wrong product surface. An id you can't reach returns one deliberately vague message
 covering both "doesn't exist" and "not yours", so read it as *go find a valid id*.
 
-**The application decides the workspace.** The server runs the analysis in the workspace that owns
-it — not the `workspaceId` you passed to `list_mabl_applications`, not your default-workspace
-preference, not the workspace your API key was created for, and no switcher or CLI `config
-set-workspace`. Your default workspace decides whether the tool is *visible* (**Preflight**),
-never which workspace it analyzes. **You still need that workspace id in hand**, because the
-dispatch in **Run it** and the fallback search in **Honest limits** both take one explicitly — and
-every `viewTestUrl` is `/workspaces/<workspace-id>/train/tests/<test-id>/current`, so reading
-one confirms the workspace the analysis actually resolved. If it isn't the one you passed, fix the
-application, not the workspace.
+**The application decides the workspace.** The server runs the analysis in the workspace that owns it
+— not the `workspaceId` you passed to `list_mabl_applications`, not your default-workspace preference,
+not the workspace your API key was created for, and no switcher or CLI `config set-workspace`. Your
+default workspace decides whether the tool is *visible* (**Preflight**), never which workspace it
+analyzes. **You still need that workspace id in hand**, because the dispatch in **Run it** and the
+fallback search in **Honest limits** both take one explicitly — and every `viewTestUrl` is
+`/workspaces/<workspace-id>/train/tests/<test-id>/current`, so reading one confirms the workspace the
+analysis actually resolved. If it isn't the one you passed, fix the application, not the workspace.
 
 **Not every workspace has a knowledge graph, and nothing in the response says so.** Graph-backed
 analysis is enabled per workspace and is a property of the application's workspace, not a knob you
@@ -253,9 +255,8 @@ them as text.
 duplicate calls: you pay the full cost twice and can still get two different sets back.
 
 **Repeat calls genuinely differ.** Retrieval blends keyword and semantic search, so the *same*
-`changeDescription` can return materially different sets. Don't re-run a call to "confirm" a set,
-and when a follow-up comes back thinner, read it as variance rather than as proof the first set
-was wrong.
+`changeDescription` can return materially different sets. Don't re-run a call to "confirm" a set, and
+when a follow-up comes back thinner, read it as variance rather than as proof the first set was wrong.
 
 The returned set is already retrieved, verified, and prioritized server-side. Don't drop tests to
 look tidy; read the fields and act:
@@ -279,14 +280,13 @@ look tidy; read the fields and act:
 - **`runContext`** — the screening facts for that test: most of **Screen before you run**,
   arriving with the analysis instead of after it.
 
-The result as a whole also names the scope it ran in and the session behind it:
-**`workspaceId`** and **`applicationId`** are the workspace and application the analysis
-actually ran against, as the server validated them — not necessarily what you thought you passed,
-which is what makes them worth recording. **`sessionId`** is the agent session that recorded the
-analysis, and the join key for its trace; it is optional, and absent when no session was opened.
-`workspaceId` is the direct answer to the question **Scope the call** has you read off a
-`viewTestUrl` — the workspace the analysis actually resolved — so confirm the scope against it
-rather than by parsing a URL.
+The result as a whole also names the scope it ran in and the session behind it: **`workspaceId`**
+and **`applicationId`** are the workspace and application the analysis actually ran against, as the
+server validated them — not necessarily what you thought you passed, which is what makes them worth
+recording. **`sessionId`** is the agent session that recorded the analysis, and the join key for its
+trace; it is optional, and absent when no session was opened. `workspaceId` is the direct answer to
+the question **Scope the call** has you read off a `viewTestUrl` — the workspace the analysis
+actually resolved — so confirm the scope against it rather than by parsing a URL.
 
 Each result also carries **`testId`** and **`viewTestUrl`**. Include the url when you
 surface a test or a gap so the reader can open it; carry the id through, because it is what every
@@ -607,7 +607,7 @@ terms as an approval-gated one (**Report the validation**), not a passing one wi
 | Validate **uncommitted local changes** | `mabl` CLI `tests run` against a local server | Pass/fail via the **exit code** (no JSON) |
 | Machine-readable results on **deployed** code | `run_mabl_test_cloud` | `journey_run` ids you poll with `get_mabl_test_run` |
 | A human wants to **watch** a local run | `run_mabl_test_local` | A **launcher link to hand the person** — and nothing else: no status, logs, or pass/fail |
-| Running **inside CI**, advisory | `analyze_test_impact` only, no run tools | The impacted list and the gaps, in the job output or a PR comment; nothing dispatched (`references/ci-advisory.md`) |
+| Running **inside CI**, advisory | `analyze_test_impact` (and `get_mabl_test_impact_result` to poll it) only, no run tools | The impacted list and the gaps, in the job output or a PR comment; nothing dispatched (`references/ci-advisory.md`) |
 | Running **inside CI**, dispatching | `analyze_test_impact`, then one `trigger_mabl_deployment` with `testIds` and `impactSessionId` | A deployment event on the Deployments page, running the assessed set under plan `<event>-selection` and linked to the analysis (`references/ci-run.md`) |
 | **CI without an agent** | `mabl tests impact -a <application-id> --change-description-file <file> -o markdown` (CLI ≥ 2.132.3) | The same advisory markdown, rendered by the CLI; advisory, exit 0 on any completed analysis |
 
