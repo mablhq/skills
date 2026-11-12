@@ -168,12 +168,12 @@ the change finds candidates, and everything downstream works the same on a set f
 (`references/screening.md`). An invented gap list is worse than an absent one, because a reader
 can act on it.
 
-**An analysis takes minutes**, with a server-side cap around five; slow is not a hang. Output with
+**An analysis takes minutes**, with a server-side cap around eight; slow is not a hang. Output with
 `done: false` is not the result: run `sleep 30` (in the background if a foreground sleep is
 blocked), then call `get_mabl_test_impact_result` with its `sessionId` and `workspaceId` until
 `done` is true; any other output is the result. A poll is a wait, not a retry. A `failed` status
-ends the analysis: report the tool's `message`. After six minutes (about 12 polls) without `done`,
-report the analysis unfinished, with its `sessionId`, and stop.
+ends the analysis: report the tool's `message`. After twelve minutes (about 20 polls) without
+`done`, report the analysis unfinished, with its `sessionId`, and stop.
 
 ## 4. Scope the call
 
