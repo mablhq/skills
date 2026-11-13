@@ -33,14 +33,12 @@ over an earlier set, never `includePlans`.
 What you keep is assessed from the set that analysis returned, so a second analysis moves the
 ground under it.
 
-**When `analyze_test_impact` returns `done: false`, the analysis runs in the background.** Call
-`get_mabl_test_impact_result` with the `sessionId` and `workspaceId` that output carries, with
-`sleep 30` before each call, until `done` is true, at most 24 times; these polls are not calls in
-the count above. Wherever this file says what the analysis returned, it means that last output, or
-the first one when it had no `done: false`. A `failed` status ends the analysis: record it as a
-failure with the tool's `message`, and start no other. Twenty-four polls without `done`, or no
-`get_mabl_test_impact_result` in your tool list, end the analysis unfinished: say so with its
-`sessionId`, and start no other analysis.
+**`done: false` means the analysis is still running;** poll `get_mabl_test_impact_result` as its
+message says. Polls are not calls in the count above, and wherever this file says what the analysis
+returned, it means the last output. `failed` is final here: record it with the tool's `message` and
+start no other analysis. The server ends every analysis, as completed or `failed`; if you reach a
+polling limit your instructions set, or you have no `get_mabl_test_impact_result`, record the
+analysis as unfinished with its `sessionId`.
 
 ## Assess, do not re-analyze
 

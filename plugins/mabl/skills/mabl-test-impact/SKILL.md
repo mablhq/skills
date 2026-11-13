@@ -168,12 +168,10 @@ the change finds candidates, and everything downstream works the same on a set f
 (`references/screening.md`). An invented gap list is worse than an absent one, because a reader
 can act on it.
 
-**An analysis takes minutes**, with a server-side cap around eight; slow is not a hang. Output with
-`done: false` is not the result: run `sleep 30` (in the background if a foreground sleep is
-blocked), then call `get_mabl_test_impact_result` with its `sessionId` and `workspaceId` until
-`done` is true; any other output is the result. A poll is a wait, not a retry. A `failed` status
-ends the analysis: report the tool's `message`. After twelve minutes (about 20 polls) without
-`done`, report the analysis unfinished, with its `sessionId`, and stop.
+**An analysis takes minutes**; slow is not a hang. `done: false` means it is still running: poll
+`get_mabl_test_impact_result` until `done` is true, as its message says. A poll is not a retry. The
+server ends every analysis, as completed or `failed`; if one runs far longer than usual, report it
+unfinished with its `sessionId`.
 
 ## 4. Scope the call
 
@@ -207,14 +205,13 @@ wrong-but-valid `applicationId` doesn't error, it returns a confident, well-form
 for the wrong product surface. An id you can't reach returns one deliberately vague message
 covering both "doesn't exist" and "not yours", so read it as *go find a valid id*.
 
-**The application decides the workspace.** The server runs the analysis in the workspace that owns it
-— not the `workspaceId` you passed to `list_mabl_applications`, not your default-workspace preference,
-not the workspace your API key was created for, and no switcher or CLI `config set-workspace`. Your
-default workspace decides whether the tool is *visible* (**Preflight**), never which workspace it
-analyzes. **You still need that workspace id in hand**, because the dispatch in **Run it** and the
-fallback search in **Honest limits** both take one explicitly — and every `viewTestUrl` is
-`/workspaces/<workspace-id>/train/tests/<test-id>/current`, so reading one confirms the workspace the
-analysis actually resolved. If it isn't the one you passed, fix the application, not the workspace.
+**The application decides the workspace.** The server runs the analysis in the workspace that owns
+it. Your default workspace decides whether the tool is *visible* (**Preflight**), never which
+workspace it analyzes. **You still need the workspace id in hand**, because the dispatch in **Run
+it** and the fallback search in **Honest limits** both take one explicitly — and every `viewTestUrl`
+is `/workspaces/<workspace-id>/train/tests/<test-id>/current`, so reading one confirms the workspace
+the analysis actually resolved. If it isn't the one you expected, fix the application, not the
+workspace.
 
 **Not every workspace has a knowledge graph, and nothing in the response says so.** Graph-backed
 analysis is enabled per workspace and is a property of the application's workspace, not a knob you
