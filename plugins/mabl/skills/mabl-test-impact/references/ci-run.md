@@ -30,8 +30,15 @@ pull request.
 the caller passed one — the `references` and `revision` from preflight, and `branch` when the caller
 gives a mabl branch. Retry a *failure* once; never a third call, never a refined `changeDescription`
 over an earlier set, never `includePlans`.
-What you keep is assessed from the set that call returned, so a second analysis moves the ground
-under it.
+What you keep is assessed from the set that analysis returned, so a second analysis moves the
+ground under it.
+
+**`done: false` means the analysis is still running;** poll `get_mabl_test_impact_result` as its
+message says. Polls are not calls in the count above, and wherever this file says what the analysis
+returned, it means the last output. `failed` is final here: record it with the tool's `message` and
+start no other analysis. The server ends every analysis, as completed or `failed`; if you reach a
+polling limit your instructions set, or you have no `get_mabl_test_impact_result`, record the
+analysis as unfinished with its `sessionId`.
 
 ## Assess, do not re-analyze
 

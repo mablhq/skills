@@ -18,6 +18,7 @@ tell you.
 |---|---|
 | The skill fired but `analyze_test_impact` isn't in the tool list | 2, then 3 |
 | The tool is there; calling it says not enabled | 3 |
+| `analyze_test_impact` returned `done: false`, but `get_mabl_test_impact_result` isn't in the tool list | 3 |
 | `mabl: command not found`, or an unknown-command error | 4 |
 | "Login has expired" on a CLI command while MCP tools still work | 4 |
 | A local run or debug session can't reach the app: certificate, port, or sign-in origin | `references/screening.md`, **Local target gates** |
@@ -83,7 +84,8 @@ workspace will.
 about 60 seconds; the server declares `listChanged: false`, so it never tells an already-connected
 client that the list changed. A flag switched on a minute ago won't show up until you **wait, then
 reconnect** — reconnecting too early just re-reads the old list and leaves you tool-less for the rest
-of the session.
+of the session. The same goes for `get_mabl_test_impact_result`, which polls an analysis that returned
+`done: false`: after the reconnect, poll with the `sessionId` you have before starting a new analysis.
 
 If it's still missing after a clean reconnect, the filter found test impact analysis unavailable for
 your **default** workspace. Note what that means: the default may be one you never chose, since an

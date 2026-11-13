@@ -746,3 +746,83 @@ test('invisible characters are removed from comment text', async () => {
   );
   assert.equal((named?.data.tests as {testName: string}[])[0]?.testName, 'Qx');
 });
+
+test('a background analysis shows as running until its polled result arrives', async () => {
+  stubJsx();
+  const settings = {showSessionSteps: false, stepsPollMs: 15_000};
+  const ARGS = {
+    changeDescription: 'Postal codes validate on each keystroke',
+    applicationId: 'app1-a',
+  };
+  const START = {
+    sessionId: 'bg1-as',
+    workspaceId: 'ws1-w',
+    status: 'running',
+    done: false,
+    message: 'Poll for the result.',
+  };
+  const [started, ...rest] = captureImpact({
+    tool: 'mcp__mabl__analyze_test_impact',
+    args: ARGS,
+    text: '',
+    structured: START,
+  });
+  assert.equal(rest.length, 0);
+  assert.equal(started?.id, 'bg1-as');
+  assert.equal(started?.status, 'running');
+  assert.equal(started?.name, ARGS.changeDescription);
+  assert.equal(started?.workspaceId, 'ws1-w');
+  const stored = {...(started as MablEntity), updatedAt: 0};
+  assert.equal(
+    impactFeature.pollMs(stored, undefined, settings),
+    undefined,
+    'a started analysis parks no result',
+  );
+  const noteFor = (status: string): string =>
+    JSON.stringify(
+      impactFeature.render(
+        {Box: 'Box', Text: 'Text', Button: 'Button', Link: 'Link'} as never,
+        {
+          entity: {...stored, status},
+          detail: undefined,
+          entities: {},
+          rows: 20,
+          columns: 80,
+          settings,
+          actions: {} as never,
+        },
+      ),
+    );
+  assert.match(noteFor('running'), /The analysis is running/);
+  assert.match(noteFor('failed'), /The analysis failed/);
+
+  const POLL = {
+    tool: 'mcp__mabl__get_mabl_test_impact_result',
+    args: {sessionId: 'bg1-as', workspaceId: 'ws1-w'},
+    text: '',
+  };
+  const [completed] = captureImpact({
+    ...POLL,
+    structured: {
+      ...START,
+      status: 'completed',
+      done: true,
+      tests: [{testName: 'Checkout - Shipping address', testId: 't1-j'}],
+      coverageGaps: [],
+      applicationId: 'app1-a',
+    },
+  });
+  assert.equal(completed?.id, 'bg1-as');
+  assert.equal(completed?.status, '1 impacted · 0 gaps');
+  const detail = (
+    await impactFeature.poll!({} as never, stored, undefined, settings)
+  ).detail as ImpactDetail;
+  assert.equal(detail.tests.length, 1);
+  assert.equal(detail.changeDescription, ARGS.changeDescription);
+
+  const [failed] = captureImpact({
+    ...POLL,
+    structured: {sessionId: 'bg1-as', status: 'failed', done: true},
+  });
+  assert.equal(failed?.status, 'failed');
+});

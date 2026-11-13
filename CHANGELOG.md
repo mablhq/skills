@@ -5,6 +5,12 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.13.5] - 2026-11-10
+### Changed
+- `mabl-test-impact` handles an analysis that runs in the background: when `analyze_test_impact`
+  returns `done: false`, it polls `get_mabl_test_impact_result` until the result is ready, in CI
+  too. In Claude Code, the live view shows that analysis as running until its result arrives.
+
 ## [1.13.4] - 2026-11-09
 ### Fixed
 - `mabl-init` now explains why it stopped when it can't reach your mabl account. If the
