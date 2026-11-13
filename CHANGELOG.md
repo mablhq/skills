@@ -5,6 +5,16 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.14.0] - 2026-11-13
+### Added
+- `mabl-playwright-export` moves a mabl browser test into your own Playwright project. The
+  mabl CLI translates the test, with locators picked from what mabl learned about your pages.
+  The skill then fits the spec to your project's config, login and credentials, writes the
+  steps the CLI can't translate where Playwright can express them, and runs the spec on your
+  machine until it passes. If repairs stall on a step or run long, it asks you whether to keep
+  going. It keeps a list of the steps still left to write, so it or you can pick up an
+  unfinished export later, and it never presents a spec it didn't run as verified.
+
 ## [1.13.5] - 2026-11-10
 ### Changed
 - `mabl-test-impact` handles an analysis that runs in the background: when `analyze_test_impact`
