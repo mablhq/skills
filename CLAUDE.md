@@ -141,7 +141,7 @@ To test the Cursor plugin: import this repo as a team marketplace (Cursor **Dash
 
 To test the Codex plugin: `codex plugin marketplace add .` (or `mablhq/skills`) then `codex plugin add mabl@mabl`. Confirm with `codex plugin list` (should be `installed, enabled`) and `codex mcp list` (both servers present; the `mabl` server shows `Auth: OAuth`).
 
-To test the Devin plugin: in Devin for Terminal, `devin plugins install --local ./plugins/mabl`, then `devin plugins info mabl` should list the eight skills and three MCP servers. Remove it afterwards with `devin plugins remove mabl`.
+To test the Devin plugin: in Devin for Terminal, `devin plugins install --local ./plugins/mabl`, then `devin plugins info mabl` should list the nine skills and three MCP servers. Remove it afterwards with `devin plugins remove mabl`.
 
 ## Relationship to the mabl CLI
 
