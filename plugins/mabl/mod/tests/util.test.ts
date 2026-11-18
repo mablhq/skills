@@ -64,6 +64,7 @@ test('only the public CLI, run as a command, counts as a mabl call', () => {
 
   assert.ok(isMablTool('mcp__plugin_mabl_mabl__get_mabl_test_run'));
   assert.ok(isMablTool('mcp__mabl__analyze_test_impact'));
+  assert.ok(isMablTool('mcp__mabl__get_agent_session'));
   assert.ok(!isMablTool('mcp__plugin_mabl_chrome-for-mabl__evaluate_script'));
   assert.equal(
     mablCall({

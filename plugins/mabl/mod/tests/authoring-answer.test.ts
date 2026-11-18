@@ -3,16 +3,69 @@ import {test} from 'claude-code/testing';
 import {assert, stubJsx} from './assert';
 
 import type {MablEntity} from '../types';
-import type {EntityUpdate} from '../core/util';
+import {hashOf} from '../core/util';
 import type {Actions, Els, Ops, Settings, ToolResult} from '../core/feature';
 import {
   answerCall,
   captureAuthoring,
+  pauseFromSession,
   pauseOf,
   authoringFeature,
   withPause,
 } from '../features/authoring';
 import type {AuthoringDetail} from '../features/authoring';
+
+const ask = (id: string, question: string): Record<string, unknown> => ({
+  role: 'model',
+  parts: [
+    {
+      type: 'tool_call',
+      id,
+      name: 'execute_ask_for_help',
+      input: {type: 'json', json: {question}},
+    },
+  ],
+});
+const closed = (id: string): Record<string, unknown> => ({
+  role: 'tool_output',
+  parts: [
+    {type: 'tool_output', tool_name: 'execute_ask_for_help', tool_call_id: id},
+  ],
+});
+const MESSAGES = [
+  ask('c1', 'Which app?'),
+  closed('c1'),
+  ask('c2', 'Which user should log in?'),
+  closed('c2'),
+  {role: 'special', parts: []},
+];
+const PROGRESS = {
+  stepCount: 1,
+  steps: [{path: '1', text: 'Visit', kind: 'step'}],
+};
+
+test('pending question from the session', () => {
+  const paused = {status: 'needs_attention', messages: MESSAGES};
+  assert.deepEqual(pauseFromSession(paused), {
+    question: 'Which user should log in?',
+  });
+  assert.equal(
+    pauseFromSession({
+      status: 'needs_attention',
+      messages: [ask('c3', 'Still open?'), ask('c4', 'Done'), closed('c4')],
+    })?.question,
+    'Still open?',
+    'an unanswered ask outranks a newer closed one',
+  );
+  assert.equal(
+    pauseFromSession({status: 'running', messages: MESSAGES}),
+    undefined,
+  );
+  assert.equal(
+    pauseFromSession({status: 'needs_attention', messages: []}),
+    undefined,
+  );
+});
 
 test('authoring-answer', async () => {
   stubJsx();
@@ -40,10 +93,9 @@ test('authoring-answer', async () => {
         ? ((tree as Node).children ?? []).map(text).join('')
         : '';
 
-  const PAUSED = {
+  const CLI_PAUSED = {
     sessionStatus: 'needs_attention',
     question: 'Which user should log in?',
-    loopNumber: 2,
     reClarification: true,
     planDiffSummary: 'Added login',
   };
@@ -53,10 +105,8 @@ test('authoring-answer', async () => {
     text: JSON.stringify(structured),
   });
 
-  // pauseOf / withPause
-  assert.deepEqual(pauseOf(PAUSED), {
+  assert.deepEqual(pauseOf(CLI_PAUSED), {
     question: 'Which user should log in?',
-    loopNumber: 2,
     reClarification: true,
     planDiffSummary: 'Added login',
   });
@@ -64,63 +114,57 @@ test('authoring-answer', async () => {
     pauseOf({sessionStatus: 'running', question: 'stale'}),
     undefined,
   );
-  const paused: AuthoringDetail = withPause({}, pauseOf(PAUSED));
-  assert.equal(paused.pause?.loopNumber, 2);
+  const paused: AuthoringDetail = withPause({}, pauseOf(CLI_PAUSED));
   assert.equal(
-    withPause(paused, pauseOf(PAUSED)),
+    withPause(paused, pauseOf(CLI_PAUSED)),
     paused,
     'same pause keeps the same object',
   );
   assert.deepEqual(withPause(paused, undefined), {});
 
-  // answerCall
   const entity: MablEntity = {
     kind: 'authoring',
     id: 's1-as',
     status: 'needs_attention',
     mcpServer: 'mabl-alt',
+    url: 'https://app.mabl.com/workspaces/ws-w/agents/tasks/s1-as',
     updatedAt: 1,
   };
   assert.deepEqual(answerCall(entity, paused.pause, '  alice  ', 'mabl-alt'), {
     server: 'mabl-alt',
-    args: {sessionId: 's1-as', text: 'alice', expectedLoopNumber: 2},
+    args: {sessionId: 's1-as', message: 'alice'},
   });
   assert.equal(answerCall(entity, paused.pause, '   ', 'mabl-alt'), undefined);
   assert.equal(
-    answerCall(entity, {question: 'q'}, 'x', 'mabl-alt'),
+    answerCall(entity, undefined, 'x', 'mabl-alt'),
     undefined,
-    'no loop number, no answer',
-  );
-  assert.equal(
-    answerCall(
-      {...entity, mcpServer: undefined, cli: 'mabl'},
-      paused.pause,
-      'x',
-      'plugin:mabl:mabl',
-    )?.server,
-    'plugin:mabl:mabl',
+    'no question, no answer',
   );
 
-  // The answer tool's results, MCP and CLI
-  const answered = (structured: unknown, textOut = ''): EntityUpdate[] =>
+  // get_agent_session reads in the transcript
+  const [read, createdTest] = captureAuthoring({
+    tool: 'mcp__mabl-alt__get_agent_session',
+    args: {sessionId: 's1-as', includeProgress: true},
+    text: '',
+    structured: {
+      sessionId: 's1-as',
+      agentType: 'test_authoring',
+      status: 'completed',
+      progress: {...PROGRESS, createdTestId: 't1-j'},
+    },
+  });
+  assert.equal(read?.status, 'completed');
+  assert.equal(read?.testId, 't1-j');
+  assert.equal(createdTest?.kind, 'test');
+  assert.deepEqual(
     captureAuthoring({
-      tool: 'mcp__mabl-alt__mabl_authoring_answer',
-      args: {sessionId: 's1-as', text: 'a', expectedLoopNumber: 2},
-      text: textOut,
-      structured,
-    });
-  assert.equal(
-    answered({outcome: 'resumed', sessionStatus: 'queued'})[0]?.status,
-    'queued',
-  );
-  assert.equal(
-    answered({outcome: 're_clarification', question: 'More?'})[0]?.status,
-    undefined,
-    're-clarification keeps needs_attention',
-  );
-  assert.equal(
-    answered(undefined, 'resumed (status: running)')[0]?.status,
-    'running',
+      tool: 'mcp__mabl__get_agent_session',
+      args: {sessionId: 'a1-as'},
+      text: '',
+      structured: {agentType: 'workspace_assistant', status: 'running'},
+    }),
+    [],
+    'only authoring sessions are tracked',
   );
   const [cliAnswer] = captureAuthoring({
     tool: 'Bash',
@@ -137,235 +181,275 @@ test('authoring-answer', async () => {
   });
   assert.equal(cliStatus?.branch, 'feat-x');
 
-  // Polls with a fake ops
-  const STEPS = {
-    sessionStatus: 'needs_attention',
-    stepCount: 1,
-    steps: [{path: '1', text: 'Visit', kind: 'step'}],
-  };
-  const fakeOps = (answers: Record<string, unknown>, calls: string[]): Ops => ({
-    callTool: async (_server, tool) => {
-      calls.push(tool);
+  // Polls against a fake get_agent_session
+  type Read = {messageLimit?: number; includeProgress?: boolean};
+  const label = (tool: string, args: Read): string =>
+    tool === 'get_agent_session'
+      ? args.includeProgress
+        ? `progress:${args.messageLimit}`
+        : `messages:${args.messageLimit}`
+      : tool;
+  const fakeOps = (
+    respond: (args: Read) => ToolResult,
+    calls: string[] = [],
+  ): Ops => ({
+    callTool: async (_server, tool, args) => {
+      calls.push(label(tool, args));
 
-      return result(answers[tool]);
+      return respond(args);
     },
     run: async () => ({
       exitCode: 0,
-      stdout: JSON.stringify(PAUSED),
+      stdout: JSON.stringify(CLI_PAUSED),
       stderr: '',
     }),
     mtime: async () => undefined,
     read: async () => undefined,
     home: '/home',
-    serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
+    serverFor: (item: {mcpServer?: string}) => item.mcpServer ?? 'mabl',
     now: async () => 100,
   });
+  const session =
+    (status: string, messages: unknown[] = MESSAGES) =>
+    (args: Read): ToolResult =>
+      result({
+        sessionId: 's1-as',
+        agentType: 'test_authoring',
+        status,
+        messages: args.messageLimit ? messages : [],
+        ...(args.includeProgress ? {progress: PROGRESS} : {}),
+      });
   const steps: Settings = {showSessionSteps: true, stepsPollMs: 15_000};
   const status: Settings = {showSessionSteps: false, stepsPollMs: 15_000};
 
-  const main = async (): Promise<void> => {
-    const calls: string[] = [];
-    const first = await authoringFeature.poll!(
-      fakeOps(
-        {get_mabl_authoring_steps: STEPS, mabl_authoring_status: PAUSED},
-        calls,
-      ),
-      entity,
-      undefined,
-      steps,
-    );
-    assert.deepEqual(calls, [
-      'get_mabl_authoring_steps',
-      'mabl_authoring_status',
-    ]);
-    const firstDetail = first.detail as AuthoringDetail;
-    assert.equal(firstDetail.pause?.question, PAUSED.question);
-    assert.equal(firstDetail.steps?.stepCount, 1);
+  const firstCalls: string[] = [];
+  const first = await authoringFeature.poll!(
+    fakeOps(session('needs_attention'), firstCalls),
+    entity,
+    undefined,
+    steps,
+  );
+  assert.deepEqual(firstCalls, ['progress:0', 'messages:10']);
+  const firstDetail = first.detail as AuthoringDetail;
+  assert.equal(firstDetail.pause?.question, 'Which user should log in?');
+  assert.equal(firstDetail.steps?.stepCount, 1);
 
-    const again = await authoringFeature.poll!(
-      fakeOps(
-        {get_mabl_authoring_steps: STEPS, mabl_authoring_status: PAUSED},
-        [],
-      ),
-      entity,
-      firstDetail,
-      steps,
-    );
-    assert.equal(again.detail, undefined, 'nothing changed, no new detail');
+  const again = await authoringFeature.poll!(
+    fakeOps(session('needs_attention')),
+    entity,
+    firstDetail,
+    steps,
+  );
+  assert.equal(again.detail, undefined, 'nothing changed, no new detail');
 
-    const followUp = {...PAUSED, question: 'And the password?', loopNumber: 3};
-    const asked = await authoringFeature.poll!(
-      fakeOps(
-        {get_mabl_authoring_steps: STEPS, mabl_authoring_status: followUp},
-        [],
-      ),
-      entity,
-      firstDetail,
-      steps,
-    );
-    assert.equal(
-      (asked.detail as AuthoringDetail).pause?.loopNumber,
-      3,
-      'a re-clarification replaces the question',
-    );
+  const asked = await authoringFeature.poll!(
+    fakeOps(
+      session('needs_attention', [
+        ...MESSAGES,
+        ask('c5', 'And the password?'),
+        closed('c5'),
+      ]),
+    ),
+    entity,
+    firstDetail,
+    steps,
+  );
+  assert.equal(
+    (asked.detail as AuthoringDetail).pause?.question,
+    'And the password?',
+    'a newer question replaces the stored one',
+  );
 
-    const failing: Ops = {
-      ...fakeOps({get_mabl_authoring_steps: STEPS}, []),
-      callTool: async (_s, tool) =>
-        result(
-          tool === 'mabl_authoring_status' ? {} : STEPS,
-          tool === 'mabl_authoring_status',
-        ),
-    };
-    const kept = await authoringFeature.poll!(
-      failing,
-      entity,
-      firstDetail,
-      steps,
-    );
-    assert.equal(
-      kept.detail,
-      undefined,
-      'a failed status call keeps the stored question',
-    );
+  const kept = await authoringFeature.poll!(
+    fakeOps((args) =>
+      args.includeProgress
+        ? session('needs_attention')(args)
+        : result({}, true),
+    ),
+    entity,
+    firstDetail,
+    steps,
+  );
+  assert.equal(
+    kept.detail,
+    undefined,
+    'a failed message read keeps the stored question',
+  );
 
-    const resumedCalls: string[] = [];
-    const resumed = await authoringFeature.poll!(
-      fakeOps(
-        {get_mabl_authoring_steps: {...STEPS, sessionStatus: 'running'}},
-        resumedCalls,
-      ),
-      {...entity, status: 'running'},
-      firstDetail,
-      steps,
-    );
-    assert.deepEqual(resumedCalls, ['get_mabl_authoring_steps']);
-    assert.equal(
-      (resumed.detail as AuthoringDetail).pause,
-      undefined,
-      'question cleared once running',
-    );
-    assert.equal((resumed.detail as AuthoringDetail).steps?.stepCount, 1);
+  const noProgressCalls: string[] = [];
+  const noProgress = await authoringFeature.poll!(
+    fakeOps(
+      (args) =>
+        args.includeProgress ? result({}, true) : session('running')(args),
+      noProgressCalls,
+    ),
+    entity,
+    firstDetail,
+    steps,
+  );
+  assert.deepEqual(noProgressCalls, ['progress:0', 'messages:0']);
+  assert.equal(
+    noProgress.updates[0]?.status,
+    'running',
+    'a failed progress read still reports status',
+  );
 
-    const viaStatus = await authoringFeature.poll!(
-      fakeOps({mabl_authoring_status: PAUSED}, []),
-      entity,
-      undefined,
-      status,
-    );
-    assert.equal((viaStatus.detail as AuthoringDetail).pause?.loopNumber, 2);
-    const cliEntity: MablEntity = {
-      kind: 'authoring',
-      id: 's2-as',
-      status: 'needs_attention',
-      cli: 'mabl',
-      updatedAt: 1,
-    };
-    const viaCli = await authoringFeature.poll!(
-      fakeOps({}, []),
-      cliEntity,
-      undefined,
-      status,
-    );
-    assert.equal(
-      (viaCli.detail as AuthoringDetail).pause?.question,
-      PAUSED.question,
-    );
-    assert.equal(viaCli.updates[0]?.status, 'needs_attention');
-    const cleared = await authoringFeature.poll!(
-      fakeOps({mabl_authoring_status: {sessionStatus: 'running'}}, []),
-      entity,
-      firstDetail,
-      status,
-    );
-    assert.equal((cleared.detail as AuthoringDetail).pause, undefined);
-    assert.ok(
-      (cleared.detail as AuthoringDetail).steps,
-      'clearing the question keeps the steps',
-    );
+  const resumedCalls: string[] = [];
+  const resumed = await authoringFeature.poll!(
+    fakeOps(session('running'), resumedCalls),
+    {...entity, status: 'running'},
+    firstDetail,
+    steps,
+  );
+  assert.deepEqual(resumedCalls, ['progress:0']);
+  assert.equal(
+    (resumed.detail as AuthoringDetail).pause,
+    undefined,
+    'question cleared once running',
+  );
+  assert.equal((resumed.detail as AuthoringDetail).steps?.stepCount, 1);
 
-    // Render
-    const els = {
-      Box: function Box() {},
-      Text: function Text() {},
-      Button: function Button() {},
-      Link: function Link() {},
-      Input: function Input() {},
-    } as unknown as Els;
-    const sent: {
-      server: string;
-      tool: string;
-      args: Record<string, unknown>;
-    }[] = [];
-    const filled: string[] = [];
-    const polled: string[] = [];
-    const actions: Actions = {
-      fillPrompt: (value) => void filled.push(value),
-      callTool: async (server, tool, args) => {
-        sent.push({server, tool, args});
+  const viaStatusCalls: string[] = [];
+  const viaStatus = await authoringFeature.poll!(
+    fakeOps(session('needs_attention'), viaStatusCalls),
+    entity,
+    undefined,
+    status,
+  );
+  assert.deepEqual(viaStatusCalls, ['messages:0', 'messages:10']);
+  assert.equal(
+    (viaStatus.detail as AuthoringDetail).pause?.question,
+    'Which user should log in?',
+  );
 
-        return result({outcome: 'resumed', sessionStatus: 'queued'});
-      },
-      track: () => {},
-      pollNow: (id) => void polled.push(id),
-      openTab: () => {},
-      openUrl: () => {},
-      notify: () => undefined,
-      setView: () => undefined,
-      serverFor: (entity: {mcpServer?: string}) => entity.mcpServer ?? 'mabl',
-      updateDetail: () => {},
-    };
-    const context = {
-      entity,
-      detail: firstDetail,
-      entities: {[entity.id]: entity},
-      rows: 30,
-      columns: 100,
-      settings: steps,
-      actions,
-    };
-    const tree = authoringFeature.render(els, context);
-    assert.match(
-      text(tree),
-      /Question \(follow-up\):Which user should log in\?/,
-    );
-    const [input] = nodes(tree, 'Input');
-    assert.equal(input?.props.key, 'answer-s1-as-2');
-    assert.equal(input?.props.label, 'Your answer');
-    assert.equal(input?.props.submitLabel, 'Send');
-    (input?.props.onSubmit as (value: string) => void)('alice');
-    for (let tick = 0; tick < 10; tick++) await Promise.resolve();
-    assert.deepEqual(sent, [
-      {
-        server: 'mabl-alt',
-        tool: 'mabl_authoring_answer',
-        args: {sessionId: 's1-as', text: 'alice', expectedLoopNumber: 2},
-      },
-    ]);
-    assert.deepEqual(polled, ['s1-as']);
-    const [ask] = nodes(tree, 'Button');
-    (ask?.props.onPress as () => void)();
-    assert.deepEqual(filled, [
-      'Read the open question on mabl test authoring session s1-as with mabl_authoring_status, then answer it with mabl_authoring_answer. My guidance: ',
-    ]);
+  const finished = await authoringFeature.poll!(
+    fakeOps((args) =>
+      result({
+        status: 'completed',
+        ...(args.includeProgress
+          ? {progress: {...PROGRESS, createdTestId: 't1-j'}}
+          : {}),
+      }),
+    ),
+    entity,
+    undefined,
+    status,
+  );
+  assert.equal(finished.updates[0]?.testId, 't1-j');
+  assert.equal(
+    finished.updates[1]?.url,
+    'https://app.mabl.com/workspaces/ws-w/train/tests/t1-j/current',
+  );
 
-    const {Input: _input, ...mobile} = els;
-    const mobileTree = authoringFeature.render(mobile as Els, context);
-    assert.equal(nodes(mobileTree, 'Input').length, 0);
-    assert.equal(nodes(mobileTree, 'Button').length, 1);
-
-    const running = authoringFeature.render(els, {
-      ...context,
-      entity: {...entity, status: 'running'},
-    });
-    assert.equal(
-      nodes(running, 'Input').length + nodes(running, 'Button').length,
-      0,
-      'no question once running',
-    );
+  const cliEntity: MablEntity = {
+    kind: 'authoring',
+    id: 's2-as',
+    status: 'needs_attention',
+    cli: 'mabl',
+    updatedAt: 1,
   };
+  const viaCli = await authoringFeature.poll!(
+    fakeOps(session('running')),
+    cliEntity,
+    undefined,
+    status,
+  );
+  assert.equal(
+    (viaCli.detail as AuthoringDetail).pause?.question,
+    CLI_PAUSED.question,
+  );
+  assert.equal(viaCli.updates[0]?.status, 'needs_attention');
 
-  await main();
+  const clearedCalls: string[] = [];
+  const cleared = await authoringFeature.poll!(
+    fakeOps(session('running'), clearedCalls),
+    entity,
+    firstDetail,
+    status,
+  );
+  assert.deepEqual(clearedCalls, ['messages:0']);
+  assert.equal((cleared.detail as AuthoringDetail).pause, undefined);
+  assert.ok(
+    (cleared.detail as AuthoringDetail).steps,
+    'clearing the question keeps the steps',
+  );
+
+  // Render
+  const els = {
+    Box: function Box() {},
+    Text: function Text() {},
+    Button: function Button() {},
+    Link: function Link() {},
+    Input: function Input() {},
+  } as unknown as Els;
+  const sent: {
+    server: string;
+    tool: string;
+    args: Record<string, unknown>;
+  }[] = [];
+  const filled: string[] = [];
+  const polled: string[] = [];
+  const actions: Actions = {
+    fillPrompt: (value) => void filled.push(value),
+    callTool: async (server, tool, args) => {
+      sent.push({server, tool, args});
+
+      return result({sessionId: 's1-as', delivered: true});
+    },
+    track: () => {},
+    pollNow: (id) => void polled.push(id),
+    openTab: () => {},
+    openUrl: () => {},
+    notify: () => undefined,
+    setView: () => undefined,
+    serverFor: (item: {mcpServer?: string}) => item.mcpServer ?? 'mabl',
+    updateDetail: () => {},
+  };
+  const context = {
+    entity,
+    detail: asked.detail,
+    entities: {[entity.id]: entity},
+    rows: 30,
+    columns: 100,
+    settings: steps,
+    actions,
+  };
+  const tree = authoringFeature.render(els, context);
+  assert.match(text(tree), /Question:And the password\?/);
+  const [input] = nodes(tree, 'Input');
+  assert.equal(input?.props.key, `answer-s1-as-${hashOf('And the password?')}`);
+  assert.equal(input?.props.label, 'Your answer');
+  assert.equal(input?.props.submitLabel, 'Send');
+  (input?.props.onSubmit as (value: string) => void)('alice');
+  for (let tick = 0; tick < 10; tick++) await Promise.resolve();
+  assert.deepEqual(sent, [
+    {
+      server: 'mabl-alt',
+      tool: 'send_agent_message',
+      args: {sessionId: 's1-as', message: 'alice'},
+    },
+  ]);
+  assert.deepEqual(polled, ['s1-as']);
+  const [askClaude] = nodes(tree, 'Button');
+  (askClaude?.props.onPress as () => void)();
+  assert.deepEqual(filled, [
+    'Read the open question on mabl test authoring session s1-as with get_agent_session, then answer it with send_agent_message. My guidance: ',
+  ]);
+
+  const {Input: _input, ...mobile} = els;
+  const mobileTree = authoringFeature.render(mobile as Els, context);
+  assert.equal(nodes(mobileTree, 'Input').length, 0);
+  assert.equal(nodes(mobileTree, 'Button').length, 1);
+
+  const running = authoringFeature.render(els, {
+    ...context,
+    entity: {...entity, status: 'running'},
+  });
+  assert.equal(
+    nodes(running, 'Input').length + nodes(running, 'Button').length,
+    0,
+    'no question once running',
+  );
 });
 
 test('CLI answers and initiations name their session and test', () => {

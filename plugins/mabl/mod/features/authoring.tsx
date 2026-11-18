@@ -1,18 +1,21 @@
 import type {MablEntity, SessionSteps, StepEntry} from '../types';
 import type {Feature, Ops, PollResult, Settings} from '../core/feature';
 import {
+  appBaseFromUrl,
   cliArgv,
   didSucceed,
   field,
   flag,
   hashOf,
   lastJson,
+  list,
   mablCall,
   mablUrl,
   num,
   obj,
   str,
   withWorkspace,
+  workspaceFromUrl,
 } from '../core/util';
 import type {CallRecord, EntityUpdate, Fields} from '../core/util';
 
@@ -28,12 +31,15 @@ export const TERMINAL_STATUSES = new Set([
 
 const NEEDS_ATTENTION = 'needs_attention';
 const STATUS_POLL_MS = 20_000;
-const MAX_STEP_PAGES = 10;
+const GET_AGENT_SESSION = 'get_agent_session';
+const SEND_AGENT_MESSAGE = 'send_agent_message';
+const AUTHORING_AGENT_TYPES = new Set(['test_authoring', 'flow_authoring']);
+// A paused session's question is in its last few messages: the ask, its tool output, the stop event.
+const QUESTION_MESSAGE_LIMIT = 10;
+const ASK_FOR_HELP = 'execute_ask_for_help';
 
-/** The question a paused session waits on; `loopNumber` is what `mabl_authoring_answer` must echo. */
 export type Pause = {
   question: string;
-  loopNumber?: number;
   reClarification?: boolean;
   planDiffSummary?: string;
 };
@@ -55,7 +61,21 @@ export const isRunning = (entity: MablEntity): boolean =>
   !entity.isLocal &&
   !TERMINAL_STATUSES.has(entity.status ?? '');
 
-const fromStatus = (
+const testEntity = (
+  testId: string,
+  status: string,
+  branch: string | undefined,
+  url: string | undefined,
+): EntityUpdate => ({
+  kind: 'test',
+  id: testId,
+  branch,
+  url,
+  status: `by authoring ${status}`,
+});
+
+/** Updates from the CLI's `agent authoring status` / `answer` output. */
+const fromCliStatus = (
   sessionId: string,
   data: Fields,
   text: string,
@@ -66,18 +86,50 @@ const fromStatus = (
   const testId = field(data, text, 'createdTestId', 'test');
   const branch =
     str(data.branchName) ?? text.match(/^branch:\s*"?([^"\n]+)"?/m)?.[1];
-  const testUrl = field(data, text, 'viewTestUrl', 'view');
   const updates: EntityUpdate[] = [
     {kind: 'authoring', id: sessionId, status, testId, branch},
   ];
   if (testId && status && TERMINAL_STATUSES.has(status)) {
-    updates.push({
-      kind: 'test',
-      id: testId,
-      branch,
-      url: testUrl,
-      status: `by authoring ${status}`,
-    });
+    updates.push(
+      testEntity(
+        testId,
+        status,
+        branch,
+        field(data, text, 'viewTestUrl', 'view'),
+      ),
+    );
+  }
+
+  return updates;
+};
+
+const testUrlFor = (
+  entity: Pick<MablEntity, 'url' | 'workspaceId'> | undefined,
+  testId: string,
+): string | undefined => {
+  const base = appBaseFromUrl(entity?.url);
+  const workspaceId = entity?.workspaceId ?? workspaceFromUrl(entity?.url);
+
+  return base && workspaceId
+    ? `${base}/workspaces/${encodeURIComponent(workspaceId)}/train/tests/${encodeURIComponent(testId)}/current`
+    : undefined;
+};
+
+/** Updates from `get_agent_session` structured content. */
+export const fromSession = (
+  sessionId: string,
+  data: Fields,
+  entity?: Pick<MablEntity, 'url' | 'workspaceId' | 'branch'>,
+): EntityUpdate[] => {
+  const status = str(data.status);
+  const testId = str(obj(data.progress).createdTestId);
+  const updates: EntityUpdate[] = [
+    {kind: 'authoring', id: sessionId, status, testId},
+  ];
+  if (testId && status && TERMINAL_STATUSES.has(status)) {
+    updates.push(
+      testEntity(testId, status, entity?.branch, testUrlFor(entity, testId)),
+    );
   }
 
   return updates;
@@ -95,8 +147,7 @@ const fromMcp = (
   switch (name) {
     case 'mabl_authoring_initiate':
     case 'mabl_authoring_initiate_local':
-    case 'mabl_authoring_edit':
-    case 'mabl_authoring_merge': {
+    case 'mabl_authoring_edit': {
       if (str(data.testType) === 'api' || /^API test "/.test(text)) {
         const testId = field(data, text, 'testId');
 
@@ -122,12 +173,10 @@ const fromMcp = (
         {
           kind: 'authoring',
           id: sessionId,
-          name:
-            str(info.name) ??
-            (name === 'mabl_authoring_merge' ? 'merge' : undefined),
+          name: str(info.name),
           status: isLocal ? 'local' : 'queued',
           testId: str(info.testId) ?? str(args.testId),
-          branch: str(info.branch) ?? str(args.targetBranch),
+          branch: str(info.branch),
           url: field(data, text, 'viewTaskUrl', 'View task'),
           workspaceId: str(args.workspaceId),
           isLocal,
@@ -135,11 +184,12 @@ const fromMcp = (
         },
       ];
     }
-    case 'mabl_authoring_status':
-    case 'mabl_authoring_answer': {
+    case GET_AGENT_SESSION: {
       const sessionId = str(args.sessionId);
 
-      return sessionId ? fromStatus(sessionId, data, text) : [];
+      return sessionId && AUTHORING_AGENT_TYPES.has(str(data.agentType) ?? '')
+        ? fromSession(sessionId, data)
+        : [];
     }
     default:
       return [];
@@ -171,7 +221,7 @@ const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
       flag(sub, 'session-id') ??
       sub.match(/^agent\s+authoring\s+answer\s+([\w-]+)/)?.[1];
 
-    return sessionId ? fromStatus(sessionId, lastJson(text), text) : [];
+    return sessionId ? fromCliStatus(sessionId, lastJson(text), text) : [];
   }
 
   return [];
@@ -190,43 +240,32 @@ export const captureAuthoring = (call: CallRecord): EntityUpdate[] => {
   return updates.map(withWorkspace);
 };
 
-export type StepsPage = {
-  status?: string;
-  stepCount: number;
-  entries: StepEntry[];
-  nextCursor?: string;
-  isRestarted: boolean;
-};
-
-const toEntry = (raw: unknown): StepEntry | undefined => {
-  const step = obj(raw);
+const toEntry = (step: Fields): StepEntry[] => {
   const kind = str(step.kind);
 
   return kind
-    ? {
-        path: str(step.path) ?? '',
-        text: str(step.text) ?? '',
-        kind,
-        stepId: str(step.stepId),
-        flowId: str(step.flowId),
-        collapsedStepCount: num(step.collapsedStepCount),
-      }
-    : undefined;
+    ? [
+        {
+          path: str(step.path) ?? '',
+          text: str(step.text) ?? '',
+          kind,
+          stepId: str(step.stepId),
+          flowId: str(step.flowId),
+          collapsedStepCount: num(step.collapsedStepCount),
+        },
+      ]
+    : [];
 };
 
-/** Reads one page of `get_mabl_authoring_steps` structured content. */
-export const stepsPage = (structured: unknown): StepsPage => {
-  const data = obj(structured);
-  const steps = Array.isArray(data.steps) ? data.steps : [];
+/** The steps built so far, from `get_agent_session`'s `progress`. */
+export const sessionSteps = (
+  progress: unknown,
+): {entries: StepEntry[]; stepCount: number} => {
+  const data = obj(progress);
 
   return {
-    status: str(data.sessionStatus),
+    entries: list(data.steps).flatMap(toEntry),
     stepCount: num(data.stepCount) ?? 0,
-    entries: steps
-      .map(toEntry)
-      .filter((entry): entry is StepEntry => entry !== undefined),
-    nextCursor: str(data.nextCursor),
-    isRestarted: data.listChanged === true,
   };
 };
 
@@ -325,18 +364,62 @@ export const clipLines = <T extends {text: string; depth: number}>(
     : [...lines.slice(0, room), hidden];
 };
 
-/** The pending question in `mabl_authoring_status` output (MCP structured content or CLI JSON). */
+/** The pending question in the CLI's `agent authoring status` JSON. */
 export const pauseOf = (data: Fields): Pause | undefined => {
   const question = str(data.question);
 
   return question && str(data.sessionStatus) === NEEDS_ATTENTION
     ? {
         question,
-        loopNumber: num(data.loopNumber),
         reClarification: data.reClarification === true,
         planDiffSummary: str(data.planDiffSummary),
       }
     : undefined;
+};
+
+type Ask = {toolCallId: string; question: string};
+
+const askOf = (message: Fields): Ask | undefined => {
+  if (message.role !== 'model') {
+    return;
+  }
+  const part = list(message.parts).find(
+    (candidate) =>
+      candidate.type === 'tool_call' && candidate.name === ASK_FOR_HELP,
+  );
+  const toolCallId = str(part?.id);
+  const input = obj(part?.input);
+
+  return toolCallId
+    ? {toolCallId, question: str(obj(input.json).question) ?? ''}
+    : undefined;
+};
+
+/** The newest unanswered ask, else the newest ask: a cloud session closes its ask when it pauses. */
+const currentAsk = (messages: readonly Fields[]): Ask | undefined => {
+  const answered = new Set(
+    messages
+      .filter((message) => message.role === 'tool_output')
+      .flatMap((message) => list(message.parts))
+      .flatMap((part) =>
+        part.type === 'tool_output' && str(part.tool_call_id)
+          ? [String(part.tool_call_id)]
+          : [],
+      ),
+  );
+  const asks = messages.flatMap((message) => askOf(message) ?? []).reverse();
+
+  return asks.find((ask) => !answered.has(ask.toolCallId)) ?? asks[0];
+};
+
+/** The question a paused session waits on, from `get_agent_session` read with its last few messages. */
+export const pauseFromSession = (data: Fields): Pause | undefined => {
+  if (str(data.status) !== NEEDS_ATTENTION) {
+    return;
+  }
+  const question = currentAsk(list(data.messages))?.question;
+
+  return question ? {question} : undefined;
 };
 
 /** The detail with this pause, or without one; the same object when nothing changed. */
@@ -357,26 +440,59 @@ const changed = (
   after: AuthoringDetail,
 ): {detail?: AuthoringDetail} => (after === before ? {} : {detail: after});
 
+type SessionRead = {messageLimit: number; includeProgress?: boolean};
+
+/** One `get_agent_session` read; undefined when it returned an error. */
+const readSession = async (
+  ops: Ops,
+  server: string,
+  sessionId: string,
+  read: SessionRead,
+  isErrorExpected = false,
+): Promise<Fields | undefined> => {
+  const result = await ops.callTool(
+    server,
+    GET_AGENT_SESSION,
+    {sessionId, ...read},
+    isErrorExpected ? {isErrorExpected} : undefined,
+  );
+
+  return result.isError ? undefined : obj(result.structured);
+};
+
 const pollStatus = async (
   ops: Ops,
   entity: MablEntity,
   detail: AuthoringDetail,
 ): Promise<PollResult> => {
-  const args = {sessionId: entity.id};
   if (entity.mcpServer) {
-    const result = await ops.callTool(
-      entity.mcpServer,
-      'mabl_authoring_status',
-      args,
-    );
-    if (result.isError) {
+    const server = entity.mcpServer;
+    const brief = await readSession(ops, server, entity.id, {messageLimit: 0});
+    if (!brief) {
       return {updates: []};
     }
-    const data = obj(result.structured);
+    const status = str(brief.status);
+    const isPaused = status === NEEDS_ATTENTION;
+    // A pause needs the question; a finished session needs the created test.
+    const fullRead: SessionRead | undefined = isPaused
+      ? {messageLimit: QUESTION_MESSAGE_LIMIT}
+      : TERMINAL_STATUSES.has(status ?? '')
+        ? {messageLimit: 0, includeProgress: true}
+        : undefined;
+    const full = fullRead
+      ? await readSession(ops, server, entity.id, fullRead).catch(
+          () => undefined,
+        )
+      : undefined;
+    const pause = full
+      ? pauseFromSession(full)
+      : isPaused
+        ? detail.pause
+        : undefined;
 
     return {
-      updates: fromStatus(entity.id, data, result.text),
-      ...changed(detail, withPause(detail, pauseOf(data))),
+      updates: fromSession(entity.id, full ?? brief, entity),
+      ...changed(detail, withPause(detail, pause)),
     };
   }
   const argv = [
@@ -394,55 +510,55 @@ const pollStatus = async (
   const data = lastJson(stdout);
 
   return {
-    updates: fromStatus(entity.id, data, stdout),
+    updates: fromCliStatus(entity.id, data, stdout),
     ...changed(detail, withPause(detail, pauseOf(data))),
   };
 };
 
-/** Steps carry no question, so a paused session asks `mabl_authoring_status`; a re-clarification keeps the pause but changes the question. */
+/** The progress read carries no messages, so a paused session reads its last few for the question. */
 const refreshPause = async (
   ops: Ops,
   server: string,
   sessionId: string,
-  status: string | undefined,
+  session: Fields,
   current: Pause | undefined,
 ): Promise<Pause | undefined> => {
-  if (status !== NEEDS_ATTENTION) {
-    return undefined;
+  if (str(session.status) !== NEEDS_ATTENTION) {
+    return;
   }
-  const result = await ops
-    .callTool(server, 'mabl_authoring_status', {sessionId})
-    .catch(() => undefined);
+  const recent = await readSession(ops, server, sessionId, {
+    messageLimit: QUESTION_MESSAGE_LIMIT,
+  }).catch(() => undefined);
 
-  return result && !result.isError ? pauseOf(obj(result.structured)) : current;
+  return recent
+    ? pauseFromSession({...session, messages: recent.messages})
+    : current;
 };
 
-/** One `get_mabl_authoring_steps` sweep; it carries the session status too, so it replaces the status poll. */
+/** One `get_agent_session` read with progress; it carries the status too, so it replaces the status poll. */
 const pollSteps = async (
   ops: Ops,
   entity: MablEntity,
   detail: AuthoringDetail,
 ): Promise<PollResult> => {
   const server = ops.serverFor(entity);
-  let entries: StepEntry[] = [];
-  let cursor: string | undefined;
-  let page: StepsPage | undefined;
-  for (let pageIndex = 0; pageIndex < MAX_STEP_PAGES; pageIndex++) {
-    const result = await ops.callTool(server, 'get_mabl_authoring_steps', {
-      sessionId: entity.id,
-      ...(cursor ? {cursor} : {}),
+  const session = await readSession(
+    ops,
+    server,
+    entity.id,
+    {messageLimit: 0, includeProgress: true},
+    true,
+  );
+  if (!session) {
+    // The status-only read keeps the tab current when the progress read fails.
+    const brief = await readSession(ops, server, entity.id, {
+      messageLimit: 0,
     });
-    if (result.isError) {
-      return {updates: []};
-    }
-    page = stepsPage(result.structured);
-    entries = page.isRestarted ? page.entries : [...entries, ...page.entries];
-    cursor = page.nextCursor;
-    if (!cursor) {
-      break;
-    }
+
+    return {updates: brief ? fromSession(entity.id, brief, entity) : []};
   }
-  const status = page?.status;
+  const status = str(session.status);
+  const {entries, stepCount} = sessionSteps(session.progress);
   const flowStepsBranch = entity.branch;
   const flowSteps =
     detail.flowStepsBranch === flowStepsBranch ? {...detail.flowSteps} : {};
@@ -462,7 +578,7 @@ const pollSteps = async (
   }
   const steps: SessionSteps = {
     entries,
-    stepCount: page?.stepCount ?? 0,
+    stepCount,
     hash: hashOf(entries),
     fetchedAt: await ops.now(),
     isFinal: TERMINAL_STATUSES.has(status ?? ''),
@@ -476,12 +592,12 @@ const pollSteps = async (
     ops,
     server,
     entity.id,
-    status,
+    session,
     detail.pause,
   );
 
   return {
-    updates: status ? [{kind: 'authoring', id: entity.id, status}] : [],
+    updates: fromSession(entity.id, session, entity),
     ...changed(
       detail,
       withPause(
@@ -492,24 +608,17 @@ const pollSteps = async (
   };
 };
 
-/** The `mabl_authoring_answer` call for a typed answer, or undefined when it cannot be sent. */
+/** The `send_agent_message` call for a typed answer, or undefined when there is nothing to send. */
 export const answerCall = (
   entity: MablEntity,
   pause: Pause | undefined,
   value: string,
   server: string,
 ): {server: string; args: Record<string, unknown>} | undefined => {
-  const text = value.trim();
+  const message = value.trim();
 
-  return text && pause?.loopNumber !== undefined
-    ? {
-        server,
-        args: {
-          sessionId: entity.id,
-          text,
-          expectedLoopNumber: pause.loopNumber,
-        },
-      }
+  return message && pause
+    ? {server, args: {sessionId: entity.id, message}}
     : undefined;
 };
 
@@ -565,7 +674,7 @@ export const authoringFeature: Feature = {
       );
       if (call) {
         void didSucceed(
-          actions.callTool(call.server, 'mabl_authoring_answer', call.args),
+          actions.callTool(call.server, SEND_AGENT_MESSAGE, call.args),
         ).then((isSent) => {
           if (!isSent) {
             actions.notify('mabl: could not send the answer; try again.');
@@ -594,9 +703,9 @@ export const authoringFeature: Feature = {
                 Plan change: {question.planDiffSummary}
               </Text>
             )}
-            {Input && question.loopNumber !== undefined && (
+            {Input && (
               <Input
-                key={`answer-${entity.id}-${question.loopNumber}`}
+                key={`answer-${entity.id}-${hashOf(question.question)}`}
                 label="Your answer"
                 submitLabel="Send"
                 onSubmit={answer}
@@ -607,7 +716,7 @@ export const authoringFeature: Feature = {
               label="Ask Claude"
               onPress={() =>
                 actions.fillPrompt(
-                  `Read the open question on mabl test authoring session ${entity.id} with mabl_authoring_status, then answer it with mabl_authoring_answer. My guidance: `,
+                  `Read the open question on mabl test authoring session ${entity.id} with ${GET_AGENT_SESSION}, then answer it with ${SEND_AGENT_MESSAGE}. My guidance: `,
                 )
               }
             />

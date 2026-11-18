@@ -33,7 +33,7 @@ export type MablEntity = {
 
 export type MablEntities = Record<string, MablEntity>;
 
-/** One entry of `get_mabl_authoring_steps`: a step, or a step group / flow boundary. */
+/** One entry of an authoring session's formatted steps: a step, or a step group / flow boundary. */
 export type StepEntry = {
   path: string;
   text: string;
