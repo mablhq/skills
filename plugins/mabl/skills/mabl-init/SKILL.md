@@ -241,10 +241,14 @@ Credential names, IDs, and types only — never usernames, passwords, or secrets
 If a test needs no login, omit the credential.
 
 ### Create a test
-1. `mabl_authoring_plan` — describe the test in plain language (which app/URL,
-   the steps, what to verify). Refine with the returned session id if needed.
-2. `mabl_authoring_initiate` — generate it in the cloud from that plan.
-3. `mabl_authoring_status` — poll until `completed`; you get the created test id.
+1. `mabl_authoring_initiate` — describe the test in `testInformation` (which
+   app/URL, the steps, what to verify) and generate it in the cloud. To have
+   mabl plan it with you first, use `start_assistant_session` instead and
+   describe the test in `message`.
+2. `get_agent_session` — poll with `messageLimit: 0` until `status` is
+   `completed`. If it is `needs_attention`, read the question and answer it
+   with `send_agent_message`.
+3. `get_agent_session` with `includeArtifacts: true` — returns `createdTestId`.
 
 Or, when you already have the steps, create directly with `create_mabl_test`
 (`name`, `testType`, `applicationId`, `environmentId`, plus `credentialsId` for
