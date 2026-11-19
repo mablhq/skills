@@ -2,7 +2,7 @@
 
 **Independent verification for agentic development using the world's most advanced testing harness.** mabl closes the loop between application change and verified behavior — authoring, orchestrating, executing, and maintaining automated test suites, analyzing failures, and generating reporting, all with the auditable evidence that business-critical applications require.
 
-This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, an **OpenAI Codex plugin**, and a **Devin plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
+This repo packages mabl's agent skills as a **Claude Code plugin**, a **Cursor plugin**, a **GitHub Copilot plugin**, an **OpenAI Codex plugin**, a **Devin plugin**, and a **Google Antigravity plugin** (all named `mabl`), and as **agent skills** installable with the GitHub CLI — so your coding agent can create, run, and debug mabl end-to-end tests without leaving your editor or terminal.
 
 Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 
@@ -111,6 +111,23 @@ Or in the Devin web app:
 3. Choose personal or organization scope.
 
 Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Devin prompts you to authorize it on first use.
+
+### Google Antigravity
+
+The repo is also an Antigravity plugin (`plugins/mabl/.antigravity-plugin/`). Antigravity installs it from the `plugins/mabl` subdirectory. With the [Antigravity CLI](https://antigravity.google/docs/getting-started/):
+
+```bash
+agy plugin install https://github.com/mablhq/skills/tree/main/plugins/mabl
+```
+
+Without the CLI, copy that folder into Antigravity's plugins directory instead:
+
+```bash
+git clone https://github.com/mablhq/skills.git
+cp -R skills/plugins/mabl ~/.gemini/config/plugins/mabl
+```
+
+Restart Antigravity, and `mabl` appears under **Customizations → Installed**. Skills and all three MCP servers are configured in one step. The hosted `mabl` server uses OAuth — Antigravity prompts you to authorize it on first use.
 
 ### GitHub Copilot CLI (and other agents) via `gh skill`
 

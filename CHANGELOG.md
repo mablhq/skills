@@ -5,6 +5,11 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.15.0] - 2026-11-19
+### Added
+- Google Antigravity plugin. Install the `plugins/mabl` folder into Antigravity to get all
+  the mabl skills and the three MCP servers, with OAuth sign-in to the hosted `mabl` server.
+
 ## [1.14.0] - 2026-11-13
 ### Added
 - `mabl-playwright-export` moves a mabl browser test into your own Playwright project. The
