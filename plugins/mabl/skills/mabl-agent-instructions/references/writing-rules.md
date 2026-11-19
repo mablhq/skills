@@ -11,6 +11,9 @@ Apply all ten to every new or changed instruction.
    - **Results analysis** (`results_analysis`): how run outcomes get
      interpreted, prioritized and framed. Known-flaky areas, triage priorities,
      business context.
+
+   A rule scoped to the wrong capability does nothing: a variable-naming rule
+   scoped to results analysis never reaches the authoring agent that needed it.
 3. **Use the narrowest scope that achieves the goal.** Workspace-wide is the
    default in mabl; narrow beats broad.
 4. **Be specific and observable.** Concrete, checkable actions, not

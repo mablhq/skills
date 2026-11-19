@@ -10,7 +10,8 @@ the `version` field in `plugin.json` (kept in sync across all manifests — see
 - `mabl-agent-instructions` builds and maintains your workspace's agent instructions, the
   rules mabl's agents follow when they author tests and analyze results. It reads your
   applications, environments, tests, and the rules already live, interviews you, and proposes
-  a small first batch written to mabl's writing rules and ID convention. After you approve the
+  a small first batch written to mabl's writing rules and ID convention, starting from worked
+  examples for e-commerce, banking, B2B SaaS, healthcare, or utility apps. After you approve the
   exact text and scope, it creates the rules in mabl switched off, so nothing changes until
   your team turns them on. It also updates rules when your app changes or the agent does
   something unwanted, proposes the next batch, and reviews the rules you have.

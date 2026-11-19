@@ -26,7 +26,8 @@ every later task: the authoring agents read them when they plan and build
 tests and flows, and the results analysis agents read them when they explain a
 run. Good rules make agent-built tests match the team's standards and make
 failure analysis speak the team's language. Each rule is capped at 2,000
-characters, and every one changes how every later agent run behaves.
+characters, and every one changes how every later agent run behaves. Agent
+instructions apply to browser tests only.
 
 This skill reads the live workspace, drafts rules the way mabl recommends,
 and writes the approved ones into mabl itself, switched off.
@@ -123,6 +124,10 @@ standards, test data rules, what must never be touched in production, known
 interruptions (modals, consent banners), environment differences, upcoming UI
 changes, and who owns the rules. Ask fewer when the workspace already answered.
 
+Name the closest archetype (see [Archetypes](#archetypes)) and ask the user to
+confirm it, or say none fits. Read that archetype's file and fold its "Ask
+about" list into your questions.
+
 **Stop** for answers. Never invent app behavior; mark anything unconfirmed as
 an assumption.
 
@@ -136,6 +141,11 @@ team sees it helping. Propose:
   has none);
 - 2–4 app-specific authoring rules for the most-tested areas;
 - 1–2 results analysis rules.
+
+When an archetype fits, start from its rules marked Crawl. Rename apps and
+environments to the Scope Key, rewrite each to the interview answers, and drop
+any the workspace doesn't need. They are examples to adapt, never text to
+copy as is.
 
 Show one table: proposed ID, title, capability, scope (by name), and a one-line
 reason. Also show the Scope Key and the Topic Vocabulary
@@ -219,12 +229,26 @@ Each mode starts at step 2 (read the workspace) and ends with steps 5 and 6
 |---|---|---|
 | App changed | "We just shipped the new checkout flow" | Read live rules scoped to the affected app plus the workspace-wide ones. In a coding agent, read the diff or release notes too. Name the affected rules, then propose edits (with version bumps), new rules, and retirements. |
 | Agent misbehaved | "The agent named a test without our module prefix" | Ask for the test or run ID if not given. Read it (`get_mabl_test`, `get_mabl_test_run`) to see what the agent did, and find which live rules should have covered it. Propose an edit to that rule, or one narrowly scoped new rule, and check it for conflicts. |
-| Next batch | "The crawl rules are working, what's next?" | Propose the walk or run batch: results analysis rules for areas that actually flake (back each with run history), environment-specific rules for staging versus production, and explicit authoring steps for known interruptions. Show the proposal table and stop for approval. |
+| Next batch | "The crawl rules are working, what's next?" | Propose the walk or run batch: results analysis rules for areas that actually flake (back each with run history), environment-specific rules for staging versus production, and explicit authoring steps for known interruptions. Draw on the archetype's Walk and Run rules. Show the proposal table and stop for approval. |
 | Periodic review | "Review our agent instructions" | For every live and disabled rule: is it still true, still scoped right, earning its place? Flag rules over 1,800 characters, rules naming no capability, overly broad scope, conflicts, rules not reviewed in 90+ days (when a library file records review dates), and rules added in the mabl app without an ID line. Recommend keep, edit, disable to compare, or retire for each. |
 
 A rule someone added in the mabl app without an ID line is still a live rule.
 In a review, propose giving it an ID with a version bump (`set_name`, and the
 ID line at the top of its text) rather than retiring and re-creating it.
+
+## Archetypes
+
+Worked example rules for common kinds of apps, each with proposed IDs, scope,
+rollout phase (Crawl, Walk, or Run), questions to ask, and anti-patterns. Pick
+the closest fit, or borrow across several:
+
+| Archetype | Fits | File |
+|---|---|---|
+| E-commerce and checkout | Cart, checkout, payments, promotions | `references/archetype-ecommerce.md` |
+| Banking and fintech | Accounts, transfers, payments, MFA | `references/archetype-banking.md` |
+| B2B SaaS admin console | Users, roles, tenants, billing, feature flags | `references/archetype-b2b-saas.md` |
+| Healthcare and insurance portal | Members, claims, eligibility, long forms | `references/archetype-healthcare.md` |
+| Energy and utilities | Usage billing, outages, field operations | `references/archetype-energy.md` |
 
 ## Capabilities beyond authoring and results analysis
 
