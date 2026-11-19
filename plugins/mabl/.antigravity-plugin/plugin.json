@@ -1,0 +1,32 @@
+{
+  "name": "mabl",
+  "displayName": "mabl",
+  "version": "1.15.0",
+  "description": "Independent verification for agentic development using the world's most advanced testing harness. Create, run, and debug mabl end-to-end tests directly from your coding agent.",
+  "logo": "assets/icon.png",
+  "suggestedPrompts": [
+    "Set up mabl for this project",
+    "Why did my latest mabl test fail?",
+    "Build an E2E test for a workflow in my app"
+  ],
+  "category": "Developer Tools",
+  "keywords": [
+    "testing",
+    "e2e",
+    "quality",
+    "test-automation",
+    "debugging",
+    "mabl"
+  ],
+  "author": {
+    "name": "mabl",
+    "email": "support@mabl.com",
+    "url": "https://www.mabl.com"
+  },
+  "homepage": "https://www.mabl.com",
+  "repository": "https://github.com/mablhq/skills",
+  "license": "MIT",
+  "skills": [
+    "./skills"
+  ]
+}

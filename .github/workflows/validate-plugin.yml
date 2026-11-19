@@ -62,6 +62,11 @@ jobs:
       # mcpServers paths stay inside plugins/mabl/.
       - name: Validate Devin cross-surface parity
         run: node .github/scripts/validate-devin-parity.mjs
+      # Antigravity installs from plugins/mabl/ and reads its own MCP file
+      # (remote servers take serverUrl), so assert its manifest and
+      # mcp_config.json stay in step with the Claude manifest and .mcp.json.
+      - name: Validate Antigravity cross-surface parity
+        run: node .github/scripts/validate-antigravity-parity.mjs
       # The frontmatter folding rules are what the description budget is
       # measured against, so they get direct tests — and they run before the
       # validator, so a broken reader can't green-light a PR.
