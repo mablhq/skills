@@ -28,6 +28,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | [`mabl-debug`](plugins/mabl/skills/mabl-debug/SKILL.md) | Triage a failed run from its artifacts, then reproduce and verify the fix step by step in a live Chrome. |
 | [`mabl-test-impact`](plugins/mabl/skills/mabl-test-impact/SKILL.md) | Find, screen, and run the existing tests a code change reaches, and report the gaps; never starts a plan run itself. |
 | [`mabl-playwright-export`](plugins/mabl/skills/mabl-playwright-export/SKILL.md) | Move a mabl browser test into your Playwright project, fitted to its config and run locally until it passes. |
+| [`mabl-agent-instructions`](plugins/mabl/skills/mabl-agent-instructions/SKILL.md) | Draft and maintain the rules mabl's agents follow, checked against the live workspace, and write them to mabl switched off once you approve. |
 
 ### MCP servers
 
@@ -125,6 +126,7 @@ gh skill install mablhq/skills mabl-version-compare
 gh skill install mablhq/skills mabl-debug
 gh skill install mablhq/skills mabl-test-impact
 gh skill install mablhq/skills mabl-playwright-export
+gh skill install mablhq/skills mabl-agent-instructions
 ```
 
 `gh skill install` installs skills only. The skills also need their MCP servers — `mabl-init` uses the hosted `mabl` server, and the debugging, coverage-design, and test-impact skills also use the `chrome-*` servers — so add them to your agent's MCP configuration:
@@ -163,6 +165,10 @@ The agent pulls the step trace, inspects screenshots, DOM, network, and console 
 > "Why is this test flaky? It passes on retry."
 
 The agent uses mabl's failure analysis and run artifacts to decide whether it's a test bug (missing wait, stale selector) or an app regression, and tells you who owns the fix — with evidence.
+
+> "Set up agent instructions so the mabl agent follows our test naming standards."
+
+The agent reads your workspace's apps, environments, tests, and existing agent instructions, asks a few questions, and proposes a small set of rules. Once you approve the exact text and scope, it creates them in mabl switched off for your team to turn on. If you keep one, it also updates an `agent-instructions-library.md` file in your project with why each rule exists.
 
 ## Live mabl view (Claude Code)
 
