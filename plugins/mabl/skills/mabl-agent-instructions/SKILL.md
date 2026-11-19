@@ -228,7 +228,11 @@ ID line at the top of its text) rather than retiring and re-creating it.
 
 ## Capabilities beyond authoring and results analysis
 
-Some workspaces also offer `recovery` and `repair_notes`. Scope a rule to them
-only when the user asks for it by name; `create_mabl_agent_instruction`
-refuses a capability the workspace doesn't have enabled. When a periodic
-review finds a rule scoped to one of them, report it as is.
+Never scope a rule to `recovery`, even if the user asks: that capability was
+withdrawn, and no agent reads it. When a periodic review finds a rule scoped
+to `recovery`, recommend retiring it, or moving its guidance to a new rule
+scoped to `authoring` or `results_analysis` if it's still worth having.
+
+Some workspaces also offer `repair_notes`. Scope a rule to it only when the
+user asks for it by name; `create_mabl_agent_instruction` refuses a capability
+the workspace doesn't have enabled.
