@@ -281,9 +281,9 @@ flow id). Get it from `mcp__mabl__get_current_user` or
 agent memory.
 
 Returns `{ sessionId, viewTaskUrl }`. It's an async cloud session (minutes, real
-compute), not a deterministic edit — track it with
-`mcp__mabl__mabl_authoring_status({ sessionId })` and, once it completes,
-verify with `mcp__mabl__run_mabl_test_cloud`. Write the `testCase` the way you
+compute), not a deterministic edit — poll `mcp__mabl__get_agent_session({ sessionId,
+messageLimit: 0 })`, answer any question with `mcp__mabl__send_agent_message`, and
+once it completes verify with `mcp__mabl__run_mabl_test_cloud`. Write the `testCase` the way you
 would an authoring intent: concrete about what to change and what to verify.
 
 The agent lane runs its **own** branch handling (a `branch` name in

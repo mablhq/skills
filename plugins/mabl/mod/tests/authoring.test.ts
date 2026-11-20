@@ -7,7 +7,7 @@ import {
   clipLines,
   captureAuthoring,
   stepLines,
-  stepsPage,
+  sessionSteps,
   authoringFeature,
 } from '../features/authoring';
 import type {AuthoringDetail} from '../features/authoring';
@@ -40,10 +40,11 @@ test('authoring', async () => {
     ],
   );
   assert.equal(clipLines(stepLines(STEPS, {}), 2, true)[0]?.text, '… 3 more');
-  assert.equal(
-    stepsPage({sessionStatus: 'running', steps: STEPS}).entries.length,
-    6,
-  );
+  const PROGRESS = {stepCount: 4, steps: STEPS, createdTestId: 't1-j'};
+  const read = sessionSteps(PROGRESS);
+  assert.deepEqual(read.entries, STEPS);
+  assert.equal(read.stepCount, 4);
+  assert.deepEqual(sessionSteps(undefined), {entries: [], stepCount: 0});
   const [session] = captureAuthoring({
     tool: 'mcp__mabl-alt__mabl_authoring_initiate',
     args: {workspaceId: 'ws-w', testInformation: {name: 'Demo'}},
@@ -68,7 +69,7 @@ test('authoring', async () => {
         structured:
           tool === 'get_mabl_flow_steps'
             ? {steps: [{description: 'Enter email'}]}
-            : {sessionStatus: 'running', steps: STEPS},
+            : {sessionId: 's1-as', status: 'running', progress: PROGRESS},
         text: '',
       };
     },

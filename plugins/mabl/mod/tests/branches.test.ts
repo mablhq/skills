@@ -87,7 +87,7 @@ test('branches', async () => {
     [],
   );
   const [fromStatus] = captureBranches({
-    tool: 'mcp__mabl__mabl_authoring_status',
+    tool: 'mcp__mabl__mabl_authoring_edit',
     args: {sessionId: 's1-as'},
     text: '',
     structured: {

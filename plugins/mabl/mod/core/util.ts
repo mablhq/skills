@@ -24,7 +24,7 @@ export type Fields = Record<string, unknown>;
 
 const MCP_TOOL = /^mcp__(.*mabl.*)__([a-z_]+)$/i;
 // Only tools the mabl server ships, so other servers in the plugin (the Chrome ones) are never read as mabl data.
-const MABL_TOOL_NAME = /mabl|^analyze_test_impact$/;
+const MABL_TOOL_NAME = /mabl|^(analyze_test_impact|get_agent_session)$/;
 // The public CLI only: background polls re-run this prefix, so it must never resolve to an unpinned package.
 const MABL_CLI =
   /(?:^|(?<!\\)[;&|(]\s*)(npx\s+(?:-y\s+)?@mablhq\/mabl-cli@\d+\.\d+\.\d+|mabl)\s+([^;&|]*)/;

@@ -5,6 +5,15 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.15.0] - 2026-11-18
+### Changed
+- The mabl MCP server retired its authoring-only session tools (`mabl_authoring_status`,
+  `get_mabl_authoring_steps`, `mabl_authoring_answer`, `mabl_authoring_list`,
+  `list_authoring_sessions`, `mabl_authoring_plan`, `mabl_authoring_merge`). `mabl-init` and
+  `mabl-test-edit` now track authoring sessions with `get_agent_session` and answer their
+  questions with `send_agent_message`, and the authoring panel in the Claude Code plugin reads
+  and answers sessions through the same tools.
+
 ## [1.14.0] - 2026-11-13
 ### Added
 - `mabl-playwright-export` moves a mabl browser test into your own Playwright project. The
