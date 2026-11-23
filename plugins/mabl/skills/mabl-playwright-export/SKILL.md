@@ -52,8 +52,8 @@ What the user is owed:
 ```bash
 # Check the mabl CLI is installed and recent enough; install/upgrade if not
 MIN_MABL_CLI_VERSION=2.114.17
-command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli@2.144.10
-[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@2.144.10
+command -v mabl >/dev/null 2>&1 || npm install -g @mablhq/mabl-cli@2.153.1
+[ "$(printf '%s\n%s' "$MIN_MABL_CLI_VERSION" "$(mabl --version)" | sort -V | head -1)" = "$MIN_MABL_CLI_VERSION" ] || npm install -g @mablhq/mabl-cli@2.153.1
 
 mabl auth login --auto   # one-time OAuth in browser — required before any command
 mabl auth info    # verify you're logged in and the token hasn't expired

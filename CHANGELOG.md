@@ -5,6 +5,11 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.15.1] - 2026-11-23
+### Changed
+- Pinned `chrome-devtools-mcp` moves from `1.12.0` to `1.13.0`.
+- Pinned `@mablhq/mabl-cli` moves from `2.144.10` to `2.153.1`.
+
 ## [1.15.0] - 2026-11-18
 ### Changed
 - The mabl MCP server retired its authoring-only session tools (`mabl_authoring_status`,
