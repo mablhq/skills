@@ -1,10 +1,10 @@
 ---
 name: mabl-test-authoring
 description: |
-  Create a SINGLE mabl browser or API test through conversational planning
-  and cloud authoring. Plan one test with an AI agent, refine the plan
-  iteratively, initiate cloud (or local) test generation, then validate that
-  the test it built actually matches what you asked for and fix it if not.
+  Create a SINGLE mabl browser or API test: optionally plan it first with
+  the mabl workspace assistant, generate it with the cloud (or local)
+  authoring agent, then validate that the test it built actually matches
+  what you asked for and fix it if not.
   Fire when the user wants to create one mabl test, asks to "plan a test",
   "create a test for <one scenario>", "generate a mabl test", "author a
   test", or mentions testing a single URL / ticket with mabl.
@@ -33,8 +33,9 @@ mabl auth login --auto   # one-time OAuth in browser — required before any com
 mabl auth info    # verify you're logged in and the token hasn't expired
 ```
 
-If the probe prints its warning, stop and report that this CLI is too old for
-this skill. Don't fall back to the older `mabl agent authoring` commands.
+If the probe prints its warning, stop: this CLI is too old for this skill.
+Don't fall back to the deprecated `mabl agent authoring plan` or `status`, or to
+`answer` for a cloud session.
 
 ## Workflow
 
@@ -127,13 +128,18 @@ so several can run in parallel.
 
 ## 2. Generate — start test authoring
 
-Kick off cloud test generation with the test information (fields at the end of
-this file):
+Kick off cloud test generation with the test information:
 
 ```bash
 mabl agent authoring initiate \
   --test-information '{"name": "Login test", "test_case": "...", "url_override": "https://..."}'
 ```
+
+`references/test-information.md` has every field. The ids are yours to find —
+the project's saved mabl settings first, else `mabl applications list`,
+`mabl environments list`, `mabl credentials list` (or the mabl MCP list tools);
+that file has the detail. Ask the user when more than one fits, and **never
+guess a credential**: leave `credentials_id` out only when no login is needed.
 
 ### Test types
 
@@ -176,9 +182,8 @@ mabl agent session <sessionId>              # {sessionId, agentType, status, las
 mabl agent session <sessionId> --progress   # adds the steps built so far, and createdTestId once saved
 ```
 
-When the session reaches a terminal state, read `--progress` for
-`createdTestId`, then the status read in *After authoring completes* for the
-reported run.
+When the session reaches a terminal state, one `--progress` read gives
+`createdTestId`, `viewTestUrl`, and `reportedTestRunId`.
 
 **Read `status` on every poll and act on what it says** — never infer
 progress from elapsed time. Most non-terminal statuses do clear on their own:
@@ -249,20 +254,24 @@ password, token, or any other secret, even when you happen to have it.
 | "should it also verify the confirmation email?" | no — your intent never said. Ask. |
 | "the login page looks different than expected, continue?" | no — you can't see it. Ask. |
 
-To answer a cloud session:
+To answer a cloud session, re-read the question right before sending, and send
+only if `status` is still `needs_attention` and `reply` is still the question
+you're answering — otherwise start over on what's pending now:
 
 ```bash
-mabl agent message <sessionId> "Use the 'Webapp user' credential"
+mabl agent session <sessionId> --since-last-prompt --messages 20
+mabl agent message <sessionId> "Use the 'Webapp user' credential" --idempotency-key <key>
 ```
 
-It prints `{"delivered":true,"messageId":"..."}` once the message is queued in
-the session's inbox, and a queued message wakes the paused session. Then go back
-to polling. If the send fails and you retry, pass the same
-`--idempotency-key <key>` both times, so the agent doesn't get the answer twice.
+It prints `{"delivered":true,"messageId":"..."}` once queued, and the message
+wakes the paused session; go back to polling. Pick a fresh key per answer and
+reuse it on a retry, so the agent never gets the same answer twice.
 
 **A local session (`--mode local`) is answered with the older command**, because
-the inbox doesn't wake it — `mabl agent authoring answer <sessionId> "<answer>"`
-resumes it, as before.
+the inbox doesn't wake it. Read its `loopNumber` with
+`mabl agent authoring status --session-id <sessionId>` and pass it back, so a
+stale answer fails instead of landing on a newer question:
+`mabl agent authoring answer <sessionId> "<answer>" --expected-loop-number <loopNumber>`.
 
 **Bound the round-trips at 3.** Count the answers you send to a session. A
 session that pauses to ask a fourth time isn't converging, and answering again
@@ -471,29 +480,3 @@ assertion was skipped. Say it is unverified and why.
 
 `references/validate-and-heal.md` has the detail: how to read the export,
 what the trace looks like, and the failure modes worth knowing.
-
----
-
-## Direct test information format
-
-`--test-information` takes a JSON object with these fields:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | yes | Human-readable test name |
-| `test_case` | yes | Free-text description of what the test should do. Be detailed: list the steps, what to click, what to verify. The more specific, the better the generated test. |
-| `url_override` | one of these | Direct URL to test against. Use for arbitrary URLs not configured in mabl. |
-| `deployment_id` | one of these | Deployment ID from mabl. Resolves to the correct URL + app + environment automatically. Preferred when the URL is already configured. |
-| `application_id` | no | Application ID. Resolved automatically when using `deployment_id`. Only needed with `url_override` if you want the test scoped to a specific app. |
-| `environment_id` | no | Environment ID. Same as above — automatic with `deployment_id`. |
-| `credentials_id` | no | Credentials ID for authenticated tests. Omit if the test doesn't require login. |
-
-Example:
-
-```json
-{
-  "name": "Checkout flow - guest user",
-  "test_case": "Navigate to the product page, add an item to cart, proceed to checkout as a guest, fill in shipping details, and verify the order confirmation page shows a confirmation number.",
-  "url_override": "https://staging.shop.example.com"
-}
-```

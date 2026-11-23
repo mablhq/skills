@@ -6,8 +6,8 @@ import type {
 } from '../types';
 
 export type EntityUpdate = Omit<MablEntity, 'updatedAt'> & {
-  /** Applies only to an item already tracked, never adds one. */
-  ifTracked?: boolean;
+  /** Applies only to a tracked, non-local item in one of these statuses; never adds one. */
+  onlyFromStatuses?: readonly string[];
 };
 
 /** A finished tool call as every feature's `capture` sees it. */
@@ -115,17 +115,56 @@ export const mablCall = (call: CallRecord): MablCall | undefined => {
 export const isMablTool = (tool: string): boolean =>
   tool === 'Bash' || MABL_TOOL_NAME.test(tool.match(MCP_TOOL)?.[2] ?? '');
 
-/** The last line of CLI output that parses as a JSON object, else the last pretty-printed object, else the whole output as one; the CLI may print warnings first. */
-export const lastJson = (text: string): Fields => {
-  for (const line of text.trim().split('\n').reverse()) {
-    const value = parseJson(line.trim());
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      return obj(value);
+const nonEmptyObject = (value: unknown): Fields | undefined =>
+  value !== null &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  Object.keys(value).length > 0
+    ? (value as Fields)
+    : undefined;
+
+/** Starts of lines opening with `{`, newest first. */
+const objectStarts = (text: string): number[] => {
+  const starts: number[] = [];
+  for (
+    let at = text.lastIndexOf('\n{');
+    at >= 0;
+    at = text.lastIndexOf('\n{', at - 1)
+  ) {
+    starts.push(at + 1);
+  }
+
+  return text.startsWith('{') ? [...starts, 0] : starts;
+};
+
+/** The newest pretty-printed object: from a line opening with `{` to a line opening with `}`, so lines printed after it don't matter. */
+const lastPrettyJson = (text: string): Fields | undefined => {
+  for (const start of objectStarts(text)) {
+    for (
+      let end = text.lastIndexOf('\n}');
+      end > start;
+      end = text.lastIndexOf('\n}', end - 1)
+    ) {
+      const value = nonEmptyObject(parseJson(text.slice(start, end + 2)));
+      if (value) {
+        return value;
+      }
     }
   }
-  const start = text.lastIndexOf('\n{');
 
-  return obj(parseJson(start >= 0 ? text.slice(start) : text));
+  return;
+};
+
+/** The last line of CLI output that parses as a non-empty JSON object, else the last pretty-printed one, else the whole output as one; the CLI may print warnings before or after. */
+export const lastJson = (text: string): Fields => {
+  for (const line of text.trim().split('\n').reverse()) {
+    const value = nonEmptyObject(parseJson(line.trim()));
+    if (value) {
+      return value;
+    }
+  }
+
+  return lastPrettyJson(text) ?? obj(parseJson(text));
 };
 
 const isMablHost = (hostname: string): boolean =>
@@ -170,11 +209,19 @@ export const mergeEntities = (
     return current;
   }
   let next = current;
-  for (const {ifTracked, ...update} of updates) {
+  for (const {onlyFromStatuses, ...update} of updates) {
     if (update.kind !== 'branch' && !ENTITY_ID.test(update.id)) {
       continue;
     }
-    if (ifTracked && !next[update.id]) {
+    const tracked = next[update.id];
+    if (
+      onlyFromStatuses &&
+      !(
+        tracked &&
+        !tracked.isLocal &&
+        onlyFromStatuses.includes(tracked.status ?? '')
+      )
+    ) {
       continue;
     }
     const existing: Fields = next[update.id] ?? {};

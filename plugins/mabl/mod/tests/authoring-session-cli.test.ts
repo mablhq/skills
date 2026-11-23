@@ -4,7 +4,8 @@ import {assert} from './assert';
 
 import {mergeEntities} from '../core/util';
 import type {EntityUpdate} from '../core/util';
-import {captureAuthoring} from '../features/authoring';
+import type {MablEntities} from '../types';
+import {captureAuthoring, positionalId} from '../features/authoring';
 
 const bash = (command: string, text: string): EntityUpdate[] =>
   captureAuthoring({tool: 'Bash', args: {command}, text});
@@ -46,6 +47,31 @@ test('mabl agent session reads status and the created test', () => {
   assert.equal(flagged?.id, 's3-as');
   assert.equal(flagged?.status, 'needs_attention');
 
+  const [beforeId] = bash(
+    'mabl agent session --progress s4-as',
+    '{"agentType":"test_authoring","status":"running"}',
+  );
+  assert.equal(beforeId?.id, 's4-as', 'a flag before the id is not the id');
+  const [afterValue] = bash(
+    'mabl agent session --messages 20 "s5-as" --since-last-prompt',
+    '{"agentType":"test_authoring","status":"running"}',
+  );
+  assert.equal(
+    afterValue?.id,
+    's5-as',
+    'a flag value is skipped, quotes removed',
+  );
+  const [fromOutput] = bash(
+    'mabl agent session --progress s6-as',
+    '{"sessionId":"s7-as","agentType":"test_authoring","status":"running"}',
+  );
+  assert.equal(fromOutput?.id, 's7-as', 'the output names the session');
+  assert.equal(
+    positionalId("agent message --file a.txt 's8-as' text"),
+    's8-as',
+  );
+  assert.equal(positionalId('agent session --progress'), undefined);
+
   assert.deepEqual(
     bash(
       'mabl agent session a1-as',
@@ -61,34 +87,34 @@ test('mabl agent session reads status and the created test', () => {
   );
 });
 
-test('mabl agent message marks a tracked session as woken', () => {
+test('mabl agent message wakes only a paused cloud session', () => {
   const [sent] = bash(
     'mabl agent message s1-as "Use the Webapp user credential"',
     '{"delivered":true,"messageId":"m1"}',
   );
   assert.equal(sent?.id, 's1-as');
   assert.equal(sent?.status, 'queued');
+  const tracked = (status: string, isLocal?: boolean): MablEntities => ({
+    's1-as': {kind: 'authoring', id: 's1-as', status, isLocal, updatedAt: 1},
+  });
+  const apply = (current: MablEntities): MablEntities =>
+    mergeEntities(current, sent ? [sent] : [], 2);
 
-  const paused = {
-    's1-as': {
-      kind: 'authoring' as const,
-      id: 's1-as',
-      status: 'needs_attention',
-      updatedAt: 1,
-    },
-  };
-  assert.equal(
-    mergeEntities(paused, sent ? [sent] : [], 2)['s1-as']?.status,
-    'queued',
-  );
+  assert.equal(apply(tracked('needs_attention'))['s1-as']?.status, 'queued');
+  const completed = tracked('completed');
+  assert.equal(apply(completed), completed, 'a completed session stays put');
+  const running = tracked('running');
+  assert.equal(apply(running), running);
+  const local = tracked('needs_attention', true);
+  assert.equal(apply(local), local, 'the inbox does not wake a local session');
   assert.deepEqual(
-    mergeEntities({}, sent ? [sent] : [], 2),
+    apply({}),
     {},
     'a message to an untracked session, such as the assistant, adds nothing',
   );
 
   const [fromFile] = bash(
-    'mabl agent message s2-as --file answer.txt --idempotency-key k1',
+    'mabl agent message --file answer.txt --idempotency-key k1 s2-as',
     '{"delivered":true,"messageId":"m2"}',
   );
   assert.equal(fromFile?.id, 's2-as');

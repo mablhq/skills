@@ -4,6 +4,7 @@ import {
   appBaseFromUrl,
   cliArgv,
   didSucceed,
+  ENTITY_ID,
   field,
   flag,
   hashOf,
@@ -196,6 +197,35 @@ const fromMcp = (
   }
 };
 
+const VALUE_FLAGS = new Set([
+  '--messages',
+  '--file',
+  '--idempotency-key',
+  '--session-id',
+  '--workspace-id',
+  '-w',
+]);
+const ARGUMENT = /'[^']*'|"(?:[^"\\]|\\.)*"|\S+/g;
+
+/** The first positional argument after `agent <command>`, unquoted; flags and their values are skipped. */
+export const positionalId = (sub: string): string | undefined => {
+  const tokens = sub.match(ARGUMENT) ?? [];
+  for (let index = 2; index < tokens.length; index++) {
+    const token = tokens[index] ?? '';
+    if (token.startsWith('-')) {
+      if (VALUE_FLAGS.has(token)) {
+        index++;
+      }
+      continue;
+    }
+    const id = token.replace(/^(['"])(.*)\1$/, '$2');
+
+    return ENTITY_ID.test(id) ? id : undefined;
+  }
+
+  return;
+};
+
 const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
   if (/^agent\s+authoring\s+initiate\b/.test(sub)) {
     const sessionId = field({}, text, 'sessionId');
@@ -223,24 +253,26 @@ const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
 
     return sessionId ? fromCliStatus(sessionId, lastJson(text), text) : [];
   }
-  const session = sub.match(/^agent\s+(session|message)\b/)?.[1];
-  if (session) {
+  const command = sub.match(/^agent\s+(session|message)\b/)?.[1];
+  if (command) {
+    const data = lastJson(text);
+    const outputId = str(data.sessionId);
     const sessionId =
+      (outputId && ENTITY_ID.test(outputId) ? outputId : undefined) ??
       flag(sub, 'session-id') ??
-      sub.match(/^agent\s+(?:session|message)\s+([\w-]+)/)?.[1];
+      positionalId(sub);
     if (!sessionId) {
       return [];
     }
-    const data = lastJson(text);
-    if (session === 'message') {
-      // A delivered message wakes a paused or finished cloud session; the id may be any agent's, so only a tracked one changes.
+    if (command === 'message') {
+      // The inbox wakes a paused cloud session; a local one, or any other agent's, is left alone.
       return data.delivered === true
         ? [
             {
               kind: 'authoring',
               id: sessionId,
               status: 'queued',
-              ifTracked: true,
+              onlyFromStatuses: [NEEDS_ATTENTION],
             },
           ]
         : [];

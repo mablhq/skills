@@ -6,7 +6,7 @@ export const DEFAULT_LINE_CEILING = 500;
 export const LINE_CEILINGS = {
   'mabl-debug': 504,
   'mabl-init': 260,
-  'mabl-test-authoring': 499,
+  'mabl-test-authoring': 482,
   'mabl-test-coverage-design': 653,
   'mabl-test-edit': 338,
   'mabl-test-edit-verify': 442,
