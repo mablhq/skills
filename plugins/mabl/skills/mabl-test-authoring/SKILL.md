@@ -260,12 +260,11 @@ you're answering — otherwise start over on what's pending now:
 
 ```bash
 mabl agent session <sessionId> --since-last-prompt --messages 20
-mabl agent message <sessionId> "Use the 'Webapp user' credential" --idempotency-key <key>
+mabl agent message <sessionId> "Use the 'Webapp user' credential" --credentials-id <id> --idempotency-key <key>
 ```
 
-It prints `{"delivered":true,"messageId":"..."}` once queued, and the message
-wakes the paused session; go back to polling. Pick a fresh key per answer and
-reuse it on a retry, so the agent never gets the same answer twice.
+It prints `{"delivered":true,"messageId":"..."}` and wakes the session. A credential, environment or data row it asked for also goes in its flag (`--credentials-id`, `--environment-id`, `--scenario-id`):
+naming it in the text alone doesn't change what the session uses. Use a fresh key per answer, reused on a retry.
 
 **A local session (`--mode local`) is answered with the older command**, because
 the inbox doesn't wake it. Read its `loopNumber` with
