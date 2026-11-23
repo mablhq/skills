@@ -79,8 +79,8 @@ passed, `reportedTestRunId`. So:
 - **`reportedTestRunId` present** → the agent ran the test end to end and it
   passed. You get a real step trace and a screenshot per step, for free — no
   need to re-run anything.
-- **absent** → nothing proved the test works. Either the validation didn't
-  pass, or the workspace can't report agent runs. Treat the test as unverified.
+- **absent, or `result.verified` false** (a plain `mabl agent session <id>` shows
+  `result`) → nothing proved the test works. Treat the test as unverified.
 
 Other things you can do with the test:
 
@@ -224,10 +224,10 @@ Read what it is asking — everything it has said since your last message:
 mabl agent session <sessionId> --since-last-prompt --messages 20
 ```
 
-`reply` is the agent's latest message, normally the question. If `reply` is
-absent, the session paused without a question you can read — report it instead
-of answering blind. If it asks for an approval rather than a question, it is
-not yours to answer: send the user to the session in the web app.
+`waitingOn` says what it waits on: `answer` gives `question` (its `expects`, e.g.
+`credential`, names the flag to answer with), and `approval` gives `approvalUrl` —
+never answer an approval; send the user there. With neither, the session paused
+without a question you can read: report it instead of answering blind.
 
 **Answer only what you already know.** Answer when the answer is something
 you're already holding: which credential, which application or environment, or
