@@ -223,6 +223,33 @@ const fromCli = (cli: string, sub: string, text: string): EntityUpdate[] => {
 
     return sessionId ? fromCliStatus(sessionId, lastJson(text), text) : [];
   }
+  const session = sub.match(/^agent\s+(session|message)\b/)?.[1];
+  if (session) {
+    const sessionId =
+      flag(sub, 'session-id') ??
+      sub.match(/^agent\s+(?:session|message)\s+([\w-]+)/)?.[1];
+    if (!sessionId) {
+      return [];
+    }
+    const data = lastJson(text);
+    if (session === 'message') {
+      // A delivered message wakes a paused or finished cloud session; the id may be any agent's, so only a tracked one changes.
+      return data.delivered === true
+        ? [
+            {
+              kind: 'authoring',
+              id: sessionId,
+              status: 'queued',
+              ifTracked: true,
+            },
+          ]
+        : [];
+    }
+
+    return AUTHORING_AGENT_TYPES.has(str(data.agentType) ?? '')
+      ? fromSession(sessionId, data)
+      : [];
+  }
 
   return [];
 };

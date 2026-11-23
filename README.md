@@ -51,6 +51,8 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 
    If the CLI is missing or too old, the skills detect that and install or upgrade it for you — but you still need to run `mabl auth login --auto` once.
 
+   Test authoring (`mabl-test-authoring`, `mabl-test-coverage-design`) uses `mabl agent session`, `mabl agent message` and `mabl agent assistant`, which need mabl CLI <SESSION_COMMANDS_VERSION> or newer.
+
 3. Node.js 20+ (the local MCP server runs via `npx`).
 
 ## Installation

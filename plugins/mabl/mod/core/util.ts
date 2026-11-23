@@ -5,7 +5,10 @@ import type {
   MablEntityKind,
 } from '../types';
 
-export type EntityUpdate = Omit<MablEntity, 'updatedAt'>;
+export type EntityUpdate = Omit<MablEntity, 'updatedAt'> & {
+  /** Applies only to an item already tracked, never adds one. */
+  ifTracked?: boolean;
+};
 
 /** A finished tool call as every feature's `capture` sees it. */
 export type CallRecord = {
@@ -112,7 +115,7 @@ export const mablCall = (call: CallRecord): MablCall | undefined => {
 export const isMablTool = (tool: string): boolean =>
   tool === 'Bash' || MABL_TOOL_NAME.test(tool.match(MCP_TOOL)?.[2] ?? '');
 
-/** The last line of CLI output that parses as a JSON object, else the whole output as one; the CLI may print warnings first. */
+/** The last line of CLI output that parses as a JSON object, else the last pretty-printed object, else the whole output as one; the CLI may print warnings first. */
 export const lastJson = (text: string): Fields => {
   for (const line of text.trim().split('\n').reverse()) {
     const value = parseJson(line.trim());
@@ -120,8 +123,9 @@ export const lastJson = (text: string): Fields => {
       return obj(value);
     }
   }
+  const start = text.lastIndexOf('\n{');
 
-  return obj(parseJson(text));
+  return obj(parseJson(start >= 0 ? text.slice(start) : text));
 };
 
 const isMablHost = (hostname: string): boolean =>
@@ -166,8 +170,11 @@ export const mergeEntities = (
     return current;
   }
   let next = current;
-  for (const update of updates) {
+  for (const {ifTracked, ...update} of updates) {
     if (update.kind !== 'branch' && !ENTITY_ID.test(update.id)) {
+      continue;
+    }
+    if (ifTracked && !next[update.id]) {
       continue;
     }
     const existing: Fields = next[update.id] ?? {};

@@ -119,4 +119,39 @@ test('CLI flags and JSON output', () => {
     {sessionStatus: 'queued'},
   );
   assert.deepEqual(lastJson('{"a":1}\n[1,2]'), {a: 1});
+  assert.deepEqual(
+    lastJson(
+      'warning: x\n{\n  "status": "running",\n  "progress": {\n    "stepCount": 2\n  }\n}\n',
+    ),
+    {status: 'running', progress: {stepCount: 2}},
+    'pretty-printed output after a warning',
+  );
+});
+
+test('an ifTracked update never adds an item', () => {
+  const current: MablEntities = {
+    's1-as': {
+      kind: 'authoring',
+      id: 's1-as',
+      status: 'needs_attention',
+      updatedAt: 1,
+    },
+  };
+  assert.deepEqual(
+    mergeEntities(
+      {},
+      [{kind: 'authoring', id: 's2-as', status: 'queued', ifTracked: true}],
+      2,
+    ),
+    {},
+  );
+  assert.deepEqual(
+    mergeEntities(
+      current,
+      [{kind: 'authoring', id: 's1-as', status: 'queued', ifTracked: true}],
+      2,
+    )['s1-as'],
+    {kind: 'authoring', id: 's1-as', status: 'queued', updatedAt: 2},
+    'the flag itself is never stored',
+  );
 });
