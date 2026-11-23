@@ -20,7 +20,7 @@ Trusted by industry leaders like Microsoft, JetBlue, and Priceline.
 | Skill | What it does |
 |-------|--------------|
 | [`mabl-init`](plugins/mabl/skills/mabl-init/SKILL.md) | One-time project setup: records your workspace, apps, environments, and credentials in agent memory. |
-| [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Plan a test in plain language, generate it in the mabl cloud, and check it against what you asked for. |
+| [`mabl-test-authoring`](plugins/mabl/skills/mabl-test-authoring/SKILL.md) | Describe a test in plain language (optionally planning it with the mabl workspace assistant), generate it in the mabl cloud, and check it against what you asked for. |
 | [`mabl-test-coverage-design`](plugins/mabl/skills/mabl-test-coverage-design/SKILL.md) | Explore a feature like a user and author a suite of self-isolating tests, each checked against the ask. |
 | [`mabl-test-edit`](plugins/mabl/skills/mabl-test-edit/SKILL.md) | Change an existing test through the cheapest lane that works, confirming before it writes to the default branch. |
 | [`mabl-version-compare`](plugins/mabl/skills/mabl-version-compare/SKILL.md) | Say what changed between two versions of a test or flow, separating real changes from reorganization. |
@@ -50,6 +50,8 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
    ```
 
    If the CLI is missing or too old, the skills detect that and install or upgrade it for you — but you still need to run `mabl auth login --auto` once.
+
+   Test authoring (`mabl-test-authoring`, `mabl-test-coverage-design`) uses `mabl agent session`, `mabl agent message` and `mabl agent assistant`, which need mabl CLI <SESSION_COMMANDS_VERSION> or newer.
 
 3. Node.js 20+ (the local MCP server runs via `npx`).
 

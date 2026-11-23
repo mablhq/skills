@@ -5,6 +5,23 @@ All notable changes to the `mabl` plugin are documented here. Format follows
 the `version` field in `plugin.json` (kept in sync across all manifests — see
 `CLAUDE.md`).
 
+## [1.16.0] - 2026-11-23
+### Changed
+- `mabl-test-authoring` and `mabl-test-coverage-design` now drive authoring sessions with the
+  mabl CLI's `mabl agent session` (poll, read the agent's question, read the created test) and
+  answer cloud sessions with `mabl agent message`. Planning first goes through the workspace
+  assistant, `mabl agent assistant`; otherwise a test starts straight from
+  `mabl agent authoring initiate --test-information`, and a suite copies a test with
+  `source_test_id`. These commands need mabl CLI <SESSION_COMMANDS_VERSION> or newer, and both
+  skills check for them.
+- With no planner choosing them, both skills now find the application, environment, URL and
+  credential ids themselves: from the project's saved mabl settings, else the CLI or mabl MCP
+  list commands, asking you when more than one fits. Neither ever guesses a credential.
+- The older `mabl agent authoring plan`, `answer` and `status` commands still work but are
+  deprecated. Local authoring sessions are still answered with `mabl agent authoring answer`.
+- The authoring panel in the Claude Code plugin also follows `mabl agent session` and
+  `mabl agent message` calls.
+
 ## [1.15.1] - 2026-11-23
 ### Changed
 - Pinned `chrome-devtools-mcp` moves from `1.12.0` to `1.13.0`.

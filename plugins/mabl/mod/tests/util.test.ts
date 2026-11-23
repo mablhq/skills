@@ -119,4 +119,54 @@ test('CLI flags and JSON output', () => {
     {sessionStatus: 'queued'},
   );
   assert.deepEqual(lastJson('{"a":1}\n[1,2]'), {a: 1});
+  assert.deepEqual(
+    lastJson(
+      'warning: x\n{\n  "status": "running",\n  "progress": {\n    "stepCount": 2\n  }\n}\n',
+    ),
+    {status: 'running', progress: {stepCount: 2}},
+    'pretty-printed output after a warning',
+  );
+  assert.deepEqual(
+    lastJson(
+      '{\n  "sessionId": "s1-as",\n  "status": "running"\n}\nnote: printed after\n',
+    ),
+    {sessionId: 's1-as', status: 'running'},
+    'pretty-printed output before a trailing line',
+  );
+  assert.deepEqual(
+    lastJson(
+      '{\n  "status": "running",\n  "progress": {\n    "steps": [\n      {}\n    ]\n  }\n}',
+    ),
+    {status: 'running', progress: {steps: [{}]}},
+    'a lone {} line inside the output does not win',
+  );
+  assert.deepEqual(lastJson('{}'), {});
+});
+
+test('an onlyFromStatuses update changes only a tracked cloud item in those statuses', () => {
+  const wake = {
+    kind: 'authoring' as const,
+    id: 's1-as',
+    status: 'queued',
+    onlyFromStatuses: ['needs_attention'],
+  };
+  const at = (status: string, isLocal?: boolean): MablEntities => ({
+    's1-as': {kind: 'authoring', id: 's1-as', status, isLocal, updatedAt: 1},
+  });
+  assert.deepEqual(mergeEntities({}, [wake], 2), {}, 'never adds an item');
+  assert.deepEqual(
+    mergeEntities(at('needs_attention'), [wake], 2)['s1-as'],
+    {
+      kind: 'authoring',
+      id: 's1-as',
+      status: 'queued',
+      isLocal: undefined,
+      updatedAt: 2,
+    },
+    'the condition itself is never stored',
+  );
+  const completed = at('completed');
+  assert.equal(mergeEntities(completed, [wake], 2), completed);
+  const local = at('needs_attention', true);
+  assert.equal(mergeEntities(local, [wake], 2), local);
 });
