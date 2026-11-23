@@ -36,8 +36,8 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 | Server | Type | Purpose |
 |--------|------|---------|
 | `mabl` | Hosted (`https://mcp.mabl.com/mcp`) | Structured tools for your workspace: failure analysis with root-cause inference, test details, applications, environments, credentials, and more. |
-| `chrome-for-mabl` | Local (`npx chrome-devtools-mcp@1.12.0`) | Attaches to the Chrome instance that `mabl agent debug session` launches, so the agent can see and drive the live browser while reproducing a failure. |
-| `chrome-devtools` | Local (`npx chrome-devtools-mcp@1.12.0`) | Drives its own real Chrome instance so the agent can explore an app while designing test coverage — not attached to a debug session. |
+| `chrome-for-mabl` | Local (`npx chrome-devtools-mcp@1.13.0`) | Attaches to the Chrome instance that `mabl agent debug session` launches, so the agent can see and drive the live browser while reproducing a failure. |
+| `chrome-devtools` | Local (`npx chrome-devtools-mcp@1.13.0`) | Drives its own real Chrome instance so the agent can explore an app while designing test coverage — not attached to a debug session. |
 
 ## Prerequisites
 
@@ -45,7 +45,7 @@ The plugin also configures three MCP servers (Claude Code wires these automatica
 2. The mabl CLI, authenticated:
 
    ```bash
-   npm install -g @mablhq/mabl-cli@2.144.10
+   npm install -g @mablhq/mabl-cli@2.153.1
    mabl auth login --auto
    ```
 
@@ -134,11 +134,11 @@ gh skill install mablhq/skills mabl-playwright-export
   "mcpServers": {
     "chrome-for-mabl": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@1.12.0", "--browserUrl", "http://127.0.0.1:9222"]
+      "args": ["-y", "chrome-devtools-mcp@1.13.0", "--browserUrl", "http://127.0.0.1:9222"]
     },
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@1.12.0"]
+      "args": ["-y", "chrome-devtools-mcp@1.13.0"]
     },
     "mabl": {
       "type": "http",
