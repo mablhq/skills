@@ -249,9 +249,8 @@ Poll a wave's sessions together on the same 30–60s cycle: one
 a session that has stopped: `--since-last-prompt --messages 20` for a pause's
 question, and `--progress` for `createdTestId` on **every** terminal word —
 `merged`, or one you don't recognise, too — or a test you did author reports as
-never built. Its `viewTestUrl` and `reportedTestRunId` come only from
-`mabl agent authoring status --session-id <id> --verbose` (deprecated, still
-works). Drop each session from the poll set as it stops; when the set is empty,
+never built; `--progress` also carries its `viewTestUrl` and
+`reportedTestRunId`. Drop each session from the poll set as it stops; when the set is empty,
 launch the next wave.
 
 Don't reach for `mabl agent authoring list --status all` to save those calls:

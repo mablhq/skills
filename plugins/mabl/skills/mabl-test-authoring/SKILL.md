@@ -66,15 +66,14 @@ Read the terminal output carefully — two things are easy to misread:
 
 `reportedTestRunId` is the useful signal. When the agent's final validation
 replay passes, it reports that replay to the cloud as a test run and links it
-to the session. Only the older status command carries it — it is deprecated but
-still works, and prints a note saying so on stderr:
+to the session. Read it from the session's progress:
 
 ```bash
-mabl agent authoring status --session-id <sessionId> --verbose
+mabl agent session <sessionId> --progress
 ```
 
-It returns `createdTestId`, `viewTestUrl`, and, when that replay passed,
-`reportedTestRunId` plus a `viewTestRunUrl`. So:
+`progress` carries `createdTestId`, `viewTestUrl`, and, when that replay
+passed, `reportedTestRunId`. So:
 
 - **`reportedTestRunId` present** → the agent ran the test end to end and it
   passed. You get a real step trace and a screenshot per step, for free — no
